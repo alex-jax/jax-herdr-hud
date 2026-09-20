@@ -50,14 +50,14 @@ if you want to use them; the HUD does not install agents or their credentials.
 
 ### 3. Download the preview and verify it
 
-Open the [release page](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.1-preview.1)
-and download `jax-herdr-hud_0.1.1-1_all.deb` and `SHA256SUMS`, or run:
+Open the [release page](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.2-preview.1)
+and download `jax-herdr-hud_0.1.2-1_all.deb` and `SHA256SUMS`, or run:
 
 ```sh
-mkdir -p ~/Downloads/jax-herdr-hud-0.1.1
-cd ~/Downloads/jax-herdr-hud-0.1.1
-curl -fLO https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.1-preview.1/jax-herdr-hud_0.1.1-1_all.deb
-curl -fLO https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.1-preview.1/SHA256SUMS
+mkdir -p ~/Downloads/jax-herdr-hud-0.1.2
+cd ~/Downloads/jax-herdr-hud-0.1.2
+curl -fLO https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.2-preview.1/jax-herdr-hud_0.1.2-1_all.deb
+curl -fLO https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.2-preview.1/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS
 ```
 
@@ -73,7 +73,7 @@ source installation and native `.deb`.
 
 ```sh
 sudo apt update
-sudo apt install ./jax-herdr-hud_0.1.1-1_all.deb
+sudo apt install ./jax-herdr-hud_0.1.2-1_all.deb
 ```
 
 APT installs Python/GTK/VTE dependencies from Ubuntu. The `.deb` contains the HUD
@@ -95,23 +95,16 @@ Choose **New space** to add another named space. Both are visible in `herdr`.
 
 ### 6. Enable the floating H (optional)
 
-The standalone window works immediately. To use the bubble:
+The H extension is already included in the package. No separate download is needed.
 
-1. Save your desktop work, then **log out and log back in** so GNOME discovers the
-   newly installed system extension.
-2. Open a terminal and run these commands as your normal desktop user:
+1. Open Herdr Hud and click the **gear** at the top left.
+2. Click **Enable floating H**.
+3. If setup asks you to log out and back in, do that once so GNOME can discover it.
+4. Click H to show/hide Hud, or drag it to reposition it.
 
-```sh
-# Only needed when the legacy development extension was previously installed:
-gnome-extensions disable herdr-hud@local 2>/dev/null || true
-
-gnome-extensions enable herdr-hud@alex-jax.github.io
-gnome-extensions info herdr-hud@alex-jax.github.io
-```
-
-3. If GNOME says user extensions are globally disabled, turn them on in the
-   **Extensions** application, then repeat the enable command.
-4. Click H to show/hide the HUD and drag H to reposition it.
+The button also disables the old development H extension when present. If desktop
+extensions are globally off, setup explains that they must be turned on in the
+Extensions app first. Other extension preferences are preserved.
 
 Never enable the old and new UUIDs together. For extension code updates, log out
 and back in again. The `.deb` enables background startup at GNOME login; it does
@@ -129,9 +122,24 @@ extension as well if you do not want the HUD to start at login.
 
 ### 7. Update or remove
 
-For updates, exit the HUD, download the next `.deb`, verify its checksum and run
-`sudo apt install ./<downloaded-file>.deb`. Reopen the HUD; log out/in if the
-extension changed. There is no automatic APT update repository for this preview.
+When the download arrow appears beside the information button, click it to open
+these instructions for the new version. Checks run once every 24 hours.
+
+1. Exit Hud using its power button. Your Herdr terminals keep running.
+2. Open the [0.1.2 release downloads](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.2-preview.1).
+   Save `jax-herdr-hud_0.1.2-1_all.deb` and `SHA256SUMS` in the same folder.
+3. Open a terminal in that folder and run:
+
+```sh
+sha256sum --check --ignore-missing SHA256SUMS
+sudo apt install ./jax-herdr-hud_0.1.2-1_all.deb
+/usr/bin/herdr-hud
+```
+
+Continue only if the `.deb` checksum reports `OK`. Your settings and Herdr sessions
+are retained. This update does not change the extension code, so a companion
+restart is enough. For future extension updates, log out and back in when instructed.
+There is no automatic APT update repository for this preview.
 
 To remove the `.deb` installation:
 
@@ -157,7 +165,7 @@ sudo apt update
 sudo apt install git python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 gsettings-desktop-schemas adwaita-icon-theme
 git clone https://github.com/alex-jax/jax-herdr-hud.git
 cd jax-herdr-hud
-git checkout v0.1.1-preview.1
+git checkout v0.1.2-preview.1
 ```
 
 Use `git switch main` instead if you want the current development source.
@@ -196,7 +204,7 @@ From a checkout with Python 3 and `dpkg-deb` (provided by Ubuntu's `dpkg`):
 
 ```sh
 python3 scripts/build_deb.py
-sudo apt install ./dist/jax-herdr-hud_0.1.1-1_all.deb
+sudo apt install ./dist/jax-herdr-hud_0.1.2-1_all.deb
 ```
 
 Building needs no root and performs no downloads. To prepare the separate extension

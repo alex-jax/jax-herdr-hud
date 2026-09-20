@@ -187,7 +187,7 @@ need logout/login under this project's GNOME 50 workflow.
 
 ## Release packaging contracts
 
-- App version is `0.1.1`; extension revision is separate. Synchronize app_info.py
+- App version is `0.1.2`; extension revision is separate. Synchronize app_info.py
   and snap/snapcraft.yaml when changing the release version.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID
   is `herdr-hud@alex-jax.github.io`; never enable it with the legacy UUID.
@@ -216,3 +216,7 @@ no maintainer scripts, and no root required for building. It installs the native
 launcher, optional GNOME 50 extension and login autostart. Read install.md before
 changing those paths. Keep Snap preview validation separate from Debian validation.
 The source-install scripts are not Debian removal scripts.
+
+- Update checks use `RELEASE_TAG` in app_info.py for preview-aware version comparison.
+  Keep it synchronized with the GitHub release tag when publishing. Include updates.py
+  in every installer, and keep daily network checks off the GTK thread.

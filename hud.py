@@ -13,7 +13,9 @@ from gi.repository import Gtk, Gdk, Gio, GLib, Pango, Vte
 from backend import (Monitor, attention, environment, ensure_session, create_terminal,
                      create_shared_workspace, request, resolve_herdr, configure_herdr,
                      check_herdr, HerdrUnavailable)
-from app_info import VERSION, ATTRIBUTION, AUTHOR_URL, UPSTREAM_URL, HERDR_URL
+from enable import enable_extension
+from updates import UpdateMonitor, UPDATE_GUIDE_URL
+from app_info import RELEASE_TAG, VERSION, ATTRIBUTION, AUTHOR_URL, UPSTREAM_URL, HERDR_URL
 
 APP_ID = 'io.github.herdr.Hud'
 CONFIG = Path(os.environ.get('XDG_CONFIG_HOME', str(Path.home() / '.config'))) / 'herdr-hud'
@@ -137,7 +139,9 @@ class Hud(Gtk.Application):
         except (OSError, ValueError):
             self.settings = {}
         configure_herdr(self.settings.get('herdr_path'))
+        self.extension_pending = False
         self.setup_pending = False
+        self.update_tag = None
         self.theme = self.settings.get('theme', 'system')
         self.sidebar_expanded_width = max(32, self.settings.get('sidebar_expanded_width',
             self.settings.get('sidebar_width', 245) or 245))
@@ -156,6 +160,9 @@ class Hud(Gtk.Application):
                                lambda *a: idle(self.event_received, *a),
                                lambda *a: idle(self.sessions_changed, *a))
         self.monitor.start()
+        self.update_monitor = UpdateMonitor(CONFIG / 'updates.json', RELEASE_TAG,
+            lambda tag: idle(self.update_available, tag))
+        self.update_monitor.start()
         self.shell_watch = Gio.bus_watch_name(Gio.BusType.SESSION, 'org.gnome.Shell',
                              Gio.BusNameWatcherFlags.NONE, lambda *_: self.publish(), None)
 
@@ -167,6 +174,25 @@ class Hud(Gtk.Application):
             self.show()
         self.publish()
         return 0
+
+    def update_available(self, tag):
+        if self.closing:
+            return
+        self.update_tag = tag
+        self.update_button.set_visible(bool(tag))
+        if tag:
+            label = 'Herdr Hud ' + tag.removeprefix('v') + ' is available — how to download and update'
+            self.update_button.set_tooltip_text(label)
+            self.update_button.get_accessible().set_name(label)
+
+    def open_update(self):
+        if self.update_tag:
+            try:
+                Gtk.show_uri_on_window(self.window, UPDATE_GUIDE_URL + self.update_tag
+                                       + '/install.md#7-update-or-remove',
+                                       Gdk.CURRENT_TIME)
+            except GLib.Error as exc:
+                self.status.set_text('Could not open update instructions: ' + str(exc))
 
     def show_about(self):
         dialog = Gtk.AboutDialog(transient_for=self.window, modal=True,
@@ -184,6 +210,27 @@ class Hud(Gtk.Application):
         self.herdr_entry.set_text(self.settings.get('herdr_path') or '')
         self.stack.set_visible_child_name('setup')
         self.active_title.set_text('Herdr setup')
+
+    def enable_floating_h(self):
+        if self.extension_pending or self.closing:
+            return
+        self.extension_pending = True
+        self.extension_button.set_sensitive(False)
+        self.extension_message.set_text('Turning on the floating H…')
+        def work():
+            try:
+                message = enable_extension()
+            except (GLib.Error, OSError) as exc:
+                message = 'Could not enable the floating H. Open Hud in a GNOME desktop session. ' + str(exc)
+            idle(self.extension_enabled, message)
+        threading.Thread(target=work, daemon=True).start()
+
+    def extension_enabled(self, message):
+        self.extension_pending = False
+        if self.closing:
+            return
+        self.extension_button.set_sensitive(True)
+        self.extension_message.set_text(message)
 
     def choose_herdr(self):
         dialog = Gtk.FileChooserDialog(title='Choose Herdr executable', transient_for=self.window,
@@ -268,6 +315,11 @@ class Hud(Gtk.Application):
         credits.set_tooltip_text(ATTRIBUTION)
         credits.get_accessible().set_name('Credits')
         header.pack_start(credits)
+        self.update_button = self.icon_button('go-down-symbolic',
+            'Download update — view GitHub instructions', self.open_update)
+        self.update_button.set_no_show_all(True)
+        self.update_button.get_style_context().add_class('suggested-action')
+        header.pack_start(self.update_button)
         header.pack_start(self.icon_button('preferences-system-symbolic', 'Herdr setup and floating H', self.show_setup))
         self.theme_button = self.icon_button('weather-clear-night-symbolic', 'Switch theme', self.toggle_theme)
         header.pack_end(self.icon_button('system-shutdown-symbolic', 'Exit Hud — keep sessions running', self.exit_hud))
@@ -359,11 +411,14 @@ class Hud(Gtk.Application):
             if label == 'Retry':
                 self.retry_button = control
         setup.pack_start(controls, False, False, 0)
-        setup.pack_start(Gtk.Label(label='The floating H is optional. Install the separate GNOME 50\n'
-            'extension from the release ZIP or GNOME Extensions catalogue.\n'
-            'Disable the old herdr-hud@local extension before enabling the new one.',
-            wrap=True, xalign=0), False, False, 0)
-        setup.pack_start(Gtk.LinkButton(uri='https://extensions.gnome.org', label='Open GNOME Extensions catalogue'), False, False, 0)
+        self.extension_message = Gtk.Label(
+            label='The floating H comes with Herdr Hud. Turn it on below to show or hide '
+                  'your terminals from your desktop. Requires GNOME 50.', wrap=True, xalign=0)
+        setup.pack_start(self.extension_message, False, False, 0)
+        self.extension_button = Gtk.Button(label='Enable floating H')
+        self.extension_button.set_halign(Gtk.Align.START)
+        self.extension_button.connect('clicked', lambda *_: self.enable_floating_h())
+        setup.pack_start(self.extension_button, False, False, 0)
         self.stack.add_named(setup, 'setup')
         right.pack_start(self.stack, True, True, 0)
         self.split.pack2(right, True, True)
@@ -1109,16 +1164,19 @@ class Hud(Gtk.Application):
             GLib.Source.remove(self.sidebar_refresh_id)
             self.sidebar_refresh_id = 0
         self.monitor.stop()
+        self.update_monitor.stop()
         for terminal in self.terminals.values():
             terminal.detach()
         self.shell_call('ExitHud')
         self.quit()
 
     def do_shutdown(self):
+        self.update_monitor.stop()
         if not self.closing:
             self.monitor.stop()
             for terminal in self.terminals.values():
                 terminal.detach()
+        self.closing = True
         Gio.bus_unwatch_name(self.shell_watch)
         Gtk.Application.do_shutdown(self)
 

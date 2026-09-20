@@ -1,3 +1,62 @@
+# Public preview validation — 0.1.2
+
+Date: 20 September 2026. Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.
+Public tag: `v0.1.2-preview.1`.
+
+This release adds background GitHub checks once every 24 hours, a download arrow
+shown only for newer releases, and a link to that version's update instructions.
+The check time and result persist across restarts. Setup now enables the bundled
+floating H with one click and explains when a logout/login is needed.
+
+## Checks run for 0.1.2
+
+- 25 Python unit/package tests passed, covering daily cache/retry behavior,
+  preview version ordering, badge clearing after upgrade, bounded HTTP reads,
+  extension enablement, preference preservation and Debian payload contents.
+- Four JavaScript extension-launcher tests passed.
+- Final Debian package: `jax-herdr-hud_0.1.2-1_all.deb`; extracted launcher
+  reports `Herdr Hud 0.1.2`. APT simulated installation resolves all dependencies
+  without removing any packages. HTTPS CA certificates are now a dependency.
+- Extracted Debian payload: update-icon, setup, sidebar and desktop smoke tests
+  passed under separate D-Bus sessions. The update test uses a simulated future
+  release and checks visibility, tooltip, instructions link, worker delivery,
+  daily cache and shutdown behavior without making network requests.
+- Isolated GNOME 50 test with the extracted Debian launcher and packaged extension
+  passed: enabling through the new helper, pointer grabs, drag, accent styling,
+  exact hide/show geometry, D-Bus and clean extension disable.
+- Cold-start regression still passes: one default `~` terminal opens automatically;
+  New space adds exactly one additional workspace.
+
+All five smoke tests exited zero. Test-session service shutdown and simulated menu
+warnings can appear in logs. No GTK critical messages appeared in this release's
+smoke output. Tests never stop user Herdr servers; disposable servers are cleaned up.
+
+This remains a development preview. Clean-VM install/upgrade/removal and other
+architectures/desktops remain unverified. Extension code/revision is unchanged.
+No Snap binary or Store submission is included.
+
+## Reproduce
+
+```sh
+python3 -m unittest discover -s tests -v
+node --test tests/test_extension_launcher.mjs
+python3 scripts/build_deb.py --output dist/0.1.2
+dpkg-deb --extract dist/0.1.2/jax-herdr-hud_0.1.2-1_all.deb build/deb-0.1.2
+build/deb-0.1.2/usr/bin/herdr-hud --version
+apt-get --simulate install ./dist/0.1.2/jax-herdr-hud_0.1.2-1_all.deb
+python3 scripts/release.py --output dist/0.1.2
+```
+
+Set `HUD_TEST_SOURCE` to the absolute extracted `usr/lib/herdr-hud` directory for
+update/setup/sidebar/desktop tests and run each with `dbus-run-session`.
+For the extension test, leave that variable unset, set `HUD_TEST_LAUNCHER` to a
+JSON array containing the extracted launcher, and `HUD_TEST_EXTENSION` to the
+extracted extension directory. Run smoke tests sequentially.
+
+---
+
+## Previous release records
+
 # Public preview validation — 0.1.1
 
 Date: 20 September 2026. Target: Ubuntu 26.04, GNOME Shell 50, amd64,

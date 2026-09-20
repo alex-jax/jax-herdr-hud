@@ -9,7 +9,7 @@ This is an independently maintained Ubuntu implementation.
 ## Install
 
 **[Step-by-step installation → install.md](install.md)** ·
-**[Download the .deb preview](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.1-preview.1)**
+**[Download the .deb preview](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.2-preview.1)**
 
 Targets Ubuntu 26.04 / GNOME 50; tested on amd64 with Herdr 0.9.1.
 The native `.deb` installs the app and optional floating H extension, and APT
@@ -26,7 +26,9 @@ and a draggable floating H with Ubuntu's accent colour.
 
 ## Use
 
-Version 0.1.1 fixes cold startup: the default `~` space and terminal open
+Version 0.1.2 adds daily update checks, a download arrow linking to update
+instructions, and one-click activation of the bundled floating H. It retains
+the cold-start fix: the default `~` space and terminal open
 automatically, before you add any additional spaces.
 
 Browse Spaces and Agents, attach real terminals, add or rename spaces and terminals,
@@ -35,7 +37,11 @@ Exit Hud disconnects only its clients. Explicit Close stops the targeted termina
 or space. The floating H is optional; the main window works independently.
 
 The setup button locates Herdr automatically or lets you select its executable.
+The H extension comes with the installer; click **Enable floating H** in setup
+to turn it on. Setup tells you if a one-time logout/login is needed.
 The About dialog contains version, publisher and original-project attribution.
+A daily GitHub check shows a download arrow beside the information button when a
+newer release is available; click it to open the GitHub update instructions.
 
 ## Documentation
 

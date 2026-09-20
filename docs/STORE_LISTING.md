@@ -4,7 +4,7 @@
 
 **Proposed snap ID:** `herdr-hud-alex-jax` (not registered)
 
-**Version:** 0.1.1
+**Version:** 0.1.2
 
 **Publisher:** Alex Jax — https://github.com/alex-jax
 

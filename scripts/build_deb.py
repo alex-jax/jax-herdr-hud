@@ -30,7 +30,7 @@ def build(output):
             target.write_text(text)
             target.chmod(mode)
 
-        for name in ('hud.py', 'backend.py', 'app_info.py', 'runtime_env.py'):
+        for name in ('hud.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
             copy(name, 'usr/lib/herdr-hud/' + name)
         write('usr/bin/herdr-hud', '''#!/usr/bin/python3
 from pathlib import Path
@@ -70,7 +70,7 @@ Section: utils
 Priority: optional
 Architecture: all
 Maintainer: Alex Jax <alex-jax@users.noreply.github.com>
-Depends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, gsettings-desktop-schemas, adwaita-icon-theme
+Depends: ca-certificates, python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, gsettings-desktop-schemas, adwaita-icon-theme
 Recommends: fonts-ubuntu
 Installed-Size: {size}
 Homepage: https://github.com/alex-jax/jax-herdr-hud

@@ -5,8 +5,16 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+import threading
+from unittest.mock import patch
 sys.path.insert(0, os.environ.get('HUD_TEST_SOURCE', str(Path(__file__).resolve().parents[1])))
 import hud
+# Network discovery is covered separately; these desktop tests stay offline.
+class NoUpdates:
+    def __init__(self, *args): pass
+    def start(self): pass
+    def stop(self): pass
+hud.UpdateMonitor = NoUpdates
 import backend
 from hud import Gtk, GLib
 
@@ -51,6 +59,21 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
         assert app.settings['herdr_path'] == str(program)
         assert backend.resolve_herdr() == str(program)
         app.show_setup()
+        def enable_h():
+            assert threading.current_thread() is not threading.main_thread()
+            return 'The floating H is ready. Log out and log back in once to show it.'
+        with patch('hud.enable_extension', side_effect=enable_h) as enable:
+            app.extension_button.clicked()
+            assert not app.extension_button.get_sensitive()
+            app.extension_button.clicked()
+            until = time.monotonic() + 5
+            while app.extension_pending and time.monotonic() < until:
+                pump()
+            assert not app.extension_pending
+            assert app.extension_button.get_sensitive()
+            assert 'Log out and log back in' in app.extension_message.get_text()
+            enable.assert_called_once()
+        print('PASS: bundled H button runs off-thread, prevents duplicate requests and explains login')
         assert app.herdr_entry.get_text() == str(program)
         print('PASS: missing dependency, invalid path, executable with spaces, Retry and persisted selection')
         def close_about():

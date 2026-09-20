@@ -12,6 +12,12 @@ os.environ.setdefault('GDK_BACKEND', 'x11')
 output_dir = Path(os.environ.get('HUD_TEST_OUTPUT', tempfile.mkdtemp(prefix='herdr-hud-test-output-')))
 output_dir.mkdir(parents=True, exist_ok=True)
 import hud
+# Network discovery is covered separately; these desktop tests stay offline.
+class NoUpdates:
+    def __init__(self, *args): pass
+    def start(self): pass
+    def stop(self): pass
+hud.UpdateMonitor = NoUpdates
 import backend
 from hud import Gtk, Gdk, Gio, GLib
 from backend import request, SessionWatcher

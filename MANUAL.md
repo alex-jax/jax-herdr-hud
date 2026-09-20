@@ -5,7 +5,7 @@ GNOME Shell extension providing a floating **H** button. The project targets
 Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
-This manual describes release 0.1.1, prepared on 20 September 2026.
+This manual describes release 0.1.2, prepared on 20 September 2026.
 
 A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).
 Original: [Herdr HUD for Omarchy](https://github.com/finna/omarchy-herdr-hud).
@@ -293,3 +293,25 @@ The extension test starts headless GNOME with a temporary instrumented extension
 It defaults to the source companion. Set `HUD_TEST_LAUNCHER` to a JSON argv array
 to test an extracted snap or installed launcher. Production extension files never
 contain these test hooks. See the publishing guide and AGENTS.md for details.
+
+## Update notifications
+
+Hud checks this project's public GitHub releases in the background on first launch
+and then once every 24 hours while running, including while hidden. The last attempt
+and available release are saved in `herdr-hud/updates.json` alongside settings, so
+restarts do not trigger extra checks. If the app was closed when a check became due,
+it checks on its next launch. Offline or failed checks retry after 24 hours.
+
+When a newer release is available, a highlighted download arrow appears immediately
+beside the information button at the top left. Its tooltip identifies the version;
+click it to open that release's GitHub update instructions. Preview releases are included. The icon
+remains until the installed release is current or a later check finds no newer release.
+Updates are downloaded and installed manually; the checker does not change sessions.
+
+## Turn on the bundled floating H
+
+The Debian package and source installer include the H extension. Open setup (the
+gear), then click **Enable floating H**. No separate download or terminal command
+is needed. Hud turns it on for GNOME 50 and retains your other extension settings.
+If GNOME has not discovered it yet, setup asks you to log out and back in once.
+If desktop extensions are globally off, setup explains how to turn them back on.

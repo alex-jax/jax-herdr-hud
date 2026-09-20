@@ -15,10 +15,14 @@ os.environ['XDG_CONFIG_HOME'] = tmp.name
 os.environ['XDG_CACHE_HOME'] = tmp.name + '/cache'
 os.environ['XDG_STATE_HOME'] = tmp.name + '/state'
 os.environ['GSETTINGS_BACKEND'] = 'keyfile'
+update_state = Path(tmp.name) / 'herdr-hud/updates.json'
+update_state.parent.mkdir(parents=True)
+update_state.write_text(json.dumps({'checked': time.time()}))
 # Instrument only a temporary copy, never the user's installed extension.
 source = Path(os.environ.get('HUD_TEST_SOURCE', str(Path(__file__).resolve().parents[1])))
 sys.path.insert(0, str(source))
 from backend import request
+from enable import enable_extension
 output_dir = Path(os.environ.get('HUD_TEST_OUTPUT', tempfile.mkdtemp(prefix='herdr-hud-shell-output-')))
 output_dir.mkdir(parents=True, exist_ok=True)
 extension_source = Path(os.environ.get('HUD_TEST_EXTENSION', str(source / 'extension')))
@@ -61,7 +65,10 @@ try:
         except GLib.Error:
             pass
     assert info and info.get('state') == 1, repr(info)
-    print('PASS: GNOME 50 loaded and enabled the floating H extension', flush=True)
+    call('/org/gnome/Shell', 'org.gnome.Shell.Extensions', 'DisableExtension',
+         GLib.Variant('(s)', (uuid,)))
+    assert 'floating H is on' in enable_extension()
+    print('PASS: bundled H setup enables the extension in an isolated GNOME 50 desktop', flush=True)
     iface = 'org.gnome.Shell.Extensions.HerdrHud'
     path = '/org/gnome/Shell/Extensions/HerdrHud'
     def state():
