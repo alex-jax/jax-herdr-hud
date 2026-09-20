@@ -11,11 +11,8 @@ This is an independently maintained Ubuntu implementation.
 **[Step-by-step installation → install.md](install.md)** ·
 **[Download the .deb preview](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.2-preview.1)**
 
-> **Important — finish setup with a logout/login:** After installing **Herdr** and
-> **Herdr Hud**, open Hud's **gear/settings** and click **Enable floating H**.
-> **Save your work, log out of Ubuntu, then log back in.** This lets GNOME load the
-> H extension and connect it to Herdr Hud, which displays your Herdr terminals.
-> Closing the app or locking the screen does not replace logging out.
+**Quick setup:** Download the `.deb` → install Herdr → install Hud → start
+`herdr` once → **log out and back in** → open Hud → **gear → Enable floating H**.
 
 Targets Ubuntu 26.04 / GNOME 50; tested on amd64 with Herdr 0.9.1.
 The native `.deb` installs the app and optional floating H extension, and APT
@@ -54,7 +51,7 @@ or space. The floating H is optional; the main window works independently.
 
 The setup button locates Herdr automatically or lets you select its executable.
 The H extension comes with the installer; click **Enable floating H** in setup
-to turn it on. Complete first-time setup by logging out and back in once.
+to turn it on after completing the installation steps above.
 The About dialog contains version, publisher and original-project attribution.
 A daily GitHub check shows a download arrow beside the information button when a
 newer release is available; click it to open the GitHub update instructions.
