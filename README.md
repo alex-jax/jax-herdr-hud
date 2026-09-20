@@ -9,7 +9,7 @@ This is an independently maintained Ubuntu implementation.
 ## Install
 
 **[Step-by-step installation → install.md](install.md)** ·
-**[Download the .deb preview](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.2-preview.1)**
+**[Download the .deb preview](https://github.com/alex-jax/jax-herdr-hud/releases)**
 
 **Quick setup:** Download the `.deb` → install Herdr → install Hud → start
 `herdr` once → **log out and back in** → open Hud → **gear → Enable floating H**.

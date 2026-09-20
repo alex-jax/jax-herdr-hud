@@ -2,7 +2,7 @@
 
 For **Ubuntu 26.04 with GNOME 50**. The floating H is included in the download.
 
-1. **Download [jax-herdr-hud_0.1.2-1_all.deb](https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.2-preview.1/jax-herdr-hud_0.1.2-1_all.deb)** from the [release page](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.2-preview.1).
+1. **Download the `*_all.deb` file** from the [release page](https://github.com/alex-jax/jax-herdr-hud/releases).
 2. **Install Herdr** using the [official instructions](https://herdr.dev/docs/install/). Skip this if you already have it.
 3. **Install Herdr Hud** by opening the downloaded `.deb` with your software installer.
 4. **Start Herdr once** by running `herdr` in a terminal.
@@ -14,10 +14,11 @@ That's it. Click **H** to show or hide Hud, or drag it wherever you like.
 <details>
 <summary>If the .deb does not open in a software installer</summary>
 
-Open a terminal in the folder containing the download and run:
+Open a terminal in the download folder and run this, replacing
+`downloaded-file.deb` with the name of the file you downloaded:
 
 ```sh
-sudo apt install ./jax-herdr-hud_0.1.2-1_all.deb
+sudo apt install ./downloaded-file.deb
 ```
 
 </details>
