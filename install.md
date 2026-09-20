@@ -99,8 +99,13 @@ The H extension is already included in the package. No separate download is need
 
 1. Open Herdr Hud and click the **gear** at the top left.
 2. Click **Enable floating H**.
-3. If setup asks you to log out and back in, do that once so GNOME can discover it.
-4. Click H to show/hide Hud, or drag it to reposition it.
+3. **Save your work, log out of Ubuntu, and log back in once to complete setup.**
+4. After logging back in, click H to show/hide Hud, or drag it to reposition it.
+
+> **Important:** Do this after installing both Herdr and Herdr Hud and clicking
+> **Enable floating H** in settings. The fresh login lets GNOME load the bundled H
+> extension and connect it to Hud. Hud then displays your Herdr terminals.
+> Simply closing Hud or locking/unlocking the screen is not a logout/login.
 
 The button also disables the old development H extension when present. If desktop
 extensions are globally off, setup explains that they must be turned on in the

@@ -313,5 +313,9 @@ Updates are downloaded and installed manually; the checker does not change sessi
 The Debian package and source installer include the H extension. Open setup (the
 gear), then click **Enable floating H**. No separate download or terminal command
 is needed. Hud turns it on for GNOME 50 and retains your other extension settings.
-If GNOME has not discovered it yet, setup asks you to log out and back in once.
+**Complete first-time setup by saving your work, logging out of Ubuntu, and
+logging back in once after installing Herdr and Hud and enabling the H.** This
+loads the bundled GNOME extension and connects the floating H to Hud, where your
+Herdr terminals appear. Closing Hud or locking the screen does not replace this
+logout/login step.
 If desktop extensions are globally off, setup explains how to turn them back on.
