@@ -5,7 +5,7 @@ GNOME Shell extension providing a floating **H** button. The project targets
 Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
-This manual describes release 0.1.0, prepared on 20 September 2026.
+This manual describes release 0.1.1, prepared on 20 September 2026.
 
 A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).
 Original: [Herdr HUD for Omarchy](https://github.com/finna/omarchy-herdr-hud).
@@ -87,6 +87,10 @@ The extension also starts the companion in the background when enabled. The
 application's D-Bus identity prevents duplicate companion instances on one bus.
 
 ## Spaces, terminals and agents
+
+At launch, Hud starts Herdr's `default` server if needed and opens its first
+terminal. A fresh server supplies the default `~` space, just like bare `herdr`.
+Existing spaces are reused; reopening Hud does not add another space.
 
 A **space** is a Herdr workspace. A terminal row represents a pane, attached by
 its terminal ID. Herdr also has named **server sessions**, which may each contain

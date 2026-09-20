@@ -24,15 +24,9 @@ def test_env():
 hud.environment = test_env
 backend.environment = test_env
 hud.CONFIG = Path(temp.name) / 'hud-settings'
-class NoMonitor:
-    def __init__(self, *args): pass
-    def start(self): pass
-    def stop(self): pass
-hud.Monitor = NoMonitor
 app = hud.Hud()
 app.set_application_id('io.github.herdr.Hud.Smoke')
 app.register(None)
-app.monitor.stop()
 app.show()
 
 
@@ -58,12 +52,19 @@ def until(fn, timeout=10):
 
 path = str(Path(temp.name) / 'herdr/herdr.sock')
 try:
-    session, snap = backend.ensure_session('default')
+    until(lambda: app.selected is not None and app.selected in app.terminals)
+    app.monitor.stop()
+    app.monitor.join(6)
+    pump()
+    session, snap = app.snapshots[path]
+    assert len(snap['workspaces']) == len(snap['panes']) == 1, snap
+    assert snap['workspaces'][0]['label'] == '~', snap
     pane = snap['panes'][0]
-    session = {'name': 'default', 'socket_path': path, 'running': True}
-    app.snapshot_changed(session, snap, None)
     key = (path, pane['terminal_id'])
-    app.select(key)
+    assert app.selected == key
+    _, reopened = backend.ensure_session('default')
+    assert [p['terminal_id'] for p in reopened['panes']] == [key[1]]
+    print('PASS: cold startup opens the single default ~ terminal; reuse adds no space', flush=True)
     terminal = app.terminals[key]
     until(lambda: terminal.pid)
     pump(1)
@@ -240,6 +241,8 @@ try:
     until(lambda: not app.creating_session and app.selected not in (key, second_key))
     shared_key = app.selected
     assert shared_key[0] == path
+    created = request(path, 'session.snapshot')['snapshot']
+    assert len(created['workspaces']) == len(created['panes']) == 2
     shared_workspace = app.panes[shared_key]['workspace_id']
     # Bare Herdr's API uses the same default server as its original TUI.
     original = subprocess.run([backend.resolve_herdr(), 'api', 'snapshot'], env=test_env(),

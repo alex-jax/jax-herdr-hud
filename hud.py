@@ -122,6 +122,7 @@ class Hud(Gtk.Application):
         self.sessions = []
         self.creating_session = False
         self.selected = None
+        self.initial_selection_pending = True
         self.rebuilding = False
         self.sidebar_refresh_id = 0
         self.sidebar_rows = {}
@@ -250,7 +251,7 @@ class Hud(Gtk.Application):
     def build_window(self):
         self.window = Gtk.ApplicationWindow(application=self)
         self.window.set_title('Herdr Hud')
-        self.window.set_wmclass('herdr-hud', APP_ID)
+        self.window.set_wmclass('herdr-hud', self.get_application_id())
         self.window.set_icon_name(APP_ID)
         self.window.set_default_size(self.settings.get('width', 1040), self.settings.get('height', 660))
         self.window.set_size_request(620, 360)
@@ -574,6 +575,15 @@ class Hud(Gtk.Application):
             key = (path, pane['terminal_id'])
             self.transition(key, pane, pane['agent_status'])
         self.update_panes()
+
+        if self.initial_selection_pending and session['name'] == 'default' and snapshot['panes']:
+            self.initial_selection_pending = False
+            if self.selected is None:
+                idle(self.select_initial_terminal, (path, snapshot['panes'][0]['terminal_id']))
+
+    def select_initial_terminal(self, key):
+        if not self.closing and self.selected is None and key in self.panes:
+            self.select(key)
 
     def transition(self, key, pane, state):
         previous = self.states.get(key)

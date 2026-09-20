@@ -1,6 +1,6 @@
 name: herdr-hud-alex-jax
 base: core26
-version: '0.1.0'
+version: '0.1.1'
 summary: Native Herdr terminals and agents for Ubuntu
 license: GPL-3.0-or-later
 description: |

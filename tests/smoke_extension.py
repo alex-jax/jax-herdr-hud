@@ -17,6 +17,8 @@ os.environ['XDG_STATE_HOME'] = tmp.name + '/state'
 os.environ['GSETTINGS_BACKEND'] = 'keyfile'
 # Instrument only a temporary copy, never the user's installed extension.
 source = Path(os.environ.get('HUD_TEST_SOURCE', str(Path(__file__).resolve().parents[1])))
+sys.path.insert(0, str(source))
+from backend import request
 output_dir = Path(os.environ.get('HUD_TEST_OUTPUT', tempfile.mkdtemp(prefix='herdr-hud-shell-output-')))
 output_dir.mkdir(parents=True, exist_ok=True)
 extension_source = Path(os.environ.get('HUD_TEST_EXTENSION', str(source / 'extension')))
@@ -162,4 +164,9 @@ finally:
     except subprocess.TimeoutExpired:
         process.kill()
     logfile.close()
+    # Startup now creates a server; stop only this test's disposable instance.
+    try:
+        request(str(Path(tmp.name) / 'herdr/herdr.sock'), 'server.stop')
+    except (OSError, ValueError, RuntimeError):
+        pass
     tmp.cleanup()

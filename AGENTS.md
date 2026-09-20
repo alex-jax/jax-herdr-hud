@@ -187,7 +187,7 @@ need logout/login under this project's GNOME 50 workflow.
 
 ## Release packaging contracts
 
-- App version is `0.1.0`; extension revision is separate. Synchronize app_info.py
+- App version is `0.1.1`; extension revision is separate. Synchronize app_info.py
   and snap/snapcraft.yaml when changing the release version.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID
   is `herdr-hud@alex-jax.github.io`; never enable it with the legacy UUID.

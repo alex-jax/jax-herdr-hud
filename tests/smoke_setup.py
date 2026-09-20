@@ -55,7 +55,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
         print('PASS: missing dependency, invalid path, executable with spaces, Retry and persisted selection')
         def close_about():
             dialog = next(w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.AboutDialog))
-            assert dialog.get_version() == '0.1.0'
+            assert dialog.get_version() == hud.VERSION
             assert 'Alex Finn' in dialog.get_comments() and 'Alex Jax' in dialog.get_comments()
             dialog.response(Gtk.ResponseType.CLOSE)
             return GLib.SOURCE_REMOVE

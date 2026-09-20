@@ -15,7 +15,7 @@ https://ubuntu.com/docs/snapcraft/9/how-to/crafting/enable-classic-confinement/
 
 ```sh
 snapcraft
-python3 scripts/release.py --snap ./herdr-hud-alex-jax_0.1.0_amd64.snap
+python3 scripts/release.py --snap ./herdr-hud-alex-jax_0.1.1_amd64.snap
 ```
 
 The recipe is `snap/snapcraft.yaml`, base `core26`, classic confinement, amd64.
@@ -48,7 +48,7 @@ classic linter or snapd installation. A later build may resolve newer Ubuntu upd
 In a disposable Ubuntu 26.04 GNOME desktop VM, with Herdr installed independently:
 
 ```sh
-sudo snap install --dangerous --classic ./dist/herdr-hud-alex-jax_0.1.0_amd64.snap
+sudo snap install --dangerous --classic ./dist/herdr-hud-alex-jax_0.1.1_amd64.snap
 herdr-hud-alex-jax --version
 herdr-hud-alex-jax
 ```
@@ -61,7 +61,7 @@ for destructive Close tests.
 Local extracted-runtime verification (does not replace the VM checks):
 
 ```sh
-unsquashfs -d /tmp/herdr-hud-extracted dist/herdr-hud-alex-jax_0.1.0_amd64.snap
+unsquashfs -d /tmp/herdr-hud-extracted dist/herdr-hud-alex-jax_0.1.1_amd64.snap
 SNAP=/tmp/herdr-hud-extracted /tmp/herdr-hud-extracted/usr/bin/herdr-hud --runtime-check
 python3 -m unittest discover -s tests -v
 dbus-run-session -- scripts/run_packaged_test.sh /tmp/herdr-hud-extracted tests/smoke_setup.py

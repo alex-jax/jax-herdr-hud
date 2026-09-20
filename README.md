@@ -9,7 +9,7 @@ This is an independently maintained Ubuntu implementation.
 ## Install
 
 **[Step-by-step installation → install.md](install.md)** ·
-**[Download the .deb preview](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.0-preview.1)**
+**[Download the .deb preview](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.1-preview.1)**
 
 Targets Ubuntu 26.04 / GNOME 50; tested on amd64 with Herdr 0.9.1.
 The native `.deb` installs the app and optional floating H extension, and APT
@@ -25,6 +25,9 @@ copy-on-selection, right-click paste, linked tab renaming, light/dark appearance
 and a draggable floating H with Ubuntu's accent colour.
 
 ## Use
+
+Version 0.1.1 fixes cold startup: the default `~` space and terminal open
+automatically, before you add any additional spaces.
 
 Browse Spaces and Agents, attach real terminals, add or rename spaces and terminals,
 search, copy by dragging, and paste with right-click. Hide keeps monitoring;

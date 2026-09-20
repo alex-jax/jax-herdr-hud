@@ -10,6 +10,7 @@ from pathlib import Path
 from runtime_env import host_environment
 
 _herdr_path = None
+_session_lock = threading.Lock()
 
 
 class HerdrUnavailable(RuntimeError):
@@ -186,8 +187,15 @@ class Monitor(threading.Thread):
                 watcher.stop()
 
     def run(self):
+        initialized = False
         while not self.stopping.is_set():
             try:
+                if not initialized:
+                    session, snapshot = ensure_session('default')
+                    if self.stopping.is_set():
+                        break
+                    self.changed(session, snapshot, None)
+                    initialized = True
                 sessions = list_sessions()
                 if self.stopping.is_set():
                     break
@@ -211,6 +219,12 @@ class Monitor(threading.Thread):
 
 def ensure_session(name, cwd=None, initialize=True):
     """Start a named headless server if needed; never launch Herdr's full TUI."""
+    # Startup and a New space request may arrive together.
+    with _session_lock:
+        return _ensure_session(name, cwd, initialize)
+
+
+def _ensure_session(name, cwd, initialize):
     sessions = list_sessions()
     session = next((s for s in sessions if s['name'] == name and s['running']), None)
     if session is None:

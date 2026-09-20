@@ -18,9 +18,11 @@ from app_info import VERSION, SNAP_NAME, EXTENSION_UUID
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--snap', type=Path, help='Snapcraft artifact to copy into dist')
+    parser.add_argument('--output', type=Path, default=SOURCE / 'dist',
+                        help='Release artifact directory')
     args = parser.parse_args()
-    out = SOURCE / 'dist'
-    out.mkdir(exist_ok=True)
+    out = args.output.resolve()
+    out.mkdir(parents=True, exist_ok=True)
     if args.snap:
         target = out / args.snap.name
         if args.snap.resolve() != target.resolve():

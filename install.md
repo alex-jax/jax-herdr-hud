@@ -50,14 +50,14 @@ if you want to use them; the HUD does not install agents or their credentials.
 
 ### 3. Download the preview and verify it
 
-Open the [release page](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.0-preview.1)
-and download `jax-herdr-hud_0.1.0-1_all.deb` and `SHA256SUMS`, or run:
+Open the [release page](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v0.1.1-preview.1)
+and download `jax-herdr-hud_0.1.1-1_all.deb` and `SHA256SUMS`, or run:
 
 ```sh
-mkdir -p ~/Downloads/jax-herdr-hud-0.1.0
-cd ~/Downloads/jax-herdr-hud-0.1.0
-curl -fLO https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.0-preview.1/jax-herdr-hud_0.1.0-1_all.deb
-curl -fLO https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.0-preview.1/SHA256SUMS
+mkdir -p ~/Downloads/jax-herdr-hud-0.1.1
+cd ~/Downloads/jax-herdr-hud-0.1.1
+curl -fLO https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.1-preview.1/jax-herdr-hud_0.1.1-1_all.deb
+curl -fLO https://github.com/alex-jax/jax-herdr-hud/releases/download/v0.1.1-preview.1/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS
 ```
 
@@ -73,7 +73,7 @@ source installation and native `.deb`.
 
 ```sh
 sudo apt update
-sudo apt install ./jax-herdr-hud_0.1.0-1_all.deb
+sudo apt install ./jax-herdr-hud_0.1.1-1_all.deb
 ```
 
 APT installs Python/GTK/VTE dependencies from Ubuntu. The `.deb` contains the HUD
@@ -90,8 +90,8 @@ Open **Herdr Hud** in Ubuntu's application launcher, or run:
 ```
 
 If setup appears, leave the executable field blank to discover Herdr automatically
-and click **Retry**, or select your Herdr executable. Choose **New space**, name
-it and click **Start**. The space also appears in the original `herdr` application.
+and click **Retry**, or select your Herdr executable. The default `~` space and its terminal open automatically on a fresh start.
+Choose **New space** to add another named space. Both are visible in `herdr`.
 
 ### 6. Enable the floating H (optional)
 
@@ -157,7 +157,7 @@ sudo apt update
 sudo apt install git python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 gsettings-desktop-schemas adwaita-icon-theme
 git clone https://github.com/alex-jax/jax-herdr-hud.git
 cd jax-herdr-hud
-git checkout v0.1.0-preview.1
+git checkout v0.1.1-preview.1
 ```
 
 Use `git switch main` instead if you want the current development source.
@@ -196,7 +196,7 @@ From a checkout with Python 3 and `dpkg-deb` (provided by Ubuntu's `dpkg`):
 
 ```sh
 python3 scripts/build_deb.py
-sudo apt install ./dist/jax-herdr-hud_0.1.0-1_all.deb
+sudo apt install ./dist/jax-herdr-hud_0.1.1-1_all.deb
 ```
 
 Building needs no root and performs no downloads. To prepare the separate extension
