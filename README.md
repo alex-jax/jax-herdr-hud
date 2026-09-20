@@ -35,11 +35,11 @@ Antigravity and OpenCode running in the AI Studio space.
 
 **Dark theme** — compact spaces, terminal rows and agent shortcuts.
 
-![Herdr Hud 1.0.0 in dark mode with two shells and five AI CLIs](docs/screenshots/jax-herdr-hud-dark.png)
+![Herdr Hud 1.0.0 in dark mode with two shells and five AI CLIs](docs/screenshots/herdr-hud-1.0.0-fullscreen-dark.png)
 
 **Light theme** — the same workspace in light mode.
 
-![Herdr Hud 1.0.0 in light mode with two shells and five AI CLIs](docs/screenshots/jax-herdr-hud-white.png)
+![Herdr Hud 1.0.0 in light mode with two shells and five AI CLIs](docs/screenshots/herdr-hud-1.0.0-fullscreen-light.png)
 
 ## Floating H
 
