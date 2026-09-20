@@ -30,16 +30,25 @@ right-click paste, light/dark display and a draggable floating H.
 
 ## Screenshots
 
-These screenshots show an earlier release. The current sidebar is more compact,
-and terminal text now follows Hud's monochrome light/dark display.
+Herdr Hud 1.0.0 with two shell terminals and Codex, Grok, Claude Code,
+Antigravity and OpenCode running in the AI Studio space.
 
-**Dark theme** — Spaces, Agents and the floating H.
+**Dark theme** — compact spaces, terminal rows and agent shortcuts.
 
-![Herdr Hud in dark mode, with a Codex agent, Spaces sidebar and floating H](docs/screenshots/jax-herdr-hud-dark.png)
+![Herdr Hud 1.0.0 in dark mode with two shells and five AI CLIs](docs/screenshots/jax-herdr-hud-dark.png)
 
 **Light theme** — the same workspace in light mode.
 
-![Herdr Hud in light mode, with a Codex agent, Spaces sidebar and floating H](docs/screenshots/jax-herdr-hud-white.png)
+![Herdr Hud 1.0.0 in light mode with two shells and five AI CLIs](docs/screenshots/jax-herdr-hud-white.png)
+
+## Floating H
+
+![Floating H icon with unread activity badge](docs/screenshots/floating-h.svg)
+
+**H is your draggable desktop shortcut to Hud.** Click it to show or hide the
+window; drag it wherever you like. The blue dot means there is unread agent
+activity. Its outline follows your desktop accent colour. Enable it from
+**Settings → Enable floating H** after the installation logout/login step.
 
 ## Use
 
