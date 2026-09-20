@@ -24,6 +24,16 @@ Features include separate Spaces/Agents lists, live status and notifications,
 copy-on-selection, right-click paste, linked tab renaming, light/dark appearance,
 and a draggable floating H with Ubuntu's accent colour.
 
+## Screenshots
+
+**Dark theme** — Spaces, Agents and the floating H.
+
+![Herdr Hud in dark mode, with a Codex agent, Spaces sidebar and floating H](docs/screenshots/jax-herdr-hud-dark.png)
+
+**Light theme** — the same workspace in light mode.
+
+![Herdr Hud in light mode, with a Codex agent, Spaces sidebar and floating H](docs/screenshots/jax-herdr-hud-white.png)
+
 ## Use
 
 Version 0.1.2 adds daily update checks, a download arrow linking to update
