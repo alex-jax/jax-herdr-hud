@@ -36,6 +36,8 @@ class UpdateTests(unittest.TestCase):
                              'v0.1.1-preview.10')
         self.assertTrue(updates.newer_tag('v0.1.1', 'v0.1.1-preview.10'))
         self.assertTrue(updates.newer_tag('v0.1.10', 'v0.1.9'))
+        self.assertTrue(updates.newer_tag('v1.0.0', 'v0.1.2-preview.1'))
+        self.assertIsNone(updates.newer_tag('v0.1.2-preview.1', 'v1.0.0'))
         self.assertIsNone(updates.newer_tag('v0.1.1-preview.10', 'v0.1.1'))
 
     def test_upgrade_hides_cached_icon_without_an_extra_request(self):

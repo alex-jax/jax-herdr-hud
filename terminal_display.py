@@ -1,0 +1,151 @@
+#!/usr/bin/python3
+"""Hud-only color presentation around Herdr's native direct-attach client.
+
+Input, mouse reports, resize and terminal control sequences pass through. Color
+assignments are removed so VTE owns the foreground/background, including scrollback.
+No shell or agent process is created, signalled or reconfigured by this helper.
+"""
+import errno
+import fcntl
+import os
+import pty
+import select
+import signal
+import sys
+import termios
+import tty
+
+
+class DisplayFilter:
+    def __init__(self):
+        self.pending = bytearray()
+        self.state = 'text'
+
+    @staticmethod
+    def sgr(sequence):
+        values = sequence[2:-1].decode('ascii').split(';')
+        kept = []
+        index = 0
+        while index < len(values):
+            value = values[index]
+            code = value.split(':')[0]
+            number = int(code or '0')
+            if number in (38, 48, 58):
+                if ':' not in value and index + 1 < len(values):
+                    mode = values[index + 1]
+                    index += 4 if mode == '2' else 2 if mode == '5' else 0
+            elif not (30 <= number <= 49 or 90 <= number <= 107 or number == 59):
+                kept.append(value)
+            index += 1
+        return b'\x1b[' + ';'.join(kept).encode() + b'm' if kept else b''
+
+    def feed(self, data):
+        output = bytearray()
+        for byte in data:
+            if self.state == 'text':
+                if byte == 27:
+                    self.pending.append(byte)
+                    self.state = 'escape'
+                else:
+                    output.append(byte)
+            elif self.state == 'escape':
+                self.pending.append(byte)
+                if byte == ord('['):
+                    self.state = 'csi'
+                elif byte == ord(']'):
+                    self.state = 'osc'
+                elif byte in b'PX^_':
+                    output.extend(self.pending)
+                    self.pending.clear()
+                    self.state = 'string'
+                else:
+                    output.extend(self.pending)
+                    self.pending.clear()
+                    self.state = 'text'
+            elif self.state in ('string', 'string_escape'):
+                output.append(byte)
+                if self.state == 'string_escape' and byte == ord('\\'):
+                    self.state = 'text'
+                else:
+                    self.state = 'string_escape' if byte == 27 else 'string'
+            else:
+                self.pending.append(byte)
+                complete = (self.state == 'csi' and 0x40 <= byte <= 0x7e or
+                            self.state == 'osc' and (byte == 7 or self.pending.endswith(b'\x1b\\')))
+                if complete:
+                    sequence = bytes(self.pending)
+                    if self.state == 'csi' and byte == ord('m'):
+                        try:
+                            output.extend(self.sgr(sequence))
+                        except (ValueError, UnicodeError):
+                            output.extend(sequence)
+                    elif self.state == 'osc' and sequence[2:].split(b';', 1)[0].rstrip(b'\x07\x1b\\') in (
+                            b'4', b'10', b'11', b'12', b'104', b'110', b'111', b'112'):
+                        # Queries still receive VTE's answer; assignments cannot override Hud.
+                        if b'?' in sequence:
+                            output.extend(sequence)
+                    else:
+                        output.extend(sequence)
+                    self.pending.clear()
+                    self.state = 'text'
+                elif len(self.pending) > 65536:
+                    output.extend(self.pending)
+                    self.pending.clear()
+                    self.state = 'text'
+        return bytes(output)
+
+
+def write_all(fd, data):
+    while data:
+        written = os.write(fd, data)
+        data = data[written:]
+
+
+def run(argv):
+    size = fcntl.ioctl(0, termios.TIOCGWINSZ, b'\0' * 8)
+    saved = termios.tcgetattr(0)
+    pid, master = pty.fork()
+    if pid == 0:
+        fcntl.ioctl(0, termios.TIOCSWINSZ, size)
+        os.execvp(argv[0], argv)
+    def resize(*_):
+        fcntl.ioctl(master, termios.TIOCSWINSZ,
+                    fcntl.ioctl(0, termios.TIOCGWINSZ, b'\0' * 8))
+    def stop(*_):
+        raise SystemExit(0)
+    signal.signal(signal.SIGWINCH, resize)
+    signal.signal(signal.SIGHUP, stop)
+    signal.signal(signal.SIGTERM, stop)
+    filtering = DisplayFilter()
+    try:
+        tty.setraw(0)
+        resize()
+        while True:
+            ready, _, _ = select.select([0, master], [], [])
+            for fd in ready:
+                try:
+                    data = os.read(fd, 65536)
+                except OSError as exc:
+                    if exc.errno == errno.EIO:
+                        return
+                    raise
+                if not data:
+                    return
+                write_all(master if fd == 0 else 1,
+                          data if fd == 0 else filtering.feed(data))
+    finally:
+        # Only our attach client belongs to us; Herdr's server owns the real pane.
+        try:
+            os.kill(pid, signal.SIGHUP)
+        except ProcessLookupError:
+            pass
+        os.close(master)
+        try:
+            termios.tcsetattr(0, termios.TCSANOW, saved)
+        except termios.error:
+            pass
+        os.waitpid(pid, 0)
+
+
+if __name__ == '__main__':
+    run(sys.argv[1:])

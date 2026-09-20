@@ -30,7 +30,7 @@ def build(output):
             target.write_text(text)
             target.chmod(mode)
 
-        for name in ('hud.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
+        for name in ('hud.py', 'terminal_display.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
             copy(name, 'usr/lib/herdr-hud/' + name)
         write('usr/bin/herdr-hud', '''#!/usr/bin/python3
 from pathlib import Path
@@ -42,7 +42,7 @@ runpy.run_path(str(app / 'hud.py'), run_name='__main__')
 ''', 0o755)
         for name in ('extension.js', 'metadata.json', 'stylesheet.css'):
             copy('extension/' + name, f'usr/share/gnome-shell/extensions/{EXTENSION_UUID}/{name}')
-        for name in ('LICENSE', 'NOTICE.md', 'MANUAL.md', 'install.md'):
+        for name in ('LICENSE', 'NOTICE.md', 'MANUAL.md', 'install.md', 'CHANGELOG.md'):
             copy(name, 'usr/share/doc/jax-herdr-hud/' + name)
         copy('LICENSE', 'usr/share/doc/jax-herdr-hud/copyright')
         copy('licenses/Alex-Finn-MIT.txt', 'usr/share/doc/jax-herdr-hud/Alex-Finn-MIT.txt')
@@ -70,7 +70,7 @@ Section: utils
 Priority: optional
 Architecture: all
 Maintainer: Alex Jax <alex-jax@users.noreply.github.com>
-Depends: ca-certificates, python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, gsettings-desktop-schemas, adwaita-icon-theme
+Depends: pkexec, ca-certificates, python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, gsettings-desktop-schemas, adwaita-icon-theme
 Recommends: fonts-ubuntu
 Installed-Size: {size}
 Homepage: https://github.com/alex-jax/jax-herdr-hud

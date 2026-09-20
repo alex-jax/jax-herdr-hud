@@ -9,7 +9,11 @@ For **Ubuntu 26.04 with GNOME 50**. The floating H is included in the download.
 5. **Save your work, log out of Ubuntu, and log back in.**
 6. **Open Herdr Hud**, click the **gear** at the top left, then **Enable floating H**.
 
-That's it. Click **H** to show or hide Hud, or drag it wherever you like.
+**The logout/login step is important:** it lets GNOME discover the bundled H
+extension so it can connect to Hud. If you enabled H before logging out, reopen
+Hud after logging back in.
+
+Click **H** to show or hide Hud, or drag it wherever you like.
 
 <details>
 <summary>If the .deb does not open in a software installer</summary>
@@ -27,15 +31,23 @@ sudo apt install ./downloaded-file.deb
 
 ## Updating
 
-When the download arrow appears in Hud, follow it to the update instructions.
-Exit Hud, download and install the newer `.deb`, then open Hud again. Your settings
-and Herdr sessions are kept. If an update changes the H extension, log out and back in.
+Hud checks GitHub silently every six hours. When the download arrow appears,
+click it to download and install the new `.deb`. Approve Ubuntu's password prompt
+if shown, then restart Hud. Your settings and Herdr sessions are kept. If an update
+changes the H extension, log out and back in.
+
+You can also download the newer `.deb` under **Assets** on the release page and
+install it manually. No update notification pop-ups are shown.
+
+## Removing Hud
+
+Exit Hud, then run `sudo apt remove jax-herdr-hud`. Herdr is a separate application.
 
 ## Need help?
 
 - **H does not appear:** follow the message beside **Enable floating H** in settings.
 - **Herdr is not found:** use the gear to select your Herdr executable, then click **Retry**.
 - [Source installation, building and troubleshooting](docs/INSTALL_ADVANCED.md)
-- [User manual](MANUAL.md) · [Preview validation](docs/VALIDATION.md)
+- [User manual](MANUAL.md) · [Validation record](docs/VALIDATION.md)
 
-This is a development preview, tested on amd64 with Herdr 0.9.1.
+Tested on amd64 with Herdr 0.9.1. See the release page for the available version.

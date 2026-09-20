@@ -9,10 +9,10 @@ sudo apt update
 sudo apt install git python3 python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91 gsettings-desktop-schemas adwaita-icon-theme
 git clone https://github.com/alex-jax/jax-herdr-hud.git
 cd jax-herdr-hud
-git checkout v0.1.2-preview.1
 ```
 
-Use `git switch main` instead if you want the current development source.
+This checks out the development branch. To build a published release, use
+`git checkout TAG`, replacing `TAG` with the tag shown on its GitHub release page.
 
 ### 2. Install as your desktop user
 
@@ -48,8 +48,10 @@ From a checkout with Python 3 and `dpkg-deb` (provided by Ubuntu's `dpkg`):
 
 ```sh
 python3 scripts/build_deb.py
-sudo apt install ./dist/jax-herdr-hud_0.1.2-1_all.deb
+sudo apt install ./dist/downloaded-file.deb
 ```
+
+Replace `downloaded-file.deb` with the exact filename printed by the builder.
 
 Building needs no root and performs no downloads. To prepare the separate extension
 ZIP and source archive too, run `python3 scripts/release.py` after building.
@@ -61,6 +63,7 @@ ZIP and source archive too, run `python3 scripts/release.py` after building.
   uninstall that source installation before switching to the `.deb`.
 - **Old UI:** exit the current singleton app before opening the newly installed one.
 - **Missing Herdr:** use the setup screen and verify your executable with `--version`.
-- **Agents not separated:** only agents identified or reported by Herdr enter Agents.
+- **Missing agent shortcut:** only agents identified or reported by Herdr enter Agents;
+  their terminals also stay under their original space.
 - **More details:** [MANUAL.md](../MANUAL.md), [validation](VALIDATION.md),
   [report an issue](https://github.com/alex-jax/jax-herdr-hud/issues).

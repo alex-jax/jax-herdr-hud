@@ -12,7 +12,7 @@ app = data / 'herdr-hud'
 extension = data / 'gnome-shell/extensions/herdr-hud@alex-jax.github.io'
 for directory in [app, extension, data / 'applications', data / 'icons/hicolor/scalable/apps', home / '.local/bin']:
     directory.mkdir(parents=True, exist_ok=True)
-for name in ['hud.py', 'backend.py', 'app_info.py', 'updates.py', 'enable.py', 'runtime_env.py']:
+for name in ['hud.py', 'terminal_display.py', 'backend.py', 'app_info.py', 'updates.py', 'enable.py', 'runtime_env.py']:
     shutil.copy2(source / name, app / name)
 for name in ['extension.js', 'metadata.json', 'stylesheet.css']:
     shutil.copy2(source / 'extension' / name, extension / name)

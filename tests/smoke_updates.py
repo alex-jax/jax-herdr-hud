@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-updates-') as tmp:
         assert threading.current_thread() is not threading.main_thread()
         return [{'tag_name': 'v99.0.0-preview.1'}]
     with patch('updates.fetch_releases', side_effect=releases) as fetch, \
-            patch.object(Gtk, 'show_uri_on_window') as browser:
+            patch('hud.install_update') as installer:
         app = hud.Hud()
         app.set_application_id('io.github.herdr.Hud.UpdateTest')
         app.register(None)
@@ -50,15 +50,21 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-updates-') as tmp:
             credits = next(w for w in header.get_children() if w.get_accessible().get_name() == 'Credits')
             assert credits.get_allocation().x < app.update_button.get_allocation().x
             app.update_button.clicked()
-            browser.assert_called_once_with(app.window,
-                updates.UPDATE_GUIDE_URL + 'v99.0.0-preview.1/install.md#7-update-or-remove', Gdk.CURRENT_TIME)
+            deadline = time.monotonic() + 5
+            while app.update_pending and time.monotonic() < deadline:
+                pump()
+            installer.assert_called_once()
+            assert installer.call_args.args[0] == 'v99.0.0-preview.1'
+            assert 'Update installed' in app.status.get_text()
+            assert not app.update_button.get_visible()
+            app.update_available('v99.1.0')
             app.hide()
             app.show()
             pump()
             assert app.update_button.get_visible()
             assert fetch.call_count == 1
             assert (hud.CONFIG / 'updates.json').is_file()
-            print('PASS: background check, daily cache, adjacent update icon, version tooltip and GitHub update instructions')
+            print('PASS: background check, six-hour cache, adjacent update icon, version tooltip and click-to-install worker')
             app.update_available(None)
             header.show_all()
             assert not app.update_button.get_visible()

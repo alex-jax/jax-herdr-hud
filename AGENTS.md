@@ -5,17 +5,18 @@
 These instructions apply to this directory and its descendants. Read the relevant
 source before changing it; [MANUAL.md](MANUAL.md) describes current user behaviour.
 The project is a small native Python/GTK 3/VTE companion plus a GNOME Shell 50
-GJS extension. The README targets Herdr 0.9.1. There is no web frontend or pip dependency manifest. Snap packaging lives in
-`snap/snapcraft.yaml` (core26, classic, amd64). `scripts/build_rootless.py` is the
-Ubuntu 26.04 rootless APT alternative; it does not validate the Snapcraft provider.
-See docs/PUBLISHING.md for build commands and docs/VALIDATION.md for release gates. At the documentation review this directory had no Git metadata; check
-whether Git is available before assuming branch, diff or commit operations work.
+GJS extension. The README targets Herdr 0.9.1. There is no web frontend or pip
+dependency manifest. Distribution uses GitHub, the native Debian package and the
+per-user source installer. See docs/PUBLISHING.md for builds and docs/VALIDATION.md
+for completed checks. Check Git availability in the current directory; the public
+checkout and local source directory may differ.
 
 ## Source map
 
 | File | Responsibility |
 | --- | --- |
 | `backend.py` | Herdr executable discovery, sanitized child environment, JSON-lines RPC, server discovery, reconnecting watchers, server/workspace/tab creation. |
+| `terminal_display.py` | Hud-only color filter and PTY relay around the native attach client; preserves input, resize and safe detachment. |
 | `hud.py` | `Terminal` VTE subclass; singleton `Hud` application; sidebar rendering, actions, themes, preferences, notifications and attach-client lifecycle. |
 | `extension/extension.js` | Floating actor, pointer grabs, D-Bus bridge, companion launch, monitor-aware window placement, geometry persistence and cleanup. |
 | `extension/stylesheet.css` | Bubble, badge and tooltip styling, including native accent token. |
@@ -39,12 +40,13 @@ Do not modify artifacts incidentally; preserve existing ones when running tests.
 ### Process ownership and model identity
 
 - Hide keeps the app, watchers and attachments alive. Exit stops watchers and
-  signals only VTE's direct-attach client PID with SIGHUP. Never stop user Herdr
+  signals only VTE's display relay, which forwards SIGHUP to its direct-attach client. Never stop user Herdr
   servers, shell processes or agents as part of hide, exit, update or uninstall.
 - Explicit terminal/space **Close** is intentionally destructive and separate:
-  use `pane.close` / `workspace.close`, preserve `can_close_sidebar_item()` guards
-  for the first workspace and its first pane, and keep actions scoped to their
-  selected server and object IDs. There is currently no confirmation dialog.
+  use `pane.close` / `workspace.close`, preserve the first-workspace guard in `can_close_sidebar_item()`. Any terminal
+  can close, including the first; agent terminals require confirmation. Keep actions
+  scoped to their selected server and object IDs. Empty spaces are retained in
+  memory and recreated on the same server when New terminal is used.
 - New UI spaces call `create_shared_workspace()` on the `default` server, making
   them visible to bare `herdr`. Do not substitute a new named server per space.
 - Terminal identity is `(socket_path, terminal_id)`; groups use
@@ -52,7 +54,8 @@ Do not modify artifacts incidentally; preserve existing ones when running tests.
   Never key terminals by label, agent name or terminal ID alone across servers.
 - Renaming a terminal updates both pane and tab labels; a tab can contain more
   than one pane. Renaming a space updates its workspace label.
-- Herdr's nonempty `agent` field determines placement under Agents. Do not infer
+- Herdr's nonempty `agent` field determines shortcuts under Agents. Agent terminals
+  remain under their spaces; both rows share the same VTE and unread state. Do not infer
   identity from workspace labels, process titles or status alone. Changing
   status or moving rows must retain the VTE instance and connection.
 - Preserve native direct attachment and input ownership. Do not force takeover,
@@ -71,7 +74,8 @@ Do not modify artifacts incidentally; preserve existing ones when running tests.
   guards. Cancel pending sidebar refresh on exit and ignore late worker results.
 - Defer terminal focus until GTK finishes processing selection. Preserve selection,
   focus and scrollback during snapshots, search and Spaces/Agents reparenting.
-- VTE reserves normal left dragging for copy and right-click for paste. Sidebar
+- VTE forwards normal left clicks/drags to mouse-aware CLIs; Shift+drag selects
+  and copies text, and right-click pastes. Sidebar
   context menus are separate; ListBox owns its input window, so resolve row hits
   from ListBox coordinates.
 
@@ -174,8 +178,8 @@ tests that simply repeat implementation or unnecessary tests for prose changes.
   can succeed even if the follow-up fails.
 - Installation copies files; running source on the same bus as an installed
   instance may forward to that existing instance. Confirm what code is running.
-- Extracted-snap smoke tests validate bundled Python/GI plus host desktop integration,
-  not snapd confinement, a fresh OS, upgrade, revert or removal. Those require a VM.
+- Extracted Debian smoke tests do not replace clean-VM install, upgrade and
+  removal verification.
 
 These are maintenance caveats, not instructions to expand every task into a
 refactor. Keep changes scoped, use existing Python/GJS style and update the manual
@@ -187,26 +191,26 @@ need logout/login under this project's GNOME 50 workflow.
 
 ## Release packaging contracts
 
-- App version is `0.1.2`; extension revision is separate. Synchronize app_info.py
-  and snap/snapcraft.yaml when changing the release version.
+- App version is `1.0.0` with stable release tag `v1.0.0`; extension revision is
+  separate. Keep app_info.py and retained packaging metadata synchronized.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID
   is `herdr-hud@alex-jax.github.io`; never enable it with the legacy UUID.
-- Snap has no hooks, daemon or autostart installer. Do not bundle/install Herdr.
+- Do not bundle or automatically install Herdr.
 - Executable discovery is explicit absolute path, ~/.local/bin/herdr, host PATH.
   An invalid explicit selection is an error, not a silent fallback. Blank setup
   selection restores automatic discovery. Test dependency errors without agents.
 - `runtime_env.py` restores saved host runtime variables before spawning Herdr.
-  The launch wrapper bundles Python/GTK/VTE; never leak its GI, Python, loader or
-  snap paths into host shells. Preserve user-provided host environment values.
-- Test `scripts/run_packaged_test.sh <extracted-root> <smoke-test>` and the
-  extension test with `HUD_TEST_LAUNCHER`. Unit tests also cover real discovery,
+  Preserve user-provided host environment values and keep GUI runtime overrides
+  out of host shells.
+- Test the extracted Debian payload using `HUD_TEST_SOURCE`, and the extension
+  with `HUD_TEST_LAUNCHER`. Unit tests also cover real discovery,
   malformed protocol shapes and environment restoration.
 - `scripts/release.py` generates a clean extension ZIP, project source archive
   and checksums. Exclude build trees, caches, personal output and test hooks.
 - Keep GPL-3.0-or-later and Alex Finn's original MIT notice. Attribution and original
   link must identify this as Alex Jax's independent Ubuntu remix.
-- Distribution remains grade devel until all release gates pass. Do not upload,
-  publish, register accounts or send reviewer messages as part of a local build.
+- Distribution is GitHub and the source installer. Store submission work was
+  cancelled. A local build does not publish a release. Keep release status honest.
 
 ## Public GitHub and native Debian packaging
 
@@ -214,9 +218,16 @@ This checkout is the public repository at https://github.com/alex-jax/jax-herdr-
 `scripts/build_deb.py` builds a system-library `.deb` with no Herdr/runtime bundling,
 no maintainer scripts, and no root required for building. It installs the native
 launcher, optional GNOME 50 extension and login autostart. Read install.md before
-changing those paths. Keep Snap preview validation separate from Debian validation.
+changing those paths. Record validation of the exact Debian artifact separately from source checks.
 The source-install scripts are not Debian removal scripts.
 
 - Update checks use `RELEASE_TAG` in app_info.py for preview-aware version comparison.
   Keep it synchronized with the GitHub release tag when publishing. Include updates.py
-  in every installer, and keep daily network checks off the GTK thread.
+  in every installer, and keep six-hour network checks and user-initiated downloads/installations off the
+  GTK thread. Checks are silent; only an explicit Update click may start installation.
+
+## Display colors
+
+Hud filters CLI color assignments in terminal_display.py; it does not synchronize
+CLI themes or require a patched Herdr. Preserve non-color controls, mouse input,
+resize and attach-client ownership. Include the helper in every installer.

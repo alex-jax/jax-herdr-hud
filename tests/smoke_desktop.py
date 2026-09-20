@@ -30,6 +30,9 @@ def test_env():
 hud.environment = test_env
 backend.environment = test_env
 hud.CONFIG = Path(temp.name) / 'hud-settings'
+if os.environ.get('HUD_TEST_HERDR'):
+    hud.CONFIG.mkdir(parents=True)
+    (hud.CONFIG / 'settings.json').write_text(json.dumps({'herdr_path': os.environ['HUD_TEST_HERDR']}))
 app = hud.Hud()
 app.set_application_id('io.github.herdr.Hud.Smoke')
 app.register(None)
@@ -62,20 +65,22 @@ try:
     app.monitor.stop()
     app.monitor.join(6)
     pump()
+    until(lambda: app.snapshots[path][1]['workspaces'][0]['label'] == 'Space 1')
     session, snap = app.snapshots[path]
     assert len(snap['workspaces']) == len(snap['panes']) == 1, snap
-    assert snap['workspaces'][0]['label'] == '~', snap
+    assert snap['workspaces'][0]['label'] == 'Space 1', snap
     pane = snap['panes'][0]
     key = (path, pane['terminal_id'])
     assert app.selected == key
     _, reopened = backend.ensure_session('default')
     assert [p['terminal_id'] for p in reopened['panes']] == [key[1]]
-    print('PASS: cold startup opens the single default ~ terminal; reuse adds no space', flush=True)
+    print('PASS: cold startup opens the single default Space 1 terminal; reuse adds no space', flush=True)
     terminal = app.terminals[key]
     until(lambda: terminal.pid)
     pump(1)
     def screen():
         return terminal.get_text_format(hud.Vte.Format.TEXT) or ''
+    until(lambda: '$' in screen() or '#' in screen())
     terminal.feed_child(b"printf 'HUD_INPUT_%s\\n' AC")
     terminal.feed_child(b'\x1b[DB\r')
     until(lambda: 'HUD_INPUT_ABC' in screen())
@@ -111,15 +116,15 @@ try:
             data.button = 1
         terminal.event(event)
         pump(0.05)
-    mouse(Gdk.EventType.BUTTON_PRESS, 2, row * ch + ch / 2)
+    mouse(Gdk.EventType.BUTTON_PRESS, 2, row * ch + ch / 2, Gdk.ModifierType.SHIFT_MASK)
     for i in range(1, 14):
-        mouse(Gdk.EventType.MOTION_NOTIFY, i * cw, row * ch + ch / 2, Gdk.ModifierType.BUTTON1_MASK)
-    mouse(Gdk.EventType.BUTTON_RELEASE, 13 * cw, row * ch + ch / 2, Gdk.ModifierType.BUTTON1_MASK)
+        mouse(Gdk.EventType.MOTION_NOTIFY, i * cw, row * ch + ch / 2, Gdk.ModifierType.BUTTON1_MASK | Gdk.ModifierType.SHIFT_MASK)
+    mouse(Gdk.EventType.BUTTON_RELEASE, 13 * cw, row * ch + ch / 2, Gdk.ModifierType.BUTTON1_MASK | Gdk.ModifierType.SHIFT_MASK)
     width, height = app.window.get_size()
     pixels = Gdk.pixbuf_get_from_window(app.window.get_window(), 0, 0, width, height)
     if pixels and os.environ.get('GDK_BACKEND') == 'x11': pixels.savev(str(output_dir / 'hud-preview.png'), 'png', [], [])
-    assert terminal.get_has_selection(), 'Normal drag did not select text'
-    print('PASS: ordinary mouse drag selects terminal text', flush=True)
+    assert terminal.get_has_selection(), 'Shift+drag did not select text'
+    print('PASS: Shift+drag selects terminal text', flush=True)
     terminal.select_all()
     pump()
     clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
@@ -137,6 +142,55 @@ try:
     terminal.feed_child(b'\r')
     until(lambda: 'HUD_PASTE_OK' in screen())
     print('PASS: right-click pastes through the terminal', flush=True)
+    # Exercise click reporting through VTE -> native attach -> Herdr -> child PTY.
+    import shlex
+    mouse_log = Path(temp.name) / 'mouse-input'
+    mouse_ready = Path(temp.name) / 'mouse-ready'
+    mouse_done = Path(temp.name) / 'mouse-done'
+    probe = Path(temp.name) / 'mouse-probe.py'
+    probe.write_text('''import os, sys, termios, tty
+from pathlib import Path
+saved = termios.tcgetattr(0)
+try:
+    tty.setraw(0)
+    os.write(1, b'\\x1b[2J\\x1b[HHUD_MOUSE_TARGET\\r\\n\\x1b[?1002h\\x1b[?1006h')
+    Path(sys.argv[2]).touch()
+    with open(sys.argv[1], 'ab', buffering=0) as log:
+        while True:
+            data = os.read(0, 4096)
+            if b'q' in data:
+                break
+            log.write(data)
+finally:
+    os.write(1, b'\\x1b[?1002l\\x1b[?1006l\\r\\n')
+    termios.tcsetattr(0, termios.TCSANOW, saved)
+    Path(sys.argv[3]).touch()
+''')
+    command = 'python3 ' + ' '.join(shlex.quote(str(p)) for p in (probe, mouse_log, mouse_ready, mouse_done))
+    terminal.feed_child((command + '\r').encode())
+    until(mouse_ready.exists)
+    pump(.3)
+    terminal.unselect_all()
+    mouse(Gdk.EventType.BUTTON_PRESS, 6 * cw, ch / 2)
+    mouse(Gdk.EventType.BUTTON_RELEASE, 6 * cw, ch / 2, Gdk.ModifierType.BUTTON1_MASK)
+    until(lambda: mouse_log.exists() and b'm' in mouse_log.read_bytes())
+    clicks = mouse_log.read_bytes()
+    import re
+    assert re.search(rb'\x1b\[<0;\d+;\d+M', clicks), clicks
+    assert re.search(rb'\x1b\[<0;\d+;\d+m', clicks), clicks
+    assert not terminal.get_has_selection(), 'CLI click unexpectedly selected text'
+    shift = Gdk.ModifierType.SHIFT_MASK
+    mouse(Gdk.EventType.BUTTON_PRESS, 2, ch / 2, shift)
+    for column in range(1, 15):
+        mouse(Gdk.EventType.MOTION_NOTIFY, column * cw, ch / 2, shift | Gdk.ModifierType.BUTTON1_MASK)
+    mouse(Gdk.EventType.BUTTON_RELEASE, 14 * cw, ch / 2, shift | Gdk.ModifierType.BUTTON1_MASK)
+    assert terminal.get_has_selection(), 'Shift+drag did not select in mouse-reporting mode'
+    assert 'HUD_MOUSE' in (clip.wait_for_text() or '')
+    assert mouse_log.read_bytes() == clicks, 'Shift+drag leaked mouse clicks to the CLI'
+    terminal.unselect_all()
+    terminal.feed_child(b'q')
+    until(mouse_done.exists)
+    print('PASS: native CLI receives left-button press/release; Shift+drag selects and copies without sending clicks', flush=True)
     old = app.dark
     app.toggle_theme()
     assert app.dark != old
@@ -153,7 +207,7 @@ try:
     until(lambda: any(m.get('data', {}).get('agent_status') == 'blocked' for m in observed))
     app.snapshot_changed(session, request(path, 'session.snapshot')['snapshot'], None)
     pump()
-    agent_row = app.sidebar_rows[('terminal', key)]
+    agent_row = app.sidebar_rows[('agent', key)]
     assert agent_row.get_parent() is app.agent_rows
     assert 'hud-test' in agent_row.subtitle_label.get_text()
     assert 'Needs input' in agent_row.subtitle_label.get_text()
@@ -176,21 +230,23 @@ try:
     second_key = app.selected
     second = app.terminals[second_key]
     until(lambda: second.pid)
-    pump(0.5)
+    until(lambda: '$' in (second.get_text_format(hud.Vte.Format.TEXT) or '') or '#' in (second.get_text_format(hud.Vte.Format.TEXT) or ''))
     second.feed_child(b"printf 'HUD_SECOND_TERMINAL\\n'\r")
     until(lambda: 'HUD_SECOND_TERMINAL' in (second.get_text_format(hud.Vte.Format.TEXT) or ''))
     assert 'HUD_SECOND_TERMINAL' not in screen()
     assert app.panes[second_key]['session']['socket_path'] == path
     app.select(key)
-    assert app.stack.get_visible_child() == terminal and 'HUD_INPUT_ABC' in screen()
+    assert app.stack.get_visible_child() == terminal and 'HUD_MOUSE_TARGET' in screen()
     assert terminal.get_margin_start() == 16 and terminal.get_margin_end() == 16
     print('PASS: + adds independent terminal in the same session; switching preserves both; 16px padding', flush=True)
     checked = []
     def check_dialog():
         dialog = next(w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.Dialog))
         entry = next(w for w in dialog.get_content_area().get_children() if isinstance(w, Gtk.Entry))
-        checked.append(entry.get_text() == '' and entry.get_placeholder_text() == 'Name your space'
-                       and not dialog.get_widget_for_response(Gtk.ResponseType.OK).get_sensitive())
+        checked.append(entry.get_text() == 'Space 2' and entry.get_placeholder_text() == 'Name your space'
+                       and dialog.get_widget_for_response(Gtk.ResponseType.OK).get_sensitive())
+        entry.set_text('  ')
+        assert not dialog.get_widget_for_response(Gtk.ResponseType.OK).get_sensitive()
         cancel = dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
         start = dialog.get_widget_for_response(Gtk.ResponseType.OK)
         cx, cy = cancel.translate_coordinates(dialog, 0, 0)
@@ -208,7 +264,7 @@ try:
     GLib.idle_add(check_dialog)
     app.new_session()
     assert checked == [True, True], checked
-    print('PASS: new session starts blank with requested placeholder and requires a name', flush=True)
+    print('PASS: new space suggests Space 2 and rejects a blank name', flush=True)
     # Rename a real pane through the dialog and verify Herdr persists the label.
     def submit_rename():
         dialog = next(w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.Dialog))
@@ -293,6 +349,26 @@ try:
     pump()
     assert request(path, 'session.snapshot')['snapshot']['panes']
     print('PASS: detaching Hud clients leaves server and shell running', flush=True)
+    # Closing the first/last pane leaves a usable empty workspace.
+    def confirm_agent_close():
+        dialogs = [w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.MessageDialog)]
+        assert len(dialogs) == 1
+        dialogs[0].response(Gtk.ResponseType.OK)
+        return False
+    if app.panes[key].get('agent'):
+        GLib.idle_add(confirm_agent_close)
+    app.close_sidebar_item(('terminal', key))
+    until(lambda: key not in app.panes)
+    pump()
+    empty_group = app.sidebar_rows[('group', (path, pane['workspace_id']))]
+    assert empty_group.get_visible() and empty_group.add_button.get_sensitive()
+    assert not request(path, 'session.snapshot')['snapshot']['panes']
+    empty_group.add_button.clicked()
+    until(lambda: app.selected is not None and app.selected in app.panes)
+    assert app.panes[app.selected]['workspace_label'] == snap['workspaces'][0]['label']
+    assert app.selected != key
+    assert len(request(path, 'session.snapshot')['snapshot']['panes']) == 1
+    print('PASS: first agent terminal can close; empty workspace creates exactly one replacement terminal', flush=True)
 finally:
     app.exit_hud()
     try:

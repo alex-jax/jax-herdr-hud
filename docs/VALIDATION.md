@@ -1,184 +1,54 @@
-# Public preview validation — 0.1.2
+# Validation for the 1.0.0 release
 
-Date: 20 September 2026. Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.
-Public tag: `v0.1.2-preview.1`.
+Status: source and Debian payload checks passed for stable release `v1.0.0`. Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.
 
-This release adds background GitHub checks once every 24 hours, a download arrow
-shown only for newer releases, and a link to that version's update instructions.
-The check time and result persist across restarts. Setup now enables the bundled
-floating H with one click and explains when a logout/login is needed.
+## Checks completed
 
-## Checks run for 0.1.2
+- Python unit suite: 35 tests passed in the public checkout. This includes display
+  filtering across fragmented ANSI sequences, RGB/indexed colors, preserved controls,
+  hyperlinks and color queries, alongside backend, update and packaging tests.
+- Native desktop smoke passed with stock Herdr: cold startup, input and arrow keys,
+  Shift+drag copy, right-click paste, CLI mouse press/release, theme switching, agent
+  reports, notifications, workspace creation, rename, close and safe detachment.
+- Native sidebar smoke passed: compact groups, search, collapse, focus and menus,
+  including confirmation/cancellation of agent closure and empty-space recovery.
+- Disposable Codex, Grok, Claude Code and agy sessions were visually checked in both
+  Hud themes. The final display filter does not require the experimental Herdr theme
+  synchronization build.
+- Header layout measurement confirmed equal 6-pixel button gaps in light and dark
+  themes, with the update arrow both shown and hidden.
+- Installed Hud was restarted locally after the display change. All three existing
+  pane IDs and shell PIDs were preserved.
 
-- 25 Python unit/package tests passed, covering daily cache/retry behavior,
-  preview version ordering, badge clearing after upgrade, bounded HTTP reads,
-  extension enablement, preference preservation and Debian payload contents.
+Early desktop attempts timed out while typing before the attach client was ready.
+The smoke test now waits for a visible shell prompt; the subsequent run passed.
+Simulated menu and isolated desktop-service shutdown warnings were present.
+
+## Debian 1.0.0 package checks
+
+- Built `jax-herdr-hud_1.0.0-1_all.deb`; extracted launcher reports `Herdr Hud 1.0.0`.
+- APT simulation resolves dependencies without removing packages.
+- Update, setup, sidebar and desktop smoke tests passed against the extracted payload.
+- Isolated GNOME 50 extension smoke passed with the extracted launcher and extension:
+  click/drag input, grab cleanup, window geometry, theme, D-Bus and disable lifecycle.
 - Four JavaScript extension-launcher tests passed.
-- Final Debian package: `jax-herdr-hud_0.1.2-1_all.deb`; extracted launcher
-  reports `Herdr Hud 0.1.2`. APT simulated installation resolves all dependencies
-  without removing any packages. HTTPS CA certificates are now a dependency.
-- Extracted Debian payload: update-icon, setup, sidebar and desktop smoke tests
-  passed under separate D-Bus sessions. The update test uses a simulated future
-  release and checks visibility, tooltip, instructions link, worker delivery,
-  daily cache and shutdown behavior without making network requests.
-- Isolated GNOME 50 test with the extracted Debian launcher and packaged extension
-  passed: enabling through the new helper, pointer grabs, drag, accent styling,
-  exact hide/show geometry, D-Bus and clean extension disable.
-- Cold-start regression still passes: one default `~` terminal opens automatically;
-  New space adds exactly one additional workspace.
+- Upgrade comparison covers stable `v1.0.0` replacing `v0.1.2-preview.1`.
+- Relative documentation links resolve and `git diff --check` passes.
 
-All five smoke tests exited zero. Test-session service shutdown and simulated menu
-warnings can appear in logs. No GTK critical messages appeared in this release's
-smoke output. Tests never stop user Herdr servers; disposable servers are cleaned up.
+The first package desktop runs exposed outdated expectations for the old `~` label
+and blank new-space dialog. Tests now verify `Space 1`, the suggested `Space 2`
+name and rejection of blank names. The final desktop run passed. No application
+code was changed to bypass those checks. Service-shutdown and simulated-menu
+warnings remain present in the isolated logs.
 
-This remains a development preview. Clean-VM install/upgrade/removal and other
-architectures/desktops remain unverified. Extension code/revision is unchanged.
-No Snap binary or Store submission is included.
+Clean-VM install/upgrade/removal and other architectures/desktops remain unverified.
+See [PUBLISHING.md](PUBLISHING.md) for publication and
+[CONTRIBUTING.md](../CONTRIBUTING.md) for test commands.
 
-## Reproduce
+## Six-hour updater verification
 
-```sh
-python3 -m unittest discover -s tests -v
-node --test tests/test_extension_launcher.mjs
-python3 scripts/build_deb.py --output dist/0.1.2
-dpkg-deb --extract dist/0.1.2/jax-herdr-hud_0.1.2-1_all.deb build/deb-0.1.2
-build/deb-0.1.2/usr/bin/herdr-hud --version
-apt-get --simulate install ./dist/0.1.2/jax-herdr-hud_0.1.2-1_all.deb
-python3 scripts/release.py --output dist/0.1.2
-```
-
-Set `HUD_TEST_SOURCE` to the absolute extracted `usr/lib/herdr-hud` directory for
-update/setup/sidebar/desktop tests and run each with `dbus-run-session`.
-For the extension test, leave that variable unset, set `HUD_TEST_LAUNCHER` to a
-JSON array containing the extracted launcher, and `HUD_TEST_EXTENSION` to the
-extracted extension directory. Run smoke tests sequentially.
-
----
-
-## Previous release records
-
-# Public preview validation — 0.1.1
-
-Date: 20 September 2026. Target: Ubuntu 26.04, GNOME Shell 50, amd64,
-Herdr 0.9.1. Public tag: `v0.1.1-preview.1`.
-
-This update fixes cold startup: Hud initializes the default Herdr server, opens
-its existing first terminal, and shows the single `~` workspace on a fresh server.
-New space then creates exactly one additional workspace. Existing sessions remain
-intact. Startup and workspace creation serialize server initialization.
-
-## Checks run for 0.1.1
-
-- Python unit tests: 12 passed, including startup retries, shutdown during
-  initialization, environment restoration and Debian package payload/layout.
-- Extension launcher tests: 4 passed with Node's test runner.
-- Debian build: `jax-herdr-hud_0.1.1-1_all.deb`; extracted launcher reports
-  `Herdr Hud 0.1.1`.
-- APT simulated installation: dependencies resolve; no removals required.
-- Setup, sidebar and desktop smoke tests against the extracted Debian payload:
-  passed under separate D-Bus sessions. Cold startup opens one `~` workspace and
-  automatically selects its terminal; reusing the server adds no workspace;
-  New space adds exactly one workspace and one terminal. Input, clipboard,
-  notifications, agent placement, focus, renaming and scoped Close also passed.
-- Isolated headless GNOME 50 smoke with the extracted Debian launcher and
-  packaged extension: passed, including pointer grabs, dragging, accent,
-  hide/show geometry, D-Bus and extension disable. Cleanup stops only its
-  disposable Herdr server.
-
-The desktop smoke completed all assertions and exited zero, but emitted
-`gtk_widget_get_window` critical messages during cleanup. Simulated menu actions
-also emit “no trigger event” warnings. These are recorded, not treated as clean
-GTK output. The sidebar smoke runs with GTK criticals fatal and passed.
-
-This remains a development preview. A clean-VM install/upgrade/removal lifecycle,
-other architectures and other desktop versions were not verified. No Snap binary
-or Store submission is part of this update. The extension code/revision is unchanged.
-
-## Reproduce
-
-```sh
-python3 -m unittest discover -s tests -v
-node --test tests/test_extension_launcher.mjs
-python3 scripts/build_deb.py --output dist/0.1.1
-dpkg-deb --extract dist/0.1.1/jax-herdr-hud_0.1.1-1_all.deb build/deb-0.1.1
-build/deb-0.1.1/usr/bin/herdr-hud --version
-apt-get --simulate install ./dist/0.1.1/jax-herdr-hud_0.1.1-1_all.deb
-python3 scripts/release.py --output dist/0.1.1
-```
-
-Set `HUD_TEST_SOURCE` to the absolute extracted `usr/lib/herdr-hud` directory for
-setup/sidebar/desktop tests. Run each with `dbus-run-session -- python3 tests/TEST`.
-For the extension smoke, leave `HUD_TEST_SOURCE` unset and set `HUD_TEST_LAUNCHER`
-to a JSON array containing the extracted launcher, plus `HUD_TEST_EXTENSION` to
-the extracted `usr/share/gnome-shell/extensions/herdr-hud@alex-jax.github.io`.
-
----
-
-## Previous release record
-
-# Public preview validation — 0.1.0
-
-Date: 20 September 2026. Target: Ubuntu 26.04, GNOME Shell 50, amd64.
-Public GitHub tag: `v0.1.0-preview.1`. This is a development preview, not an
-Ubuntu App Center or Snap Store approval.
-
-## Native Debian package
-
-Artifact: `jax-herdr-hud_0.1.0-1_all.deb`. Architecture `all` describes the
-Python/JavaScript payload; only the amd64 host has been exercised.
-
-Checks performed for this repository's public snapshot:
-
-- Backend and distribution unit tests: passed (9 tests).
-- Debian package build/layout regression: passed (1 test). Checks payload/source
-  identity, directory permissions, launcher mode, desktop entry, extension files,
-  autostart conffile and absence of maintainer scripts or a bundled Herdr binary.
-- `dpkg-deb` metadata and content inspection: passed; all package paths are root-owned.
-- APT simulated installation: dependencies resolved; no removal required on test host.
-- Extracted `.deb` launcher `--version`: `Herdr Hud 0.1.0`.
-- Setup smoke with extracted payload: passed, including missing Herdr, invalid
-  executable paths, paths containing spaces, Retry and About attribution.
-- Sidebar smoke with extracted payload: passed, including actual pointer events,
-  agent row transitions, preserved focus, dividers, menu guards, search, and
-  maximize/restore geometry.
-- Desktop smoke with extracted payload and a disposable Herdr server: passed,
-  including input/arrows, copy/paste, real agent reports, linked renaming,
-  workspace/tab creation, Close and preserving servers after HUD detachment.
-- Isolated GNOME 50 extension smoke with the extracted Debian launcher: passed;
-  pointer grabs, dragging, accent changes, exact geometry across hide/show,
-  notification badge/tooltip and clean shutdown were exercised.
-- Extension launcher unit checks: passed for Snap, native `.deb`, source and missing app.
-
-The tests use separate D-Bus sessions and temporary settings. Simulated menu
-activation can emit GTK's “no trigger event” warning; test assertions pass.
-
-These checks do **not** claim a clean-VM APT install/upgrade/remove lifecycle or
-cross-distribution support. The preview should be tested on disposable machines
-before adoption for important work. The `.deb` uses Ubuntu system dependencies;
-it does not redistribute the Snap's bundled runtime libraries.
-
-## Snap / App Center work
-
-The source snapshot includes the separate `snap/snapcraft.yaml`, rootless builder,
-release scripts and reviewer drafts. This GitHub release does not publish the
-Snap binary. Its grade remains `devel` and its Store approval is pending.
-Earlier local Snap test claims from another work session are not treated as
-validation of this GitHub release. Follow PUBLISHING.md for remaining Snapcraft,
-VM lifecycle, corresponding-source and store-review gates.
-
-## Reproduction
-
-```sh
-python3 -m unittest discover -s tests -v
-node --test tests/test_extension_launcher.mjs
-python3 scripts/build_deb.py
-mkdir -p build/deb-test
-dpkg-deb --extract dist/jax-herdr-hud_0.1.0-1_all.deb build/deb-test
-build/deb-test/usr/bin/herdr-hud --version
-apt-get --simulate install ./dist/jax-herdr-hud_0.1.0-1_all.deb
-```
-
-Set `HUD_TEST_SOURCE` to the absolute path of `build/deb-test/usr/lib/herdr-hud`
-and run setup/sidebar/desktop smoke tests sequentially under `dbus-run-session`.
-For the headless extension test, set `HUD_TEST_LAUNCHER` to a JSON array containing
-the absolute path of `build/deb-test/usr/bin/herdr-hud`.
+Unit checks cover the six-hour interval, verified asset download, rejection of
+foreign URLs, checksum/package mismatches and cancelled authorization. GTK update
+smoke checks the click-to-install worker and inline success handling. Downloads
+and privileged installation are mocked: no live upgrade or password prompt was
+triggered during these tests. The Debian package now depends on `pkexec`.

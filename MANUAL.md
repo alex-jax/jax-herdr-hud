@@ -5,7 +5,8 @@ GNOME Shell extension providing a floating **H** button. The project targets
 Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
-This manual describes release 0.1.2, prepared on 20 September 2026.
+This manual describes the 1.0.0 stable release.
+See [CHANGELOG.md](CHANGELOG.md) for release notes and publication status.
 
 A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).
 Original: [Herdr HUD for Omarchy](https://github.com/finna/omarchy-herdr-hud).
@@ -22,28 +23,19 @@ See [NOTICE.md](NOTICE.md) for GPL and retained MIT notices. See
 - A graphical session with a session D-Bus and the GNOME desktop settings schemas.
 - GNOME Shell 50 for the extension. Its metadata declares only version `50`.
 
-The snap bundles its Python/GTK/VTE runtime and requires no host GI packages.
-Source installation uses the system libraries listed above. Packaging instructions
-are in [docs/PUBLISHING.md](docs/PUBLISHING.md).
+## Installation and setup
 
-## Native .deb installation
+1. Download the `*_all.deb` file under **Assets** on the
+   [release page](https://github.com/alex-jax/jax-herdr-hud/releases).
+2. Install Herdr, then install the downloaded Hud package.
+3. Start `herdr` once, then **save your work, log out and log back in**.
+4. Open Hud, click the gear at the top left, then **Enable floating H**.
 
-See [install.md](install.md) for exact download, installation, extension enablement,
-update and removal commands. The `.deb` uses system Python/GTK/VTE and installs
-`/usr/bin/herdr-hud`, the system extension, and GNOME login autostart. Herdr is a
-separate dependency. Use APT to remove the `.deb`, not the source uninstall script.
-The per-user paths below describe the source installer; settings paths are shared.
-
-## Snap preview and setup
-
-The development snap and optional GNOME extension are separate artifacts. They
-have not been approved or published in the stores. Follow the
-[publishing guide](docs/PUBLISHING.md) for local snap installation and
-[extension guide](docs/GNOME_SUBMISSION.md) for the optional H.
-
-Launch the snap with `herdr-hud-alex-jax`. `--version`, `--background` and `--quit`
-are supported. The snap creates no login autostart entry and does not enable any
-extension. The extension starts the companion in the background when enabled.
+The fresh login is important: it lets GNOME discover the bundled extension and
+connect it to Hud. Follow any further message shown beside the enable button.
+See [install.md](install.md) for the short installation and update guide.
+The `.deb` uses system Python/GTK/VTE, includes the extension and adds login
+autostart. Herdr and agents are installed separately.
 
 Open the setup button in the header to choose a Herdr executable. Leave the path
 blank for automatic discovery. Browse selects a file; **Retry** validates it and
@@ -53,8 +45,7 @@ upgrades Herdr. Newer versions may work but only 0.9.1 is tested. Protocol failu
 are reported rather than restarting servers. The About button shows version and
 publisher/original-project attribution.
 
-The following installation section describes the legacy-compatible **source
-installer**, not the snap.
+The following section is an alternative installation from source.
 
 ## Install and start from source
 
@@ -89,19 +80,27 @@ application's D-Bus identity prevents duplicate companion instances on one bus.
 ## Spaces, terminals and agents
 
 At launch, Hud starts Herdr's `default` server if needed and opens its first
-terminal. A fresh server supplies the default `~` space, just like bare `herdr`.
+terminal. The first default-server space is automatically renamed from `~` to `Space 1`
+when discovered. Custom names are preserved; the rename is also visible in Herdr.
 Existing spaces are reused; reopening Hud does not add another space.
 
-A **space** is a Herdr workspace. A terminal row represents a pane, attached by
+A **space** is a Herdr workspace. A terminal row in Hud represents a pane, attached by
 its terminal ID. Herdr also has named **server sessions**, which may each contain
 multiple workspaces. Some terminal action dialogs use the word “session”; this
 does not mean they create or rename a server.
 
-1. Click **+ New space** or **Start a space** and enter a nonblank name.
+1. Click **+ New space** or **Start a space** and accept the suggested
+   `Space 2`, `Space 3`, etc., or enter your own nonblank name. Numbering continues
+   above the existing numbered names and space count.
 2. Click **Start**. The Hud creates a workspace in Herdr's `default` server and
    opens its first terminal. It starts that server if necessary.
-3. Use the **+** beside a space to add an independent terminal tab there.
-4. Click a terminal row to attach and focus it.
+3. Terminals appear as compact, indented rows beneath their space in the sidebar.
+4. Click a terminal to switch to it, or the **+** beside its space to add another.
+   Clicking a space returns to the last terminal selected there.
+5. Click the arrow beside a space to collapse or expand its terminal list. Each
+   space keeps its own setting while Hud is open. Collapsing leaves its active
+   terminal running and keeps agents available in the separate Agents section.
+   Adding a terminal expands its space.
 
 New spaces are visible in the original app opened with `herdr`. Existing named
 servers are also discovered; their groups display `server / workspace` and can
@@ -114,44 +113,58 @@ belongs to that space, otherwise the first member's directory. Foreground
 working directory takes precedence over the pane's stored directory; the home
 directory is the fallback. New spaces start in the home directory.
 
-**Spaces** contains ordinary terminals grouped by workspace. **Agents** contains
-panes for which Herdr supplies an agent identity, across all discovered local
-servers. Status alone does not classify a terminal as an agent. Agent rows show
-agent type, state and originating space. Returning to a shell moves the row
-back; idle or finished agents remain under Agents while their identity remains.
-Moving between sections preserves the terminal connection, focus and scrollback.
+**Spaces** shows each workspace with compact, indented terminal rows and a thin
+vertical guide beneath it. Agent terminals stay under their space. **Agents**
+provides shortcuts to those same terminals, labelled with the agent and terminal
+name, plus their state and originating space. Both entries share the connection,
+selection and unread status. When an agent exits, its shortcut disappears and the
+terminal stays in its space. Herdr’s agent field determines whether a shortcut appears.
 
-Search matches terminal names, server names, workspace names and agent types.
-It filters rows without closing terminals. A space containing only agents still
-has its group header and **+** button.
+Search filters individual terminal names (including tab labels and process titles)
+and agent identities, ignoring case and leading/trailing spaces. Only matching
+terminal or agent rows remain visible; a matching terminal keeps its parent space
+heading for context. Space/server names do not make unrelated children match.
+Search temporarily reveals matching terminals inside collapsed spaces; clearing
+the search restores their collapsed state. Searching and clearing the search
+preserve the active terminal and its connection.
+Spaces consisting only of agents still retain their **+** when the search is clear.
 
 ## Rename and close
 
-Use the pencil button beside a space or terminal name to open its action menu.
-Terminal rows also support right-click and a keyboard context menu. Right-clicking
-a row opens its menu without switching the selected terminal.
+Hover over a space, terminal or agent to reveal its pencil and open Rename/Close.
+The pencil keeps its place so rows do not shift. All rows
+support right-click and keyboard context menus. Opening a menu does not switch
+the selected terminal.
 
 - **Rename** requires a nonblank name. A space rename updates the Herdr workspace.
   A terminal rename updates both the pane label and its containing tab label.
 - **Close** on a terminal sends `pane.close`, stopping that pane's running process.
 - **Close** on a space sends `workspace.close`, stopping the terminals in that space.
 
-**Close takes effect without a separate confirmation dialog.** It is different
-from hiding or exiting the Hud. The first workspace and the first pane in that
-workspace are protected from closing through the Hud; ordering comes from the
-server snapshot. The first terminal in a later workspace can be closed.
+**Any terminal can be closed**, including the first one. Agent terminals offer
+**Close terminal and stop agent** with a confirmation dialog; cancelling leaves
+the session running. Closing a plain shell takes effect immediately. Both the
+space entry and agent shortcut act on the same terminal. Empty spaces retain a
+**New terminal** button while Hud stays open. Herdr removes the underlying
+workspace after its last terminal closes; this button recreates it with the same
+name and directory on the same server. The first workspace itself remains protected
+from closing.
+Closing is separate from hiding or exiting Hud, which leaves sessions running.
 
 ## Terminal interaction
 
-The window embeds VTE running Herdr's native `terminal attach` client. Keyboard
+The window embeds VTE with a Hud display helper around Herdr's native
+`terminal attach` client. Keyboard
 input, control sequences and terminal size changes go through that client.
 Switching rows retains attached terminals and up to 20,000 VTE scrollback lines.
 The configured font is `Ubuntu Mono 12`, with 16-pixel side margins.
 
-- Drag with the left mouse button to select text and automatically copy it.
+- Hold **Shift** and drag with the left mouse button to select text and automatically copy it.
 - Right-click inside the terminal to paste the clipboard.
-- These gestures are reserved for clipboard use, including when a terminal app
-  requests mouse input. GNOME-reserved shortcuts remain with the desktop.
+- Interactive terminal apps receive normal left clicks and drags when they request
+  mouse input, so their buttons work. Hold **Shift** while dragging to select and
+  copy text instead. Right-click remains paste. GNOME-reserved shortcuts stay with
+  the desktop.
 - If a client disconnects, select its terminal again to create a new attachment.
 
 Herdr controls input ownership. If another direct-attach client owns a terminal,
@@ -172,6 +185,7 @@ Moving the bubble does not reposition an already tracked window.
 
 - Drag the vertical divider to resize the sidebar or collapse either side at
   an edge. Use the arrow at its top to collapse/restore the sidebar's last width.
+  The arrow leaves room for the terminal title even when the sidebar is collapsed.
 - Collapse **Spaces** and **Agents** independently; drag their horizontal divider
   to change their relative heights.
 - Use **Expand HUD** to maximize and **Restore window** to return to normal size.
@@ -190,6 +204,12 @@ Unread activity produces a blue dot on the bubble and a tooltip lasting five
 seconds. The dot indicates that unread items exist; it is not a numeric badge.
 The accessible name includes their count. Each terminal has at most one unread
 entry, held only in memory.
+
+Sidebar dots are green while a task is working, yellow for finished or other
+unread activity, and hollow once you open the completed item. A task that is
+still working stays green. A space is yellow if any item has unread activity,
+otherwise green if an item is running, and hollow when all are read and idle.
+Reading one item does not clear unread activity on the others.
 
 | State transition | Message |
 | --- | --- |
@@ -214,7 +234,7 @@ The launcher and Herdr binary paths remain under `~/.local/bin`.
 | Default location | Contents |
 | --- | --- |
 | `~/.local/bin/herdr-hud` | Generated Python launcher using `/usr/bin/python3`. |
-| `~/.local/share/herdr-hud/` | Installed `hud.py` and `backend.py`. |
+| `~/.local/share/herdr-hud/` | Companion, backend, `terminal_display.py`, update checker and setup helpers. |
 | `~/.local/share/gnome-shell/extensions/herdr-hud@alex-jax.github.io/` | Extension JavaScript, metadata and CSS. |
 | `~/.local/share/applications/io.github.herdr.Hud.desktop` | Applications entry. |
 | `~/.local/share/icons/hicolor/scalable/apps/io.github.herdr.Hud.svg` | Application icon. |
@@ -245,9 +265,8 @@ not reload Shell code. Finish or save other desktop work before logging out.
 
 For a source installation, run `python3 uninstall.py` to exit the Hud, remove its installation, launcher,
 desktop files and extension, and remove its UUID from GNOME extension lists.
-It preserves Herdr, its sessions, Hud preferences and log files. For the snap,
-exit Hud and remove `herdr-hud-alex-jax` through App Center or snap. Remove the
-optional extension separately; host preferences remain under the same XDG paths.
+It preserves Herdr, its sessions, Hud preferences and log files. For a Debian
+installation, exit Hud and use `sudo apt remove jax-herdr-hud` instead.
 
 ## Troubleshooting
 
@@ -261,7 +280,7 @@ optional extension separately; host preferences remain under the same XDG paths.
 | Missing GTK/VTE imports | Use the system Python with the distro GI libraries; a separate virtual environment may not expose them. |
 | Old behaviour after editing source | Installed files are copies. Reinstall and restart the relevant component. |
 | Broken layout after manually editing preferences | Exit the companion, back up `settings.json`, and move it aside to restore defaults. Coordinate extension-owned file resets with extension disable/reload so cached values do not overwrite edits. |
-| Colours differ inside an agent | ANSI colours emitted by the terminal application can override the Hud palette. |
+| Terminal text has no syntax colours | Hud deliberately uses monochrome text to keep CLI backgrounds and input readable in either theme. CLI theme settings outside Hud are unaffected. |
 
 The current settings loader handles missing files and invalid JSON syntax, but
 does not validate every decoded value's type. Keep the configuration an object
@@ -291,22 +310,30 @@ Run on a separate session bus as shown to isolate real Shell calls.
 
 The extension test starts headless GNOME with a temporary instrumented extension.
 It defaults to the source companion. Set `HUD_TEST_LAUNCHER` to a JSON argv array
-to test an extracted snap or installed launcher. Production extension files never
-contain these test hooks. See the publishing guide and AGENTS.md for details.
+to test an installed or extracted Debian launcher. Production extension files
+never contain these test hooks. See the publishing guide and AGENTS.md for details.
 
 ## Update notifications
 
 Hud checks this project's public GitHub releases in the background on first launch
-and then once every 24 hours while running, including while hidden. The last attempt
+and then once every six hours while running, including while hidden. The last attempt
 and available release are saved in `herdr-hud/updates.json` alongside settings, so
 restarts do not trigger extra checks. If the app was closed when a check became due,
-it checks on its next launch. Offline or failed checks retry after 24 hours.
+it checks on its next launch. Offline or failed checks retry after six hours.
 
-When a newer release is available, a highlighted download arrow appears immediately
-beside the information button at the top left. Its tooltip identifies the version;
-click it to open that release's GitHub update instructions. Preview releases are included. The icon
-remains until the installed release is current or a later check finds no newer release.
-Updates are downloaded and installed manually; the checker does not change sessions.
+When a newer release is available, a download arrow appears beside the information
+button. Checks do not send notification pop-ups. Clicking the arrow downloads the
+release's Debian package from this project's GitHub Assets, verifies GitHub's
+SHA-256 checksum and the package name/version, then starts Ubuntu's APT installer.
+Ubuntu may request your password through its system authorization prompt. Hud never
+collects your password. Download and installation run off the GTK thread.
+
+The button is disabled while updating. Cancelled authorization, missing assets or
+failed verification do not start installation. Failures show an inline retry message.
+After installation, restart Hud from Applications to load the new version. The
+update never stops Herdr servers or agents. Extension changes still need logout/login.
+Source installations should use the source update procedure above; the built-in
+installer installs the Debian package. Do not mix per-user and system installations.
 
 ## Turn on the bundled floating H
 
@@ -318,3 +345,17 @@ bundled extension before you enable it.
 
 If desktop extensions are globally off, setup explains how to turn them back on.
 Follow any additional message shown beside the button if H does not appear.
+
+## Terminal display colors
+
+Hud owns terminal display colors: light mode uses a white background and dark
+text; dark mode uses a dark background and light text. CLI color assignments are
+filtered in Hud only, including RGB input backgrounds. Terminal text is monochrome;
+bold, underline and inverse selection remain available. Switching themes also
+recolors existing scrollback. Codex, Grok, Claude Code and agy keep their own
+settings and sessions, and look unchanged outside Hud. No patched Herdr build
+or CLI theme synchronization is needed.
+
+The display helper wraps the native `herdr terminal attach` client, relaying input,
+mouse reports and resize events. Closing Hud detaches that client only; it never
+stops the pane, shell or agent.

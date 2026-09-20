@@ -19,6 +19,7 @@ GTK and integration checks require a graphical desktop and use temporary test
 sessions. Run sequentially on a separate D-Bus session:
 
 ```sh
+dbus-run-session -- python3 tests/smoke_updates.py
 dbus-run-session -- python3 tests/smoke_setup.py
 dbus-run-session -- python3 tests/smoke_sidebar.py
 dbus-run-session -- python3 tests/smoke_desktop.py
@@ -37,5 +38,6 @@ python3 scripts/release.py
 
 The `.deb` relies on system libraries and includes the optional GNOME extension.
 It does not bundle Herdr. The extension ZIP and source archive are separate assets.
-Check docs/VALIDATION.md for the exact scope of testing; GitHub previews are not
-Snap Store approvals. Snap work remains in snap/ and docs/PUBLISHING.md.
+See docs/VALIDATION.md for the actual test results and docs/PUBLISHING.md for
+the GitHub release workflow. Include terminal_display.py and updates.py in every
+installer. Keep CLI settings unchanged: display color filtering belongs to Hud.

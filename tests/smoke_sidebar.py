@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     for session_path in (session['socket_path'], other_session['socket_path']):
         group_identity = ('group', (session_path, 'w1'))
         assert not app.can_close_sidebar_item(group_identity)
-        assert not app.can_close_sidebar_item(('terminal', (session_path, 'terminal-1')))
+        assert app.can_close_sidebar_item(('terminal', (session_path, 'terminal-1')))
     assert app.can_close_sidebar_item(('terminal', targets[1]))
     second_space_pane = dict(pane_id='w2:p1', terminal_id='second-space-first',
                              workspace_id='w2', tab_id='w2:t1', agent_status='idle', label='First tab')
@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     second_space_identity = ('terminal', (session['socket_path'], 'second-space-first'))
     assert app.can_close_sidebar_item(second_space_identity)
     assert app.can_close_sidebar_item(('group', (session['socket_path'], 'w2')))
-    assert not app.can_close_sidebar_item(('terminal', targets[0]))
+    assert app.can_close_sidebar_item(('terminal', targets[0]))
     row = app.sidebar_rows[second_space_identity]
     row.rename_button.clicked()
     menu = Gtk.Menu.get_for_attach_widget(row.rename_button)[0]
@@ -101,7 +101,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     menu.destroy()
     app.snapshot_changed(session, snapshot, None)
     pump()
-    print('PASS: first tab in second space offers Close; first space and its first tab remain protected', flush=True)
+    print('PASS: first tab in second space offers Close; first workspace stays protected and all terminals offer Close', flush=True)
     before_close = dict(app.panes)
     app.close_sidebar_item(('terminal', targets[0]))
     app.close_sidebar_item(('group', (session['socket_path'], 'w1')))
@@ -126,7 +126,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
             menu = menus[0]
             assert menu.get_visible()
             assert [item.get_label() for item in menu.get_children()] == (
-                ['Rename', 'Close'] if target[1] == 'terminal-2' else ['Rename'])
+                ['Rename', 'Close'])
             assert app.selected == selected_before, 'Right-click switched terminals'
             menu.popdown()
             menu.destroy()
@@ -143,13 +143,14 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
             reported = {**panes[0], 'agent':agent, 'display_agent':agent, 'agent_status':state}
             app.snapshot_changed(session, {**snapshot, 'panes':[reported, panes[1]]}, None)
             pump(.03)
-            assert stable_row.get_parent() == app.agent_rows
-            assert stable_row not in app.rows.get_children()
-            assert app.agent_rows.get_selected_row() is stable_row
-            assert app.rows.get_selected_row() is None
+            shortcut = app.sidebar_rows[('agent', agent_key)]
+            assert stable_row.get_parent() == app.rows
+            assert app.agent_rows.get_selected_row() is shortcut
+            assert app.rows.get_selected_row() is stable_row
+            assert shortcut.title_label.get_text() == stable_row.title_label.get_text()
             assert app.stack.get_visible_child() is stable_terminal
             assert app.window.get_focus() is stable_terminal
-            assert agent in stable_row.subtitle_label.get_text()
+            assert agent in shortcut.subtitle_label.get_text()
         app.snapshot_changed(session, snapshot, None)
         pump()
         assert stable_row.get_parent() == app.rows
@@ -162,8 +163,8 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     pump()
     group = app.sidebar_rows[('group', (session['socket_path'], 'w1'))]
     assert group.get_visible() and group.add_button.get_sensitive()
-    assert group.subtitle_label.get_text() == '0 terminals · 2 agents'
-    agent_row = app.sidebar_rows[('terminal', targets[1])]
+    assert group.subtitle_label.get_text() == '2 terminals · 2 agents'
+    agent_row = app.sidebar_rows[('agent', targets[1])]
     allocation = agent_row.get_allocation()
     for kind in (Gdk.EventType.BUTTON_PRESS, Gdk.EventType.BUTTON_RELEASE):
         event = Gdk.Event.new(kind)
@@ -178,7 +179,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     pump()
     assert app.selected == targets[1]
     assert app.window.get_focus() is app.terminals[targets[1]]
-    assert app.rows.get_selected_row() is None
+    assert app.rows.get_selected_row() is app.sidebar_rows[('terminal', targets[1])]
     width, height = app.window.get_size()
     pixels = Gdk.pixbuf_get_from_window(app.window.get_window(), 0, 0, width, height)
     if pixels:
@@ -235,7 +236,8 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     app.states[key] = 'working'
     app.rebuild_sidebar()
     pump()
-    assert selected_row.title_label.get_text().startswith('◉')
+    assert selected_row.status_dot.get_text() == '●'
+    assert selected_row.status_dot.get_style_context().has_class('active')
     extra_session = {'name':'New session', 'socket_path':tmp+'/new.sock', 'running':True}
     app.snapshot_changed(extra_session, snapshot, None)
     pump()
@@ -306,4 +308,138 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     assert tuple(app.window.get_position()) == tuple(normal_position)
     assert app.expand_button.get_tooltip_text() == 'Expand HUD'
     print('PASS: expand/restore returns to the user window size and position without overwriting saved geometry', flush=True)
+    # Search must identify individual terminals/agents, not all siblings in a space.
+    many = panes + [dict(panes[0], pane_id=f'w1:p{i}', terminal_id=f'terminal-{i}',
+                         tab_id=f'w1:t{i}', label=f'Terminal {i}') for i in range(3, 15)]
+    many[0] = dict(many[0], agent='codex', agent_status='working')
+    unrelated = dict(panes[0], pane_id='w2:p1', terminal_id='notes', workspace_id='w2',
+                     tab_id='w2:t1', label='Notes')
+    search_snapshot = {'panes':many + [unrelated],
+        'workspaces':[{'workspace_id':'w1','label':'Home'}, {'workspace_id':'w2','label':'codex'}],
+        'tabs':[{'tab_id':p['tab_id'], 'label':p['label']} for p in many + [unrelated]]}
+    app.snapshot_changed(session, search_snapshot, None)
+    pump(.3)
+    def visible_terminals():
+        return {r.key for rows in (app.rows, app.agent_rows) for r in rows.get_children()
+                if hasattr(r, 'key') and r.get_visible()}
+    keep_terminal = app.terminals[app.selected]
+    app.search.set_text('  TERMINAL 5  '); pump(.3)
+    assert visible_terminals() == {(session['socket_path'], 'terminal-5')}, visible_terminals()
+    matching = app.sidebar_rows[('terminal', (session['socket_path'], 'terminal-5'))]
+    parent = app.sidebar_rows[('group', (session['socket_path'], 'w1'))]
+    assert parent.get_visible()
+    assert matching.get_allocation().x > parent.get_allocation().x
+    assert matching.get_allocated_height() <= 40, matching.get_allocated_height()
+    assert not matching.subtitle_label.get_visible()
+    assert not app.sidebar_rows[('group', (session['socket_path'], 'w2'))].get_visible()
+    assert app.stack.get_visible_child() is keep_terminal
+    app.search.set_text('codex'); pump(.3)
+    assert visible_terminals() == {(session['socket_path'], 'terminal-1')}, visible_terminals()
+    assert not app.sidebar_rows[('group', (session['socket_path'], 'w2'))].get_visible()
+    app.search.set_text('no-such-terminal'); pump(.3)
+    assert not visible_terminals()
+    assert app.empty_agents.get_text() == 'No matching agents'
+    app.search.set_text(''); pump(.3)
+    assert (session['socket_path'], 'terminal-5') in visible_terminals()
+    assert app.stack.get_visible_child() is keep_terminal
+    print('PASS: compact indented terminal rows; search isolates one terminal or agent among many and excludes workspace-name matches', flush=True)
+    # Per-space disclosure must preserve attachments, siblings and search results.
+    space_key = (session['socket_path'], 'w1')
+    space_row = app.sidebar_rows[('group', space_key)]
+    child = app.sidebar_rows[('terminal', (session['socket_path'], 'terminal-5'))]
+    sibling = app.sidebar_rows[('terminal', (other_session['socket_path'], 'terminal-1'))]
+    agent = app.sidebar_rows[('agent', (session['socket_path'], 'terminal-1'))]
+    app.select(child.key); pump()
+    attached = app.stack.get_visible_child()
+    space_row.collapse_button.clicked(); pump()
+    assert space_key in app.collapsed_spaces
+    assert not child.get_visible() and sibling.get_visible() and agent.get_visible()
+    assert app.stack.get_visible_child() is attached
+    assert app.selected == child.key
+    app.snapshot_changed(session, search_snapshot, None); pump()
+    assert not child.get_visible() and app.stack.get_visible_child() is attached
+    app.search.set_text('terminal 5'); pump(.3)
+    assert child.get_visible() and not space_row.collapse_button.get_sensitive()
+    app.search.set_text(''); pump(.3)
+    assert not child.get_visible() and space_row.collapse_button.get_sensitive()
+    space_row.collapse_button.clicked(); pump()
+    assert child.get_visible() and space_key not in app.collapsed_spaces
+    assert app.stack.get_visible_child() is attached
+    # Adding a terminal to a collapsed space must reveal the new selection.
+    space_row.collapse_button.clicked(); pump()
+    app.terminal_created(session, search_snapshot, child.key[1], None); pump()
+    assert child.get_visible() and space_key not in app.collapsed_spaces
+    assert app.stack.get_visible_child() is attached
+    print('PASS: spaces collapse independently, keep active attachments and agents, reveal search matches, and expand when adding a terminal', flush=True)
+    # Exercise task completion and acknowledgement without clearing sibling dots.
+    app.unread.clear()
+    app.select(targets[1]); pump()
+    agent_key = (session['socket_path'], 'terminal-1')
+    shell_key = (session['socket_path'], 'terminal-5')
+    group = app.sidebar_rows[('group', (session['socket_path'], 'w1'))]
+    agent_row = app.sidebar_rows[('terminal', agent_key)]
+    shell_row = app.sidebar_rows[('terminal', shell_key)]
+    def indicator(row, expected):
+        context = row.status_dot.get_style_context()
+        assert row.status_dot.get_text() == ('○' if not expected else '●')
+        assert context.has_class('working') == (expected == 'working')
+        assert context.has_class('active') == bool(expected)
+    many[4] = dict(many[4], agent_status='working')
+    search_snapshot['panes'] = many + [unrelated]
+    app.snapshot_changed(session, search_snapshot, None); pump()
+    indicator(agent_row, 'working'); indicator(shell_row, 'working')
+    indicator(group, 'working')
+    many[0] = dict(many[0], agent_status='done')
+    many[4] = dict(many[4], agent_status='idle')
+    search_snapshot['panes'] = many + [unrelated]
+    app.snapshot_changed(session, search_snapshot, None); pump()
+    indicator(agent_row, 'unread'); indicator(shell_row, 'unread')
+    indicator(group, 'unread')
+    app.select(agent_key); pump()
+    indicator(agent_row, ''); indicator(shell_row, 'unread')
+    indicator(group, 'unread')
+    app.select(shell_key); pump()
+    indicator(shell_row, ''); indicator(group, '')
+    app.snapshot_changed(session, search_snapshot, None); pump()
+    indicator(agent_row, ''); indicator(shell_row, '')
+    for row in (agent_row, shell_row, group):
+        row.unset_state_flags(Gtk.StateFlags.PRELIGHT); pump(.3)
+        size = (row.get_allocated_width(), row.get_allocated_height())
+        context = row.rename_button.get_style_context()
+        assert context.get_property('opacity', context.get_state()) == 0
+        row.set_state_flags(Gtk.StateFlags.PRELIGHT, False); pump(.3)
+        assert context.get_property('opacity', context.get_state()) == 1
+        assert size == (row.get_allocated_width(), row.get_allocated_height())
+        row.unset_state_flags(Gtk.StateFlags.PRELIGHT)
+    print('PASS: green running, yellow completion, hollow after reading; space aggregates siblings; hover pencils keep layout', flush=True)
+    # Both menu locations target the same pane; cancelling never closes it.
+    original_change = app.change_terminal
+    closed = []
+    app.change_terminal = lambda *args: closed.append(args)
+    def answer_close(response):
+        dialogs = [w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.MessageDialog)]
+        assert len(dialogs) == 1
+        dialogs[0].response(response)
+        return False
+    for kind, response in (('terminal', Gtk.ResponseType.CANCEL), ('agent', Gtk.ResponseType.OK)):
+        row = app.sidebar_rows[(kind, agent_key)]
+        row.rename_button.clicked(); pump()
+        menu = Gtk.Menu.get_for_attach_widget(row.rename_button)[0]
+        assert menu.get_children()[1].get_label() == 'Close terminal and stop agent'
+        GLib.idle_add(answer_close, response)
+        menu.get_children()[1].activate(); pump()
+        menu.destroy()
+        assert closed == ([] if response == Gtk.ResponseType.CANCEL else [(agent_key, 'pane.close')])
+    app.change_terminal = original_change
+    app.snapshot_changed(session, {**search_snapshot, 'panes': []}, None); pump()
+    empty_group = app.sidebar_rows[('group', (session['socket_path'], 'w1'))]
+    assert empty_group.get_visible() and empty_group.add_button.get_sensitive()
+    assert empty_group.add_button.get_label() == 'New terminal'
+    assert ('agent', agent_key) not in app.sidebar_rows
+    print('PASS: agent close cancellation and confirmation target the same pane; empty spaces retain New terminal', flush=True)
+    width, height = app.window.get_size()
+    pixels = Gdk.pixbuf_get_from_window(app.window.get_window(), 0, 0, width, height)
+    if pixels:
+        pixels.savev(str(output_dir / 'hud-compact-sidebar.png'), 'png', [], [])
+        print('Screenshot:', output_dir / 'hud-compact-sidebar.png', flush=True)
     app.exit_hud()

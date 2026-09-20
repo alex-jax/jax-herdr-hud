@@ -14,7 +14,7 @@ from backend import (Monitor, attention, environment, ensure_session, create_ter
                      create_shared_workspace, request, resolve_herdr, configure_herdr,
                      check_herdr, HerdrUnavailable)
 from enable import enable_extension
-from updates import UpdateMonitor, UPDATE_GUIDE_URL
+from updates import UpdateMonitor, install_update
 from app_info import RELEASE_TAG, VERSION, ATTRIBUTION, AUTHOR_URL, UPSTREAM_URL, HERDR_URL
 
 APP_ID = 'io.github.herdr.Hud'
@@ -37,10 +37,9 @@ def rgba(value):
 
 
 class Terminal(Vte.Terminal):
-    """Reserve ordinary drag and right-click for the requested clipboard behaviour."""
+    """Use native VTE mouse reporting, selection-to-copy and right-click paste."""
     def __init__(self):
         super().__init__()
-        self.selecting = False
         self.pid = None
         self.alive = False
         self.set_margin_start(16)
@@ -66,22 +65,11 @@ class Terminal(Vte.Terminal):
             self.grab_focus()
             self.paste_clipboard()
             return True
-        if event.button == 1:
-            self.selecting = True
-            event.state |= Gdk.ModifierType.SHIFT_MASK
         return Vte.Terminal.do_button_press_event(self, event)
-
-    def do_motion_notify_event(self, event):
-        if self.selecting:
-            event.state |= Gdk.ModifierType.SHIFT_MASK
-        return Vte.Terminal.do_motion_notify_event(self, event)
 
     def do_button_release_event(self, event):
         if event.button == 3:
             return True
-        if event.button == 1:
-            event.state |= Gdk.ModifierType.SHIFT_MASK
-            self.selecting = False
         return Vte.Terminal.do_button_release_event(self, event)
 
     def exited(self, *_):
@@ -92,6 +80,7 @@ class Terminal(Vte.Terminal):
     def launch(self, argv):
         self.alive = True
         env = [f'{key}={value}' for key, value in environment().items()]
+        argv = [sys.executable, str(Path(__file__).with_name("terminal_display.py")), *argv]
         self.spawn_async(Vte.PtyFlags.DEFAULT, str(Path.home()), argv, env,
                          GLib.SpawnFlags.DEFAULT, None, None, -1, None, self.spawned, None)
 
@@ -103,7 +92,7 @@ class Terminal(Vte.Terminal):
             self.pid = pid
 
     def detach(self):
-        # Signal only the direct-attach client, never a server or pane process.
+        # The display relay forwards SIGHUP only to its direct-attach client.
         if self.pid:
             try:
                 os.kill(self.pid, signal.SIGHUP)
@@ -125,9 +114,14 @@ class Hud(Gtk.Application):
         self.creating_session = False
         self.selected = None
         self.initial_selection_pending = True
+        self.checked_initial_spaces = set()
         self.rebuilding = False
         self.sidebar_refresh_id = 0
         self.sidebar_rows = {}
+        self.selected_workspace = None
+        self.workspace_selection = {}
+        self.collapsed_spaces = set()
+        self.empty_spaces = {}
         self.closing = False
         self.theme = 'system'
         self.session_errors = {}
@@ -176,23 +170,49 @@ class Hud(Gtk.Application):
         return 0
 
     def update_available(self, tag):
-        if self.closing:
+        if self.closing or getattr(self, 'update_pending', False):
             return
+        if tag == getattr(self, 'installed_update', None):
+            tag = None
         self.update_tag = tag
         self.update_button.set_visible(bool(tag))
         if tag:
-            label = 'Herdr Hud ' + tag.removeprefix('v') + ' is available — how to download and update'
+            label = 'Herdr Hud ' + tag.removeprefix('v') + ' is available — click to download and install'
             self.update_button.set_tooltip_text(label)
             self.update_button.get_accessible().set_name(label)
 
     def open_update(self):
-        if self.update_tag:
+        if not self.update_tag or getattr(self, 'update_pending', False):
+            return
+        tag = self.update_tag
+        self.update_pending = True
+        self.update_button.set_sensitive(False)
+        self.status.set_text('Downloading Herdr Hud ' + tag.removeprefix('v') + '…')
+        def work():
             try:
-                Gtk.show_uri_on_window(self.window, UPDATE_GUIDE_URL + self.update_tag
-                                       + '/install.md#7-update-or-remove',
-                                       Gdk.CURRENT_TIME)
-            except GLib.Error as exc:
-                self.status.set_text('Could not open update instructions: ' + str(exc))
+                install_update(tag, lambda message: idle(self.update_progress, message))
+            except Exception as exc:
+                idle(self.update_finished, str(exc))
+            else:
+                idle(self.update_finished, None)
+        threading.Thread(target=work, daemon=True).start()
+
+    def update_progress(self, message):
+        if not self.closing:
+            self.status.set_text(message)
+
+    def update_finished(self, error):
+        self.update_pending = False
+        if self.closing:
+            return
+        self.update_button.set_sensitive(True)
+        if error:
+            self.status.set_text('Update not installed: ' + error + ' Click the update arrow to retry.')
+        else:
+            self.installed_update = self.update_tag
+            self.update_button.hide()
+            self.update_tag = None
+            self.status.set_text('Update installed. Restart Herdr Hud from Applications to use it. Your sessions keep running.')
 
     def show_about(self):
         dialog = Gtk.AboutDialog(transient_for=self.window, modal=True,
@@ -309,14 +329,12 @@ class Hud(Gtk.Application):
         header.set_show_close_button(False)
         self.window.set_titlebar(header)
         credits = self.icon_button('help-about-symbolic', 'About Herdr Hud', self.show_about)
-        credits.set_margin_start(10)
-        credits.set_margin_end(10)
         credits.set_valign(Gtk.Align.CENTER)
         credits.set_tooltip_text(ATTRIBUTION)
         credits.get_accessible().set_name('Credits')
         header.pack_start(credits)
         self.update_button = self.icon_button('go-down-symbolic',
-            'Download update — view GitHub instructions', self.open_update)
+            'Download and install update', self.open_update)
         self.update_button.set_no_show_all(True)
         self.update_button.get_style_context().add_class('suggested-action')
         header.pack_start(self.update_button)
@@ -339,7 +357,7 @@ class Hud(Gtk.Application):
         sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         sidebar.set_name('sidebar')
         sidebar.set_size_request(180, -1)
-        sidebar.set_border_width(12)
+        sidebar.set_border_width(4)
         self.search = Gtk.SearchEntry(placeholder_text='Find a terminal or agent…')
         self.search.set_margin_start(12)
         self.search.set_margin_end(12)
@@ -354,12 +372,12 @@ class Hud(Gtk.Application):
         self.sections.connect('notify::position', self.section_position_changed)
         self.rows = self.make_sidebar_list()
         self.agent_rows = self.make_sidebar_list()
-        self.rows.set_header_func(self.sidebar_header)
         self.space_section = self.make_sidebar_section('SPACES', self.rows,
             self.settings.get('spaces_expanded', True))
         self.agent_section = self.make_sidebar_section('AGENTS', self.agent_rows,
             self.settings.get('agents_expanded', True))
         empty_agents = Gtk.Label(label='No agents running', margin=12)
+        self.empty_agents = empty_agents
         empty_agents.get_style_context().add_class('dim-label')
         empty_agents.show()
         self.agent_rows.set_placeholder(empty_agents)
@@ -388,7 +406,7 @@ class Hud(Gtk.Application):
         empty.set_halign(Gtk.Align.CENTER)
         empty.pack_start(Gtk.Image.new_from_icon_name('utilities-terminal-symbolic', Gtk.IconSize.DIALOG), False, False, 0)
         empty.pack_start(Gtk.Label(label='Your agents. One place.'), False, False, 0)
-        empty.pack_start(Gtk.Label(label='Choose a terminal on the left, or start a space.'), False, False, 0)
+        empty.pack_start(Gtk.Label(label='Choose a space on the left, or start a new one.'), False, False, 0)
         button = Gtk.Button(label='Start a space')
         button.connect('clicked', lambda *_: self.new_session())
         empty.pack_start(button, False, False, 0)
@@ -434,7 +452,7 @@ class Hud(Gtk.Application):
         self.split_overlay.connect('get-child-position', self.position_divider_control)
         self.split.connect('notify::position', self.sidebar_position_changed)
         self.sidebar_position_changed()
-        self.status = Gtk.Label(label='Drag text to copy  ·  Right-click to paste', xalign=0)
+        self.status = Gtk.Label(label='Shift+drag to copy  ·  Click CLI controls  ·  Right-click to paste', xalign=0)
         self.status.set_margin_start(14)
         self.status.set_margin_top(7)
         self.status.set_margin_bottom(7)
@@ -460,6 +478,8 @@ class Hud(Gtk.Application):
         if position > 0:
             self.sidebar_expanded_width = position
         collapsed = position == 0
+        # The overlay toggle is clamped to the left edge when the split closes.
+        self.active_title.set_margin_start(max(16, 40 - position))
         self.sidebar_toggle.set_image(Gtk.Image.new_from_icon_name(
             'pan-end-symbolic' if collapsed else 'pan-start-symbolic', Gtk.IconSize.MENU))
         self.sidebar_toggle.set_tooltip_text('Expand sidebar' if collapsed else 'Collapse sidebar')
@@ -536,16 +556,25 @@ class Hud(Gtk.Application):
             #sidebar {{ background: {side}; }}
             #sidebar button {{ padding: 8px 12px; }}
             #sidebar button.rename-button {{ padding: 2px; min-width: 16px; min-height: 16px;
-                background: transparent; border: 1px solid {line}; border-radius: 5px; box-shadow: none;
+                background: transparent; border: 1px solid {line}; border-radius: 5px; box-shadow: none; opacity: 0;
                 color: {'rgba(255, 255, 255, 0.6)' if self.dark else '#555555'}; }}
+            #sidebar row:hover button.rename-button {{ opacity: 1; }}
+            #sidebar label.activity-dot.active {{ color: {'#f6d365' if self.dark else '#b58100'}; }}
+            #sidebar label.activity-dot.working {{ color: {'#8bd17c' if self.dark else '#287a27'}; }}
             list, row {{ background: transparent; }}
-            row {{ border-radius: 8px; padding: 12px 10px; margin: 4px 0; }}
+            row {{ border-radius: 0; padding: 10px 8px; margin: 0; }}
             row:selected {{ background: {line}; color: {fg}; }}
-            #sidebar row.terminal-row {{ border: 1px solid {line}; border-radius: 8px; }}
+            #sidebar row.terminal-row {{ border: none; }}
+            #sidebar row {{ padding: 3px 6px; min-height: 24px; }}
+            #sidebar row.space-row {{ margin-top: 8px; padding: 4px 6px; }}
+            #sidebar row.shell-row {{ border-left: 1px solid {line}; padding-left: 10px; }}
+            #sidebar row.agent-row {{ padding: 5px 6px; }}
+            #sidebar button.space-toggle {{ padding: 0; min-width: 16px; min-height: 16px; }}
+            #sidebar button.space-add {{ padding: 2px 5px; min-width: 18px; min-height: 18px; }}
             #space-divider {{ background: {line}; min-height: 1px; }}
             .section-title {{ font-size: 10px; font-weight: bold; letter-spacing: 1px; }}
             .dim-label {{ opacity: 0.7; font-size: 11px; }}
-            .group-label {{ font-weight: bold; font-size: 11px; opacity: 0.7; }}
+            .group-label {{ font-weight: bold; font-size: 12px; }}
             paned > separator {{ background: {line}; min-width: 6px; }}
             paned > separator:hover {{ background: {'#ffffff' if self.dark else '#000000'}; }}
             #divider-grip {{ background: #888888; border-radius: 2px; min-width: 3px; min-height: 28px; }}
@@ -560,10 +589,17 @@ class Hud(Gtk.Application):
         self.publish()
 
     def color_terminal(self, terminal):
-        palette = ['#2e3436', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
-                   '#555753', '#ef2929', '#8ae234', '#fce94f', '#729fcf', '#ad7fa8', '#34e2e2', '#eeeeec']
-        terminal.set_colors(rgba('#f6f5f4' if self.dark else '#2c2c2c'),
-                            rgba('#242424' if self.dark else '#ffffff'), [rgba(c) for c in palette])
+        foreground, background, palette = self.terminal_colors()
+        terminal.set_colors(rgba(foreground), rgba(background), [rgba(c) for c in palette])
+
+    def terminal_colors(self):
+        if self.dark:
+            return '#f6f5f4', '#242424', [
+                '#2e3436', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
+                '#555753', '#ef2929', '#8ae234', '#fce94f', '#729fcf', '#ad7fa8', '#34e2e2', '#eeeeec']
+        return '#2c2c2c', '#ffffff', [
+            '#2e3436', '#a51d2d', '#267326', '#876000', '#205a9d', '#74407f', '#006f73', '#d3d7cf',
+            '#555753', '#c01c28', '#287a27', '#956700', '#2463a6', '#813d9c', '#00777d', '#eeeeec']
 
     def toggle_theme(self):
         self.theme = 'light' if self.dark else 'dark'
@@ -626,6 +662,14 @@ class Hud(Gtk.Application):
             return
         self.session_errors.pop(path, None)
         self.snapshots[path] = (session, snapshot)
+        if session['name'] == 'default' and snapshot['workspaces']:
+            first = snapshot['workspaces'][0]
+            identity = (path, first['workspace_id'])
+            if identity not in self.checked_initial_spaces:
+                self.checked_initial_spaces.add(identity)
+                if first['label'] == '~':
+                    self.change_item(session, 'workspace.rename',
+                                     {'workspace_id': first['workspace_id'], 'label': 'Space 1'})
         for pane in snapshot['panes']:
             key = (path, pane['terminal_id'])
             self.transition(key, pane, pane['agent_status'])
@@ -674,12 +718,19 @@ class Hud(Gtk.Application):
         for key in list(self.terminals):
             if isinstance(key, tuple) and key not in panes:
                 terminal = self.terminals.pop(key)
+                if self.window.get_focus() is terminal:
+                    self.window.set_focus(None)
+                if self.stack.get_visible_child() is terminal:
+                    self.stack.set_visible_child_name('empty')
                 terminal.detach()
-                terminal.destroy()
+                terminal.hide()
+                self.stack.remove(terminal)
+                idle(terminal.destroy)
         self.unread = {k: v for k, v in self.unread.items() if k in panes}
         self.states = {k: v for k, v in self.states.items() if k in panes}
         if self.selected is not None and self.selected not in panes:
             self.selected = None
+            idle(self.restore_workspace_selection)
             self.stack.set_visible_child_name('empty')
             self.active_title.set_text('Choose a terminal')
         self.rebuild_sidebar()
@@ -717,52 +768,80 @@ class Hud(Gtk.Application):
             self.rebuilding = False
 
     def _update_sidebar_rows(self):
-        query = self.search.get_text().lower()
-        groups = {}
+        query = self.search.get_text().strip().casefold()
+        self.empty_agents.set_text('No matching agents' if query else 'No agents running')
+        groups = {(path, w['workspace_id']): []
+                  for path, (_, snapshot) in self.snapshots.items()
+                  for w in snapshot['workspaces']}
         for key, pane in self.panes.items():
             groups.setdefault((key[0], pane['workspace_id']), []).append((key, pane))
+        for group in self.empty_spaces:
+            if group[0] in self.snapshots:
+                groups.setdefault(group, [])
+        self.collapsed_spaces.intersection_update(groups)
         desired = []
         for path, members in groups.items():
-            session = members[0][1]['session']
-            group_title = members[0][1]['workspace_label'] or session['name']
+            session, snapshot = self.snapshots[path[0]]
+            workspace = next((w for w in snapshot['workspaces'] if w['workspace_id'] == path[1]),
+                             self.empty_spaces.get(path))
+            group_title = workspace.get('label') or session['name']
             if session['name'] != 'default':
                 group_title = session['name'] + ' / ' + group_title
+            titles = {}
+            for number, (key, pane) in enumerate(members, 1):
+                agent = pane.get('display_agent') or pane.get('agent')
+                name = pane.get('tab_label') or pane.get('label') or ''
+                if not name or name.isdigit() or name.casefold() == str(agent or '').casefold():
+                    name = f'Terminal {number}'
+                titles[key] = f'{agent} · {name}' if agent else self.pane_title(pane)
             visible = {key for key, pane in members if not query or query in
-                       (self.pane_title(pane) + ' ' + session['name'] + ' ' + pane['workspace_label']
-                        + ' ' + (pane.get('display_agent') or pane.get('agent') or '')).lower()}
+                       ' '.join(str(value or '') for value in (
+                           titles[key], self.pane_title(pane), pane.get('label'), pane.get('tab_label'),
+                           pane.get('title'), pane.get('terminal_title_stripped'),
+                           pane.get('display_agent'), pane.get('agent'))).casefold()}
             agents = sum(bool(p.get('agent')) for _, p in members)
-            count = len(members) - agents
+            count = len(members)
             counts = f"{count} terminal{'s' if count != 1 else ''}"
             if agents:
                 counts += f" · {agents} agent{'s' if agents != 1 else ''}"
+            activity = {key: ('working' if self.states.get(key) == 'working' else
+                              'unread' if key in self.unread else '')
+                        for key, _ in members}
+            group_activity = ('unread' if 'unread' in activity.values() else
+                              'working' if 'working' in activity.values() else '')
             desired.append((('group', path), group_title,
                             counts,
-                            f"New terminal in {group_title}", bool(visible)))
+                            f"{group_title} — {counts}", not query or any(
+                                key in visible for key, pane in members),
+                            group_activity))
             for key, pane in members:
                 state = self.states.get(key, 'unknown')
-                marker = '●' if key in self.unread else ('◉' if state == 'working' else '○')
                 subtitle = self.unread.get(key) or (state.capitalize() if pane.get('agent') else 'Shell')
                 if pane.get('agent'):
                     status = {'blocked': 'Needs input', 'done': 'Finished'}.get(state, state.capitalize())
                     subtitle = f"{pane.get('display_agent') or pane['agent']} · {status} · {group_title}"
                 tooltip = f"{session['name']} / {pane['workspace_label']}\n{pane.get('foreground_cwd') or pane.get('cwd') or ''}"
-                desired.append((('terminal', key), f'{marker}  {self.pane_title(pane)}',
-                                subtitle, tooltip, key in visible))
+                desired.append((('terminal', key), titles[key],
+                                subtitle, tooltip, key in visible and
+                                (bool(query) or path not in self.collapsed_spaces),
+                                activity[key]))
+                if pane.get('agent'):
+                    desired.append((('agent', key), titles[key], subtitle, tooltip,
+                                    key in visible, activity[key]))
 
         wanted = {item[0] for item in desired}
         for identity in self.sidebar_rows.keys() - wanted:
             self.sidebar_rows.pop(identity).destroy()
         order_changed = False
-        for order, (identity, title, subtitle, tooltip, visible) in enumerate(desired):
+        for order, (identity, title, subtitle, tooltip, visible, active) in enumerate(desired):
             row = self.sidebar_rows.get(identity)
             is_group = identity[0] == 'group'
-            target_list = (self.agent_rows if not is_group and
-                           self.panes[identity[1]].get('agent') else self.rows)
+            target_list = self.agent_rows if identity[0] == 'agent' else self.rows
             if row is None:
-                row = Gtk.ListBoxRow(selectable=not is_group, activatable=not is_group)
+                row = Gtk.ListBoxRow(selectable=True, activatable=True)
                 row.is_group = is_group
                 row.order = order
-                box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3 if is_group else 4)
+                box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
                 row.title_label = Gtk.Label(xalign=0)
                 row.title_label.set_ellipsize(Pango.EllipsizeMode.END)
                 row.subtitle_label = Gtk.Label(xalign=0)
@@ -776,24 +855,36 @@ class Hud(Gtk.Application):
                 row.rename_button.set_relief(Gtk.ReliefStyle.NONE)
                 row.rename_button.get_image().set_pixel_size(14)
                 row.rename_button.get_style_context().add_class('rename-button')
+                if is_group:
+                    row.collapse_button = self.icon_button('pan-down-symbolic', 'Collapse space',
+                        lambda group=identity[1]: self.toggle_space(group))
+                    row.collapse_button.set_relief(Gtk.ReliefStyle.NONE)
+                    row.collapse_button.get_image().set_pixel_size(12)
+                    row.collapse_button.get_style_context().add_class('space-toggle')
+                    title_box.pack_start(row.collapse_button, False, False, 0)
                 title_box.pack_start(row.rename_button, False, False, 0)
+                row.status_dot = Gtk.Label(label='○')
+                row.status_dot.get_style_context().add_class('activity-dot')
+                title_box.pack_start(row.status_dot, False, False, 0)
                 title_box.pack_start(row.title_label, True, True, 0)
                 box.pack_start(title_box, False, False, 0)
                 box.pack_start(row.subtitle_label, False, False, 0)
                 if is_group:
                     row.title_label.get_style_context().add_class('group-label')
-                    header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+                    row.group_key = identity[1]
+                    row.get_style_context().add_class('space-row')
+                    header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
                     header.pack_start(box, True, True, 0)
-                    row.add_button = self.icon_button('list-add-symbolic', tooltip,
-                        lambda group=identity[1]: self.new_terminal(*group))
+                    row.add_button = self.icon_button('list-add-symbolic',
+                        'New terminal in this space', lambda group=identity[1]: self.new_terminal(*group))
+                    row.add_button.get_style_context().add_class('space-add')
                     header.pack_end(row.add_button, False, False, 0)
                     row.add(header)
                 else:
                     row.get_style_context().add_class('terminal-row')
                     row.key = identity[1]
-                    row.connect('popup-menu', self.session_keyboard_menu)
-                    box.set_margin_start(10)
                     row.add(box)
+                row.connect('popup-menu', self.session_keyboard_menu)
                 self.sidebar_rows[identity] = row
                 target_list.add(row)
                 row.show_all()
@@ -803,42 +894,72 @@ class Hud(Gtk.Application):
                 previous_list.unselect_row(row)
                 previous_list.remove(row)
                 target_list.add(row)
+            is_agent = identity[0] == 'agent'
+            row.set_margin_start(18 if not is_group and not is_agent else 0)
+            for style, enabled in (('shell-row', not is_group and not is_agent),
+                                  ('agent-row', is_agent)):
+                context = row.get_style_context()
+                if enabled:
+                    context.add_class(style)
+                else:
+                    context.remove_class(style)
+            row.subtitle_label.set_visible(is_agent)
+            if is_group:
+                expanded = bool(query) or identity[1] not in self.collapsed_spaces
+                icon = 'pan-down-symbolic' if expanded else 'pan-end-symbolic'
+                if row.collapse_button.get_image().get_icon_name()[0] != icon:
+                    row.collapse_button.get_image().set_from_icon_name(icon, Gtk.IconSize.MENU)
+                    row.collapse_button.get_image().set_pixel_size(12)
+                row.collapse_button.set_sensitive(not query)
+                row.collapse_button.set_tooltip_text('Search shows matching terminals' if query else
+                    'Collapse space' if expanded else 'Expand space')
+                empty = not groups[identity[1]]
+                row.add_button.set_label('New terminal' if empty else '')
+                row.add_button.set_always_show_image(True)
+                row.add_button.set_sensitive(identity[1][0] not in self.adding_terminals)
             if row.order != order:
                 row.order = order
                 order_changed = True
+            marker = '●' if active else '○'
+            if row.status_dot.get_text() != marker:
+                row.status_dot.set_text(marker)
+            dot_style = row.status_dot.get_style_context()
+            if active:
+                dot_style.add_class('active')
+            else:
+                dot_style.remove_class('active')
+            if active == 'working':
+                dot_style.add_class('working')
+            else:
+                dot_style.remove_class('working')
             if row.title_label.get_text() != title:
                 row.title_label.set_text(title)
             if row.subtitle_label.get_text() != subtitle:
                 row.subtitle_label.set_text(subtitle)
-            tooltip_widget = row.add_button if is_group else row
+            tooltip_widget = row
             if tooltip_widget.get_tooltip_text() != tooltip:
                 tooltip_widget.set_tooltip_text(tooltip)
-            if is_group:
-                sensitive = identity[1][0] not in self.adding_terminals
-                if row.add_button.get_sensitive() != sensitive:
-                    row.add_button.set_sensitive(sensitive)
             if row.get_visible() != visible:
                 row.set_visible(visible)
         if order_changed:
             self.rows.invalidate_sort()
             self.agent_rows.invalidate_sort()
-        selected_row = self.sidebar_rows.get(('terminal', self.selected))
-        for rows in (self.rows, self.agent_rows):
+        for rows, identity in ((self.rows, ('terminal', self.selected)),
+                               (self.agent_rows, ('agent', self.selected))):
+            selected_row = self.sidebar_rows.get(identity)
             desired_selection = (selected_row if selected_row and selected_row.get_visible()
                                  and selected_row.get_parent() == rows else None)
             if rows.get_selected_row() != desired_selection:
                 rows.select_row(desired_selection)
 
-    def sidebar_header(self, row, before):
-        if row.is_group and before is not None:
-            if row.get_header() is None:
-                divider = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-                divider.set_name('space-divider')
-                divider.set_margin_top(10)
-                divider.set_margin_bottom(10)
-                row.set_header(divider)
-        elif row.get_header() is not None:
-            row.set_header(None)
+    def toggle_space(self, group):
+        if self.closing:
+            return
+        if group in self.collapsed_spaces:
+            self.collapsed_spaces.remove(group)
+        else:
+            self.collapsed_spaces.add(group)
+        self.rebuild_sidebar()
 
     def sidebar_button_press(self, rows, event):
         # ListBox owns the input window; its windowless rows never receive
@@ -846,7 +967,7 @@ class Hud(Gtk.Application):
         if event.button != 3:
             return False
         row = rows.get_row_at_y(int(event.y))
-        if row is None or not hasattr(row, 'key'):
+        if row is None or not (hasattr(row, 'key') or hasattr(row, 'group_key')):
             return False
         self.open_session_menu(row, event)
         return True
@@ -856,10 +977,15 @@ class Hud(Gtk.Application):
         return True
 
     def open_session_menu(self, row, event=None):
-        self.open_item_menu(('terminal', row.key), row, event)
+        identity = ('group', row.group_key) if row.is_group else ('terminal', row.key)
+        self.open_item_menu(identity, row, event)
 
     def open_item_menu(self, identity, anchor, event=None):
-        if identity not in self.sidebar_rows:
+        if identity[0] == 'agent':
+            identity = ('terminal', identity[1])
+        if identity[0] == 'terminal' and identity[1] not in self.panes:
+            return
+        if identity[0] == 'group' and identity not in self.sidebar_rows:
             return
         menu = Gtk.Menu()
         menu.attach_to_widget(anchor, None)
@@ -867,7 +993,8 @@ class Hud(Gtk.Application):
         rename.connect('activate', lambda *_: self.rename_sidebar_item(identity))
         menu.append(rename)
         if self.can_close_sidebar_item(identity):
-            close = Gtk.MenuItem(label='Close')
+            agent = identity[0] == 'terminal' and self.panes[identity[1]].get('agent')
+            close = Gtk.MenuItem(label='Close terminal and stop agent' if agent else 'Close')
             close.set_tooltip_text('Stop all terminals in this space' if identity[0] == 'group'
                                   else 'Stop this terminal and its running process')
             close.connect('activate', lambda *_: self.close_sidebar_item(identity))
@@ -890,27 +1017,41 @@ class Hud(Gtk.Application):
             workspaces = snapshot['workspaces']
             return bool(workspaces and key[1] != workspaces[0]['workspace_id']
                         and any(w['workspace_id'] == key[1] for w in workspaces))
-        pane = self.panes.get(key)
-        if not pane:
-            return False
-        workspaces = snapshot['workspaces']
-        if workspaces and pane['workspace_id'] != workspaces[0]['workspace_id']:
-            return True
-        first = next((p for p in snapshot['panes']
-                      if p['workspace_id'] == pane['workspace_id']), None)
-        return first is not None and first['terminal_id'] != key[1]
+        return key in self.panes
 
     def close_sidebar_item(self, identity):
         if not self.can_close_sidebar_item(identity):
             return
         kind, key = identity
         if kind == 'terminal':
+            pane = self.panes.get(key)
+            if pane and pane.get('agent'):
+                dialog = Gtk.MessageDialog(transient_for=self.window, modal=True,
+                    message_type=Gtk.MessageType.WARNING, buttons=Gtk.ButtonsType.NONE,
+                    text='Close terminal and stop agent?')
+                dialog.format_secondary_text('This stops the agent and any other process in this terminal. Unfinished work may be lost.')
+                dialog.add_buttons('Cancel', Gtk.ResponseType.CANCEL,
+                                   'Close terminal and stop agent', Gtk.ResponseType.OK)
+                dialog.set_default_response(Gtk.ResponseType.CANCEL)
+                response = dialog.run()
+                dialog.destroy()
+                if response != Gtk.ResponseType.OK:
+                    return
+            if pane:
+                group = (key[0], pane['workspace_id'])
+                members = [p for k, p in self.panes.items()
+                           if k[0] == key[0] and p['workspace_id'] == group[1]]
+                if len(members) == 1:
+                    self.empty_spaces[group] = {'workspace_id': group[1],
+                        'label': pane['workspace_label'],
+                        'cwd': pane.get('foreground_cwd') or pane.get('cwd')}
             self.change_terminal(key, 'pane.close')
         else:
             pane = next((p for k, p in self.panes.items()
                          if k[0] == key[0] and p['workspace_id'] == key[1]), None)
-            if pane:
-                self.change_item(pane['session'], 'workspace.close', {'workspace_id': key[1]})
+            entry = self.snapshots.get(key[0])
+            if entry:
+                self.change_item(entry[0], 'workspace.close', {'workspace_id': key[1]})
 
     def rename_terminal(self, key):
         self.rename_sidebar_item(('terminal', key))
@@ -922,10 +1063,20 @@ class Hud(Gtk.Application):
                          if k[0] == key[0] and p['workspace_id'] == key[1]), None)
         else:
             pane = self.panes.get(key)
-        if not pane:
-            return
         is_space = kind == 'group'
-        current = pane['workspace_label'] if is_space else self.pane_title(pane)
+        if is_space:
+            entry = self.snapshots.get(key[0])
+            workspace = next((w for w in entry[1]['workspaces'] if w['workspace_id'] == key[1]), None) if entry else None
+            if not workspace:
+                workspace = self.empty_spaces.get(key)
+            if not workspace:
+                return
+            session = entry[0]
+            current = workspace.get('label', '')
+        else:
+            if not pane:
+                return
+            current = self.pane_title(pane)
         dialog = Gtk.Dialog(title='Rename space' if is_space else 'Rename session',
                             transient_for=self.window, modal=True)
         dialog.add_buttons('Cancel', Gtk.ResponseType.CANCEL, 'Rename', Gtk.ResponseType.OK)
@@ -947,8 +1098,12 @@ class Hud(Gtk.Application):
         name = entry.get_text().strip()
         dialog.destroy()
         if response == Gtk.ResponseType.OK and name:
-            if is_space:
-                self.change_item(pane['session'], 'workspace.rename',
+            if is_space and key in self.empty_spaces and not any(
+                    w['workspace_id'] == key[1] for w in self.snapshots[key[0]][1]['workspaces']):
+                self.empty_spaces[key]['label'] = name
+                self.rebuild_sidebar()
+            elif is_space:
+                self.change_item(session, 'workspace.rename',
                                  {'workspace_id': key[1], 'label': name})
             else:
                 self.change_terminal(key, 'pane.rename', name)
@@ -982,6 +1137,10 @@ class Hud(Gtk.Application):
         if self.closing:
             return
         if error:
+            for group in list(self.empty_spaces):
+                if any(k[0] == group[0] and p['workspace_id'] == group[1]
+                       for k, p in self.panes.items()):
+                    self.empty_spaces.pop(group, None)
             self.status.set_text('Could not update terminal: ' + error)
             return
         self.snapshot_changed(session, snapshot, None)
@@ -995,25 +1154,43 @@ class Hud(Gtk.Application):
             return
         members = [p for key, p in self.panes.items() if key[0] == path
                    and (workspace_id is None or p['workspace_id'] == workspace_id)]
-        if not members:
+        entry = self.snapshots.get(path)
+        if not entry:
             return
         selected = self.panes.get(self.selected)
-        source = selected if selected in members else members[0]
-        session = source['session']
+        source = selected if selected in members else (members[0] if members else {})
+        session = entry[0]
+        workspace_id = workspace_id or source.get('workspace_id')
+        if not workspace_id:
+            return
         number = len(members) + 1
         labels = {p['tab_label'] for p in members}
         while f'Terminal {number}' in labels:
             number += 1
         self.adding_terminals.add(path)
         self.rebuild_sidebar()
+        placeholder = self.empty_spaces.get((path, workspace_id))
+        missing = not any(w['workspace_id'] == workspace_id for w in entry[1]['workspaces'])
         def work():
             try:
-                snapshot, terminal_id = create_terminal(session, source['workspace_id'],
+                if placeholder and missing:
+                    result = request(path, 'workspace.create', {
+                        'label': placeholder['label'], 'cwd': placeholder.get('cwd') or str(Path.home()),
+                        'focus': False})
+                    snapshot = request(path, 'session.snapshot')['snapshot']
+                    idle(self.empty_space_created, (path, workspace_id), session, snapshot,
+                         result['root_pane']['terminal_id'])
+                    return
+                snapshot, terminal_id = create_terminal(session, workspace_id,
                     f'Terminal {number}', source.get('foreground_cwd') or source.get('cwd'))
                 idle(self.terminal_created, session, snapshot, terminal_id, None)
             except Exception as exc:
                 idle(self.terminal_created, session, None, None, str(exc))
         threading.Thread(target=work, daemon=True).start()
+
+    def empty_space_created(self, group, session, snapshot, terminal_id):
+        self.empty_spaces.pop(group, None)
+        self.terminal_created(session, snapshot, terminal_id, None)
 
     def terminal_created(self, session, snapshot, terminal_id, error):
         self.adding_terminals.discard(session['socket_path'])
@@ -1023,26 +1200,47 @@ class Hud(Gtk.Application):
             self.status.set_text('Could not add terminal: ' + error)
             self.rebuild_sidebar()
             return
+        pane = next((p for p in snapshot['panes'] if p['terminal_id'] == terminal_id), None)
+        if pane:
+            self.empty_spaces.pop((session['socket_path'], pane['workspace_id']), None)
+            self.collapsed_spaces.discard((session['socket_path'], pane['workspace_id']))
         self.snapshot_changed(session, snapshot, None)
         self.select((session['socket_path'], terminal_id))
-        self.status.set_text('Drag text to copy  ·  Right-click to paste')
+        self.status.set_text('Shift+drag to copy  ·  Click CLI controls  ·  Right-click to paste')
 
-    def row_activated(self, _, row):
-        if not self.rebuilding and row and hasattr(row, 'key'):
-            if row.key == self.selected:
-                idle(self.focus_selected_terminal)
-            else:
-                self.select(row.key)
+    def row_activated(self, rows, row):
+        self.row_selected(rows, row)
 
     def row_selected(self, _, row):
-        if not self.rebuilding and row and hasattr(row, 'key'):
+        if self.rebuilding or row is None:
+            return
+        if row.is_group:
+            self.select_workspace(row.group_key)
+        else:
             self.select(row.key)
+
+    def select_workspace(self, group):
+        members = [key for key, pane in self.panes.items()
+                   if (key[0], pane['workspace_id']) == group]
+        if not members:
+            return
+        key = self.workspace_selection.get(group)
+        self.select(key if key in members else members[0])
+
+    def restore_workspace_selection(self):
+        if self.closing or self.selected is not None:
+            return
+        self.select_workspace(self.selected_workspace)
+        if self.selected is None and self.panes:
+            self.select(next(iter(self.panes)))
 
     def select(self, key):
         pane = self.panes.get(key)
-        if not pane:
+        if self.closing or not pane:
             return
         self.selected = key
+        self.selected_workspace = (key[0], pane['workspace_id'])
+        self.workspace_selection[self.selected_workspace] = key
         terminal = self.terminals.get(key)
         if terminal and not terminal.alive:
             terminal.destroy()
@@ -1099,6 +1297,8 @@ class Hud(Gtk.Application):
         dialog.set_response_sensitive(Gtk.ResponseType.OK, False)
         entry.connect('changed', lambda field: dialog.set_response_sensitive(
             Gtk.ResponseType.OK, bool(field.get_text().strip())))
+        entry.set_text(self.next_space_name())
+        entry.select_region(0, -1)
         entry.set_activates_default(True)
         content.pack_start(entry, False, False, 0)
         dialog.set_default_response(Gtk.ResponseType.OK)
@@ -1109,6 +1309,14 @@ class Hud(Gtk.Application):
         if response != Gtk.ResponseType.OK or not name:
             return
         self.create_session(name)
+
+    def next_space_name(self):
+        workspaces = [space for session, snapshot in self.snapshots.values()
+                      if session['name'] == 'default' for space in snapshot['workspaces']]
+        numbers = [int(space['label'][6:]) for space in workspaces
+                   if space['label'].startswith('Space ') and space['label'][6:].isascii()
+                   and space['label'][6:].isdigit()]
+        return f'Space {max([len(workspaces), *numbers], default=0) + 1}'
 
     def create_session(self, name):
         if self.creating_session:
@@ -1135,7 +1343,7 @@ class Hud(Gtk.Application):
         self.snapshot_changed(session, snapshot, None)
         if snapshot['panes']:
             self.select((session['socket_path'], terminal_id or snapshot['panes'][0]['terminal_id']))
-            self.status.set_text('Drag text to copy  ·  Right-click to paste')
+            self.status.set_text('Shift+drag to copy  ·  Click CLI controls  ·  Right-click to paste')
 
     def show(self):
         self.window.show()
