@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.snap
+*.log
+*.deb
+hud-preview.png
+.env
+.env.*

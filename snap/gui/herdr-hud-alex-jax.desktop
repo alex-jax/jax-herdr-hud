@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Herdr Hud
+Comment=A remix of Alex Finn’s version by Alex Jax
+Exec=herdr-hud-alex-jax
+Icon=${SNAP}/meta/gui/io.github.herdr.Hud.svg
+Terminal=false
+Categories=Development;Utility;
+StartupWMClass=io.github.herdr.Hud
+Keywords=Herdr;Terminal;Agents;Development;

@@ -1,0 +1,42 @@
+name: herdr-hud-alex-jax
+base: core26
+version: '0.1.0'
+summary: Native Herdr terminals and agents for Ubuntu
+license: GPL-3.0-or-later
+description: |
+  Herdr Hud is a native GTK terminal companion for Herdr on Ubuntu 26.04.
+  A remix of Alex Finn’s version by Alex Jax (https://github.com/alex-jax).
+  Requires an existing Herdr installation; tested with Herdr 0.9.1.
+  The optional floating H is a separately installed GNOME 50 extension.
+  Independently maintained; not an official release of the upstream projects.
+  Original: https://github.com/finna/omarchy-herdr-hud
+grade: devel
+confinement: classic
+platforms:
+  amd64:
+apps:
+  herdr-hud-alex-jax:
+    command: usr/bin/herdr-hud
+    desktop: meta/gui/herdr-hud-alex-jax.desktop
+parts:
+  hud:
+    plugin: nil
+    source: .
+    build-packages: [python3, libglib2.0-bin]
+    stage-packages:
+      - python3
+      - python3-gi
+      - gir1.2-gtk-3.0
+      - gir1.2-vte-2.91
+      - libglib2.0-bin
+      - gsettings-desktop-schemas
+      - adwaita-icon-theme
+      - fonts-dejavu-core
+      - shared-mime-info
+      - librsvg2-common
+    override-build: |
+      python3 "$CRAFT_PART_SRC/packaging/stage.py" "$CRAFT_PART_INSTALL"
+    override-prime: |
+      craftctl default
+      python3 "$CRAFT_PART_SRC/packaging/stage.py" "$CRAFT_PRIME"
+      python3 "$CRAFT_PART_SRC/scripts/runtime_inventory.py" "$CRAFT_PRIME"

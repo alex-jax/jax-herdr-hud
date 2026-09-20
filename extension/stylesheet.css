@@ -1,0 +1,24 @@
+.herdr-bubble {
+    border-radius: 28px;
+    background-color: #303030;
+    color: #ffffff;
+    border: 2px solid -st-accent-color;
+    font-family: Ubuntu, sans-serif;
+    font-size: 27px;
+    font-weight: bold;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+}
+.herdr-badge {
+    border-radius: 7px;
+    background-color: #3584e4;
+    border: 2px solid #ffffff;
+}
+.herdr-tooltip {
+    background-color: #242424;
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12px;
+    max-width: 440px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+}

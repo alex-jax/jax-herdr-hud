@@ -1,0 +1,14 @@
+{
+  "uuid": "herdr-hud@alex-jax.github.io",
+  "name": "Herdr Hud",
+  "description": "Optional floating H for Herdr Hud on Ubuntu 26.04 / GNOME 50. A remix of Alex Finn\u2019s version by Alex Jax. Requires the Herdr Hud companion.",
+  "shell-version": [
+    "50"
+  ],
+  "version": 4,
+  "session-modes": [
+    "user",
+    "unlock-dialog"
+  ],
+  "url": "https://github.com/alex-jax/jax-herdr-hud"
+}
