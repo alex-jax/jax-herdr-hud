@@ -2,7 +2,7 @@
 
 For **Ubuntu 26.04 with GNOME 50**. The floating H is included in the download.
 
-1. **Download the `*_all.deb` file** from the [release page](https://github.com/alex-jax/jax-herdr-hud/releases).
+1. Open the [release page](https://github.com/alex-jax/jax-herdr-hud/releases) and, under **Assets**, **download the `*_all.deb` file**.
 2. **Install Herdr** using the [official instructions](https://herdr.dev/docs/install/). Skip this if you already have it.
 3. **Install Herdr Hud** by opening the downloaded `.deb` with your software installer.
 4. **Start Herdr once** by running `herdr` in a terminal.
