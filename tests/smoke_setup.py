@@ -79,6 +79,8 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
         def close_about():
             dialog = next(w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.AboutDialog))
             assert dialog.get_version() == hud.VERSION
+            assert 'Christian Hergert' in dialog.get_comments()
+            assert any('https://gitlab.gnome.org/chergert/ptyxis' in author for author in dialog.get_authors())
             assert 'Alex Finn' in dialog.get_comments() and 'Alex Jax' in dialog.get_comments()
             dialog.response(Gtk.ResponseType.CLOSE)
             return GLib.SOURCE_REMOVE

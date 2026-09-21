@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     for session_path in (session['socket_path'], other_session['socket_path']):
         group_identity = ('group', (session_path, 'w1'))
         assert not app.can_close_sidebar_item(group_identity)
-        assert app.can_close_sidebar_item(('terminal', (session_path, 'terminal-1')))
+        assert app.can_close_sidebar_item(('terminal', (session_path, 'terminal-1'))) == (session_path == session['socket_path'])
     assert app.can_close_sidebar_item(('terminal', targets[1]))
     second_space_pane = dict(pane_id='w2:p1', terminal_id='second-space-first',
                              workspace_id='w2', tab_id='w2:t1', agent_status='idle', label='First tab')
@@ -101,7 +101,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     menu.destroy()
     app.snapshot_changed(session, snapshot, None)
     pump()
-    print('PASS: first tab in second space offers Close; first workspace stays protected and all terminals offer Close', flush=True)
+    print('PASS: first tab in second space offers Close; first workspace and its last terminal stay protected', flush=True)
     before_close = dict(app.panes)
     app.close_sidebar_item(('terminal', targets[0]))
     app.close_sidebar_item(('group', (session['socket_path'], 'w1')))
@@ -126,7 +126,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
             menu = menus[0]
             assert menu.get_visible()
             assert [item.get_label() for item in menu.get_children()] == (
-                ['Rename', 'Close'])
+                ['Rename'] if target == targets[2] else ['Rename', 'Close'])
             assert app.selected == selected_before, 'Right-click switched terminals'
             menu.popdown()
             menu.destroy()
@@ -165,7 +165,15 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     assert group.get_visible() and group.add_button.get_sensitive()
     assert group.subtitle_label.get_text() == '2 terminals · 2 agents'
     agent_row = app.sidebar_rows[('agent', targets[1])]
-    allocation = agent_row.get_allocation()
+    # Wait for the newly populated list to receive its frame allocation.
+    for _ in range(20):
+        allocation = agent_row.get_allocation()
+        if allocation.width > 40 and allocation.height > 1 and app.agent_rows.get_row_at_y(
+                int(allocation.y + allocation.height / 2)) is agent_row:
+            break
+        pump(.05)
+    else:
+        raise AssertionError('Agent row did not receive a usable allocation')
     for kind in (Gdk.EventType.BUTTON_PRESS, Gdk.EventType.BUTTON_RELEASE):
         event = Gdk.Event.new(kind)
         event.set_device(pointer)
@@ -436,7 +444,19 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     assert empty_group.get_visible() and empty_group.add_button.get_sensitive()
     assert empty_group.add_button.get_label() == 'New terminal'
     assert ('agent', agent_key) not in app.sidebar_rows
-    print('PASS: agent close cancellation and confirmation target the same pane; empty spaces retain New terminal', flush=True)
+    print('PASS: agent close cancellation and confirmation target the same pane; backend-provided empty workspace remains usable', flush=True)
+    # A sole agent in the first workspace is protected from either menu location.
+    sole = {**search_snapshot, 'panes': [p for p in search_snapshot['panes']
+                                       if p['terminal_id'] == agent_key[1]]}
+    app.snapshot_changed(session, sole, None); pump()
+    for kind in ('terminal', 'agent'):
+        row = app.sidebar_rows[(kind, agent_key)]
+        row.rename_button.clicked(); pump()
+        menu = Gtk.Menu.get_for_attach_widget(row.rename_button)[0]
+        assert [item.get_label() for item in menu.get_children()] == ['Rename']
+        menu.destroy()
+    assert not app.can_close_sidebar_item(('terminal', agent_key))
+    print('PASS: last agent in first space has no Close action in either location', flush=True)
     width, height = app.window.get_size()
     pixels = Gdk.pixbuf_get_from_window(app.window.get_window(), 0, 0, width, height)
     if pixels:

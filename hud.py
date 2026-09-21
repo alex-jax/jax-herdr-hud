@@ -15,6 +15,8 @@ from backend import (Monitor, attention, environment, ensure_session, create_ter
                      check_herdr, HerdrUnavailable)
 from enable import enable_extension
 from updates import UpdateMonitor, install_update
+from terminal_themes import palettes, palette
+from theme_picker import ThemePicker
 from app_info import RELEASE_TAG, VERSION, ATTRIBUTION, AUTHOR_URL, UPSTREAM_URL, HERDR_URL
 
 APP_ID = 'io.github.herdr.Hud'
@@ -121,9 +123,8 @@ class Hud(Gtk.Application):
         self.selected_workspace = None
         self.workspace_selection = {}
         self.collapsed_spaces = set()
-        self.empty_spaces = {}
         self.closing = False
-        self.theme = 'system'
+        self.theme = 'dark'
         self.session_errors = {}
         self.adding_terminals = set()
         try:
@@ -136,7 +137,12 @@ class Hud(Gtk.Application):
         self.extension_pending = False
         self.setup_pending = False
         self.update_tag = None
-        self.theme = self.settings.get('theme', 'system')
+        self.theme = self.settings.get('theme', 'dark')
+        self.theme_picker = None
+        self.settings.setdefault('terminal_palette', 'gnome')
+        if (not isinstance(self.settings['terminal_palette'], str) or
+                self.settings['terminal_palette'] not in {'hud', *palettes()}):
+            self.settings['terminal_palette'] = 'gnome'
         self.sidebar_expanded_width = max(32, self.settings.get('sidebar_expanded_width',
             self.settings.get('sidebar_width', 245) or 245))
 
@@ -217,9 +223,10 @@ class Hud(Gtk.Application):
     def show_about(self):
         dialog = Gtk.AboutDialog(transient_for=self.window, modal=True,
             program_name='Herdr Hud', version=VERSION,
-            comments=ATTRIBUTION + '\nIndependent Ubuntu companion for Herdr.',
+            comments=ATTRIBUTION + '\nIndependent Ubuntu companion for Herdr.\nColor schemes from Ptyxis by Christian Hergert and contributors.',
             website=AUTHOR_URL, website_label='Alex Jax on GitHub',
-            authors=['Alex Jax', 'Original Herdr HUD: Alex Finn — ' + UPSTREAM_URL],
+            authors=['Alex Jax', 'Original Herdr HUD: Alex Finn — ' + UPSTREAM_URL,
+                     'Ptyxis color schemes: Christian Hergert and contributors — https://gitlab.gnome.org/chergert/ptyxis'],
             copyright='Copyright © 2026 Alex Jax; upstream portions © 2026 Alex Finn',
             license_type=Gtk.License.GPL_3_0, wrap_license=True)
         dialog.run()
@@ -338,7 +345,7 @@ class Hud(Gtk.Application):
         self.update_button.set_no_show_all(True)
         self.update_button.get_style_context().add_class('suggested-action')
         header.pack_start(self.update_button)
-        header.pack_start(self.icon_button('preferences-system-symbolic', 'Herdr setup and floating H', self.show_setup))
+        header.pack_start(self.icon_button('preferences-system-symbolic', 'Settings: appearance, Herdr and floating H', self.show_setup))
         self.theme_button = self.icon_button('weather-clear-night-symbolic', 'Switch theme', self.toggle_theme)
         header.pack_end(self.icon_button('system-shutdown-symbolic', 'Exit Hud — keep sessions running', self.exit_hud))
         header.pack_end(self.theme_button)
@@ -413,7 +420,10 @@ class Hud(Gtk.Application):
         self.stack.add_named(empty, 'empty')
         self.stack.add_named(Gtk.Label(label='Opening your terminal…'), 'loading')
         setup = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=24)
-        setup.set_valign(Gtk.Align.CENTER)
+        setup.set_valign(Gtk.Align.START)
+        self.appearance_button = Gtk.Button(label='Appearance · Choose a terminal theme')
+        self.appearance_button.connect('clicked', lambda *_: self.show_appearance())
+        setup.pack_start(self.appearance_button, False, False, 0)
         self.setup_message = Gtk.Label(label='Use your existing Herdr installation.', wrap=True, xalign=0)
         setup.pack_start(self.setup_message, False, False, 0)
         setup.pack_start(Gtk.LinkButton(uri=HERDR_URL, label='Herdr installation instructions'), False, False, 0)
@@ -437,7 +447,10 @@ class Hud(Gtk.Application):
         self.extension_button.set_halign(Gtk.Align.START)
         self.extension_button.connect('clicked', lambda *_: self.enable_floating_h())
         setup.pack_start(self.extension_button, False, False, 0)
-        self.stack.add_named(setup, 'setup')
+        setup_scroll = Gtk.ScrolledWindow()
+        setup_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        setup_scroll.add(setup)
+        self.stack.add_named(setup_scroll, 'setup')
         right.pack_start(self.stack, True, True, 0)
         self.split.pack2(right, True, True)
         self.sidebar_toggle = self.icon_button('pan-start-symbolic', 'Collapse sidebar', self.toggle_sidebar)
@@ -546,24 +559,53 @@ class Hud(Gtk.Application):
         button.connect('clicked', lambda *_: callback())
         return button
 
+    def show_appearance(self):
+        if self.theme_picker is None:
+            self.theme_picker = ThemePicker(self)
+            self.theme_picker.connect('destroy', lambda *_: setattr(self, 'theme_picker', None))
+        self.theme_picker.present()
+
     def apply_theme(self):
         self.dark = self.theme == 'dark' or (self.theme == 'system' and
                      self.system_settings.get_string('color-scheme') == 'prefer-dark')
-        Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', self.dark)
-        bg, side, fg, line = ('#242424', '#303030', '#f6f5f4', '#484848') if self.dark else ('#ffffff', '#f4f3f2', '#2c2c2c', '#deddda')
+        fg, bg, ansi = self.terminal_colors()
+        def blend(first, second, amount):
+            a, b = rgba(first), rgba(second)
+            return '#{:02x}{:02x}{:02x}'.format(*[
+                round((x * (1 - amount) + y * amount) * 255)
+                for x, y in zip((a.red, a.green, a.blue), (b.red, b.green, b.blue))])
+        side, line = blend(bg, fg, .055), blend(bg, fg, .22)
+        hover, selected = blend(bg, fg, .12), blend(bg, ansi[4], .35)
+        accent = ansi[12] if self.dark else ansi[4]
+        background = rgba(bg)
+        Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme',
+            .2126 * background.red + .7152 * background.green + .0722 * background.blue < .5)
         self.css.load_from_data(f'''
-            window {{ background: {bg}; color: {fg}; }}
+            window, dialog, messagedialog, .background, stack, viewport, scrolledwindow {{ background: {bg}; color: {fg}; }}
+            headerbar, toolbar, menu, popover {{ background-image: none; background-color: {side}; color: {fg}; border-color: {line}; }}
+            button, entry, searchentry, combobox, spinbutton {{ background-image: none; background-color: {side}; color: {fg}; border-color: {line}; box-shadow: none; text-shadow: none; }}
+            button:hover, menuitem:hover {{ background-image: none; background-color: {hover}; color: {fg}; }}
+            button:active, button:checked, menuitem:selected {{ background-image: none; background-color: {selected}; color: {fg}; }}
+            entry selection, textview text selection {{ background: {selected}; color: {fg}; }}
+            check, radio {{ background-image: none; background-color: {side}; color: {fg}; border-color: {line}; }}
+            check:checked, radio:checked {{ background-color: {selected}; color: {fg}; }}
+            scrollbar, scrollbar trough {{ background: {bg}; }}
+            scrollbar slider {{ background: {line}; }}
+            separator {{ background: {line}; }}
+            *:focus {{ outline-color: {accent}; }}
+            button:disabled {{ color: {line}; }}
+            label:link, link {{ color: {accent}; }}
             #sidebar {{ background: {side}; }}
             #sidebar button {{ padding: 8px 12px; }}
             #sidebar button.rename-button {{ padding: 2px; min-width: 16px; min-height: 16px;
                 background: transparent; border: 1px solid {line}; border-radius: 5px; box-shadow: none; opacity: 0;
-                color: {'rgba(255, 255, 255, 0.6)' if self.dark else '#555555'}; }}
+                color: {fg}; }}
             #sidebar row:hover button.rename-button {{ opacity: 1; }}
             #sidebar label.activity-dot.active {{ color: {'#f6d365' if self.dark else '#b58100'}; }}
             #sidebar label.activity-dot.working {{ color: {'#8bd17c' if self.dark else '#287a27'}; }}
             list, row {{ background: transparent; }}
             row {{ border-radius: 0; padding: 10px 8px; margin: 0; }}
-            row:selected {{ background: {line}; color: {fg}; }}
+            row:selected {{ background: {selected}; color: {fg}; }}
             #sidebar row.terminal-row {{ border: none; }}
             #sidebar row {{ padding: 3px 6px; min-height: 24px; }}
             #sidebar row.space-row {{ margin-top: 8px; padding: 4px 6px; }}
@@ -576,8 +618,8 @@ class Hud(Gtk.Application):
             .dim-label {{ opacity: 0.7; font-size: 11px; }}
             .group-label {{ font-weight: bold; font-size: 12px; }}
             paned > separator {{ background: {line}; min-width: 6px; }}
-            paned > separator:hover {{ background: {'#ffffff' if self.dark else '#000000'}; }}
-            #divider-grip {{ background: #888888; border-radius: 2px; min-width: 3px; min-height: 28px; }}
+            paned > separator:hover {{ background: {fg}; }}
+            #divider-grip {{ background: {line}; border-radius: 2px; min-width: 3px; min-height: 28px; }}
             #sidebar-toggle {{ padding: 2px; min-width: 20px; min-height: 22px; border-radius: 4px; }}
             headerbar {{ min-height: 42px; }}
         '''.encode())
@@ -586,13 +628,21 @@ class Hud(Gtk.Application):
         self.theme_button.set_tooltip_text('Use light theme' if self.dark else 'Use dark theme')
         for terminal in self.terminals.values():
             self.color_terminal(terminal)
+        if self.theme_picker is not None:
+            self.theme_picker.refresh()
         self.publish()
 
     def color_terminal(self, terminal):
-        foreground, background, palette = self.terminal_colors()
-        terminal.set_colors(rgba(foreground), rgba(background), [rgba(c) for c in palette])
+        foreground, background, ansi = self.terminal_colors()
+        terminal.set_colors(rgba(foreground), rgba(background), [rgba(c) for c in ansi])
+        colors = palette(self.settings.get('terminal_palette', 'gnome'), self.dark)
+        terminal.set_color_cursor(rgba(colors['cursor'] if colors else foreground))
 
-    def terminal_colors(self):
+    def terminal_colors(self, palette_key=None):
+        colors = palette(palette_key if palette_key is not None else
+                         self.settings.get('terminal_palette', 'gnome'), self.dark)
+        if colors:
+            return colors['foreground'], colors['background'], colors['colors']
         if self.dark:
             return '#f6f5f4', '#242424', [
                 '#2e3436', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
@@ -775,15 +825,11 @@ class Hud(Gtk.Application):
                   for w in snapshot['workspaces']}
         for key, pane in self.panes.items():
             groups.setdefault((key[0], pane['workspace_id']), []).append((key, pane))
-        for group in self.empty_spaces:
-            if group[0] in self.snapshots:
-                groups.setdefault(group, [])
         self.collapsed_spaces.intersection_update(groups)
         desired = []
         for path, members in groups.items():
             session, snapshot = self.snapshots[path[0]]
-            workspace = next((w for w in snapshot['workspaces'] if w['workspace_id'] == path[1]),
-                             self.empty_spaces.get(path))
+            workspace = next(w for w in snapshot['workspaces'] if w['workspace_id'] == path[1])
             group_title = workspace.get('label') or session['name']
             if session['name'] != 'default':
                 group_title = session['name'] + ' / ' + group_title
@@ -1017,7 +1063,14 @@ class Hud(Gtk.Application):
             workspaces = snapshot['workspaces']
             return bool(workspaces and key[1] != workspaces[0]['workspace_id']
                         and any(w['workspace_id'] == key[1] for w in workspaces))
-        return key in self.panes
+        pane = self.panes.get(key)
+        if not pane:
+            return False
+        workspaces = snapshot['workspaces']
+        if workspaces and pane['workspace_id'] == workspaces[0]['workspace_id']:
+            return sum(k[0] == key[0] and p['workspace_id'] == pane['workspace_id']
+                       for k, p in self.panes.items()) > 1
+        return True
 
     def close_sidebar_item(self, identity):
         if not self.can_close_sidebar_item(identity):
@@ -1037,15 +1090,9 @@ class Hud(Gtk.Application):
                 dialog.destroy()
                 if response != Gtk.ResponseType.OK:
                     return
-            if pane:
-                group = (key[0], pane['workspace_id'])
-                members = [p for k, p in self.panes.items()
-                           if k[0] == key[0] and p['workspace_id'] == group[1]]
-                if len(members) == 1:
-                    self.empty_spaces[group] = {'workspace_id': group[1],
-                        'label': pane['workspace_label'],
-                        'cwd': pane.get('foreground_cwd') or pane.get('cwd')}
-            self.change_terminal(key, 'pane.close')
+            # A confirmation dialog runs GTK events; another pane may have closed.
+            if self.can_close_sidebar_item(identity):
+                self.change_terminal(key, 'pane.close')
         else:
             pane = next((p for k, p in self.panes.items()
                          if k[0] == key[0] and p['workspace_id'] == key[1]), None)
@@ -1067,8 +1114,6 @@ class Hud(Gtk.Application):
         if is_space:
             entry = self.snapshots.get(key[0])
             workspace = next((w for w in entry[1]['workspaces'] if w['workspace_id'] == key[1]), None) if entry else None
-            if not workspace:
-                workspace = self.empty_spaces.get(key)
             if not workspace:
                 return
             session = entry[0]
@@ -1098,11 +1143,7 @@ class Hud(Gtk.Application):
         name = entry.get_text().strip()
         dialog.destroy()
         if response == Gtk.ResponseType.OK and name:
-            if is_space and key in self.empty_spaces and not any(
-                    w['workspace_id'] == key[1] for w in self.snapshots[key[0]][1]['workspaces']):
-                self.empty_spaces[key]['label'] = name
-                self.rebuild_sidebar()
-            elif is_space:
+            if is_space:
                 self.change_item(session, 'workspace.rename',
                                  {'workspace_id': key[1], 'label': name})
             else:
@@ -1137,10 +1178,6 @@ class Hud(Gtk.Application):
         if self.closing:
             return
         if error:
-            for group in list(self.empty_spaces):
-                if any(k[0] == group[0] and p['workspace_id'] == group[1]
-                       for k, p in self.panes.items()):
-                    self.empty_spaces.pop(group, None)
             self.status.set_text('Could not update terminal: ' + error)
             return
         self.snapshot_changed(session, snapshot, None)
@@ -1169,28 +1206,14 @@ class Hud(Gtk.Application):
             number += 1
         self.adding_terminals.add(path)
         self.rebuild_sidebar()
-        placeholder = self.empty_spaces.get((path, workspace_id))
-        missing = not any(w['workspace_id'] == workspace_id for w in entry[1]['workspaces'])
         def work():
             try:
-                if placeholder and missing:
-                    result = request(path, 'workspace.create', {
-                        'label': placeholder['label'], 'cwd': placeholder.get('cwd') or str(Path.home()),
-                        'focus': False})
-                    snapshot = request(path, 'session.snapshot')['snapshot']
-                    idle(self.empty_space_created, (path, workspace_id), session, snapshot,
-                         result['root_pane']['terminal_id'])
-                    return
                 snapshot, terminal_id = create_terminal(session, workspace_id,
                     f'Terminal {number}', source.get('foreground_cwd') or source.get('cwd'))
                 idle(self.terminal_created, session, snapshot, terminal_id, None)
             except Exception as exc:
                 idle(self.terminal_created, session, None, None, str(exc))
         threading.Thread(target=work, daemon=True).start()
-
-    def empty_space_created(self, group, session, snapshot, terminal_id):
-        self.empty_spaces.pop(group, None)
-        self.terminal_created(session, snapshot, terminal_id, None)
 
     def terminal_created(self, session, snapshot, terminal_id, error):
         self.adding_terminals.discard(session['socket_path'])
@@ -1202,7 +1225,6 @@ class Hud(Gtk.Application):
             return
         pane = next((p for p in snapshot['panes'] if p['terminal_id'] == terminal_id), None)
         if pane:
-            self.empty_spaces.pop((session['socket_path'], pane['workspace_id']), None)
             self.collapsed_spaces.discard((session['socket_path'], pane['workspace_id']))
         self.snapshot_changed(session, snapshot, None)
         self.select((session['socket_path'], terminal_id))

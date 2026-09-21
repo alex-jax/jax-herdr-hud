@@ -5,7 +5,7 @@ GNOME Shell extension providing a floating **H** button. The project targets
 Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
-This manual describes the 1.0.0 stable release.
+This manual describes the 1.1.0 stable release.
 See [CHANGELOG.md](CHANGELOG.md) for release notes and publication status.
 
 A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).
@@ -141,14 +141,12 @@ the selected terminal.
 - **Close** on a terminal sends `pane.close`, stopping that pane's running process.
 - **Close** on a space sends `workspace.close`, stopping the terminals in that space.
 
-**Any terminal can be closed**, including the first one. Agent terminals offer
-**Close terminal and stop agent** with a confirmation dialog; cancelling leaves
-the session running. Closing a plain shell takes effect immediately. Both the
-space entry and agent shortcut act on the same terminal. Empty spaces retain a
-**New terminal** button while Hud stays open. Herdr removes the underlying
-workspace after its last terminal closes; this button recreates it with the same
-name and directory on the same server. The first workspace itself remains protected
-from closing.
+Closing the last terminal in a secondary space also removes that space. Agent
+terminals offer **Close terminal and stop agent** with a confirmation dialog;
+cancelling leaves the session running. Closing a plain shell takes effect
+immediately. Both the space entry and agent shortcut act on the same terminal.
+The first workspace and its last terminal or agent are protected: their menus
+omit Close. Add another terminal there before closing the existing one.
 Closing is separate from hiding or exiting Hud, which leaves sessions running.
 
 ## Terminal interaction
@@ -190,10 +188,8 @@ Moving the bubble does not reposition an already tracked window.
   to change their relative heights.
 - Use **Expand HUD** to maximize and **Restore window** to return to normal size.
   Maximizing does not overwrite saved normal dimensions.
-- Use the sun/moon button to switch between light and dark. Initial appearance
-  follows the desktop; choosing a theme saves an explicit override. To restore
-  system following, exit the companion and set `theme` to `"system"` in its
-  settings file. There is no system-theme button in the current UI.
+- Use the sun/moon button to switch between light and dark. Fresh installations use GNOME Dark; choosing light or dark saves an explicit override.
+  Settings → Appearance offers **Follow desktop**, **Light**, and **Dark**.
 - **Hide**, including a window-manager close request, keeps monitoring and
   attachments alive. **Exit Hud** disconnects only its attach clients and hides
   the bubble. Herdr servers, shells and agents remain running.
@@ -245,7 +241,7 @@ The launcher and Herdr binary paths remain under `~/.local/bin`.
 | `~/.local/state/herdr-hud/server-start.log` | Output from servers started by the backend. |
 | `~/.local/state/herdr-hud/hud.log` | Companion output when launched by `activate.py`. |
 
-`settings.json` defaults are `theme: "system"`, `width: 1040`, `height: 660`,
+`settings.json` defaults are `terminal_palette: "gnome"`, `theme: "dark"`, `width: 1040`, `height: 660`,
 `sidebar_width: 245`, `section_position: 260`, and both `spaces_expanded` and
 `agents_expanded` true. `sidebar_expanded_width` restores the last expanded width,
 falling back to the saved sidebar width or 245. The window minimum is 620 × 360.
@@ -280,7 +276,7 @@ installation, exit Hud and use `sudo apt remove jax-herdr-hud` instead.
 | Missing GTK/VTE imports | Use the system Python with the distro GI libraries; a separate virtual environment may not expose them. |
 | Old behaviour after editing source | Installed files are copies. Reinstall and restart the relevant component. |
 | Broken layout after manually editing preferences | Exit the companion, back up `settings.json`, and move it aside to restore defaults. Coordinate extension-owned file resets with extension disable/reload so cached values do not overwrite edits. |
-| Terminal text has no syntax colours | Hud deliberately uses monochrome text to keep CLI backgrounds and input readable in either theme. CLI theme settings outside Hud are unaffected. |
+| Terminal text has no syntax colours | Fully exit and reopen Hud after updating from the old monochrome version. The command or editor must emit color output; Hud preserves ANSI, indexed and RGB colors. |
 
 The current settings loader handles missing files and invalid JSON syntax, but
 does not validate every decoded value's type. Keep the configuration an object
@@ -348,14 +344,38 @@ Follow any additional message shown beside the button if H does not appear.
 
 ## Terminal display colors
 
-Hud owns terminal display colors: light mode uses a white background and dark
-text; dark mode uses a dark background and light text. CLI color assignments are
-filtered in Hud only, including RGB input backgrounds. Terminal text is monochrome;
-bold, underline and inverse selection remain available. Switching themes also
-recolors existing scrollback. Codex, Grok, Claude Code and agy keep their own
+Open **Settings → Appearance · Choose a terminal theme** for preview cards.
+The chooser includes all 244 palettes bundled with Ubuntu's Ptyxis 50.1, plus
+**Hud classic**. It starts with the 12 featured Ptyxis palettes and Hud classic;
+use **Show all palettes** or search by name to browse the complete collection.
+Click a card to apply it immediately to every open terminal. A checkmark and blue
+outline identify the selection, which is saved for future launches. **Done**
+closes the chooser; selecting GNOME restores the default palette. Fresh installations start in Dark
+mode; switching to Light uses GNOME’s light variant. Saved choices are retained.
+
+**Follow desktop**, **Light**, and **Dark** control Hud's appearance. Palettes with
+light and dark variants switch with this setting and the header's sun/moon button.
+Single-variant palettes keep their original colors in both modes. Palette selection
+colors the entire Hud: header, sidebar, controls, menus and terminal. Terminal
+foreground, background, cursor and ANSI colors use the selected palette. Ptyxis does not need to be installed,
+and Hud never writes to Ptyxis or CLI preferences.
+
+Hud classic uses a white background and dark text in light mode, and a dark
+background with light text in dark mode. Filename, folder, syntax and CLI colors
+are preserved. ANSI colors follow the palette; explicitly requested RGB and
+256-color values retain the application’s colors. Palette changes recolor
+default/ANSI scrollback, while application-specific RGB colors stay unchanged.
+Global palette replacement sequences are blocked to preserve your selection. Codex, Grok, Claude Code and agy keep their own
 settings and sessions, and look unchanged outside Hud. No patched Herdr build
 or CLI theme synchronization is needed.
 
 The display helper wraps the native `herdr terminal attach` client, relaying input,
 mouse reports and resize events. Closing Hud detaches that client only; it never
 stops the pane, shell or agent.
+
+## Color scheme credits
+
+Color schemes are borrowed from [Ptyxis](https://gitlab.gnome.org/chergert/ptyxis),
+created by **Christian Hergert**, with contributions from the Ptyxis and Gogh communities.
+Thank you for making these palettes available. See [NOTICE.md](NOTICE.md) for attribution
+and the retained license notices.

@@ -19,7 +19,7 @@ class DebianPackageTests(unittest.TestCase):
             subprocess.run(['dpkg-deb', '--raw-extract', str(deb), str(root)], check=True)
             self.assertEqual(root.stat().st_mode & 0o777, 0o755)
             self.assertEqual((root / 'usr/bin/herdr-hud').stat().st_mode & 0o777, 0o755)
-            for name in ('hud.py', 'terminal_display.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
+            for name in ('hud.py', 'terminal_display.py', 'terminal_themes.py', 'theme_picker.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
                 self.assertEqual((root / 'usr/lib/herdr-hud' / name).read_bytes(), (SOURCE / name).read_bytes())
             self.assertFalse((root / 'usr/bin/herdr').exists())
             self.assertEqual({p.name for p in (root / 'DEBIAN').iterdir()}, {'control', 'conffiles'})

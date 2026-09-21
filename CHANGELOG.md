@@ -1,5 +1,21 @@
 # Release notes
 
+## 1.1.0 — 21 September 2026
+
+- Fresh installations use GNOME Dark by default, with GNOME Light when toggled.
+  Existing saved appearance and palette choices are preserved.
+
+- Settings now includes searchable preview cards for all 244 Ubuntu Ptyxis palettes,
+  with saved selection, light/dark variants and Follow desktop appearance.
+- Palettes color the whole Hud. Restore filename, folder and syntax colors by
+  preserving ANSI, indexed and RGB terminal colors.
+
+- Closing the last terminal or agent in a secondary space now removes the space.
+- Protect the first space’s last terminal or agent from Close.
+
+- Color schemes credited to Christian Hergert and the
+  [Ptyxis project](https://gitlab.gnome.org/chergert/ptyxis), including bundled license notices.
+
 ## 1.0.0 — 20 September 2026
 
 Stable GitHub release: `v1.0.0`.

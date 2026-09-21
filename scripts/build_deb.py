@@ -30,7 +30,7 @@ def build(output):
             target.write_text(text)
             target.chmod(mode)
 
-        for name in ('hud.py', 'terminal_display.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
+        for name in ('hud.py', 'terminal_display.py', 'terminal_themes.py', 'theme_picker.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
             copy(name, 'usr/lib/herdr-hud/' + name)
         write('usr/bin/herdr-hud', '''#!/usr/bin/python3
 from pathlib import Path
@@ -45,6 +45,7 @@ runpy.run_path(str(app / 'hud.py'), run_name='__main__')
         for name in ('LICENSE', 'NOTICE.md', 'MANUAL.md', 'install.md', 'CHANGELOG.md'):
             copy(name, 'usr/share/doc/jax-herdr-hud/' + name)
         copy('LICENSE', 'usr/share/doc/jax-herdr-hud/copyright')
+        copy('licenses/Ptyxis-copyright.txt', 'usr/share/doc/jax-herdr-hud/Ptyxis-copyright.txt')
         copy('licenses/Alex-Finn-MIT.txt', 'usr/share/doc/jax-herdr-hud/Alex-Finn-MIT.txt')
         copy('LICENSE', f'usr/share/gnome-shell/extensions/{EXTENSION_UUID}/LICENSE')
         copy('licenses/Alex-Finn-MIT.txt', f'usr/share/gnome-shell/extensions/{EXTENSION_UUID}/Alex-Finn-MIT.txt')

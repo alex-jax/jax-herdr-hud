@@ -1,10 +1,10 @@
 # Build and publish on GitHub
 
-Distribution uses the native Debian package and source installer. Release **1.0.0** uses tag **v1.0.0** and is a regular stable release.
+Distribution uses the native Debian package and source installer. Release **1.1.0** uses tag **v1.1.0** and is a regular stable release.
 
 ## Prepare the version
 
-Set `VERSION = '1.0.0'` and `RELEASE_TAG = 'v1.0.0'` in `app_info.py` before
+Set `VERSION = '1.1.0'` and `RELEASE_TAG = 'v1.1.0'` in `app_info.py` before
 building. The update checker uses the release tag, including prerelease ordering.
 The GNOME extension revision is separate; change it only when the extension changes.
 Review [CHANGELOG.md](../CHANGELOG.md), the manual and installation guide together.
@@ -20,7 +20,8 @@ Building needs Python 3 and `dpkg-deb`, requires no root and does not install He
 The Debian package uses system Python/GTK/VTE and includes the floating H extension.
 The release script creates an extension ZIP, source archive and `SHA256SUMS` in
 `dist`. Use a clean output directory so checksums include only intended artifacts.
-All installers must include `terminal_display.py` and `updates.py` alongside Hud.
+All installers must include `terminal_display.py`, `terminal_themes.py`,
+`theme_picker.py` and `updates.py`, plus the Ptyxis license notice.
 
 ## Verify the exact package
 
@@ -43,7 +44,7 @@ Source test results do not establish that a new Debian artifact passed its check
 
 ## Publish
 
-Commit the reviewed source and documentation, tag the same commit `v1.0.0`, and
+Commit the reviewed source and documentation, tag the same commit `v1.1.0`, and
 push the commit and tag. Create a regular GitHub release with the approved release
 notes; leave **Set as a pre-release** unchecked and mark it as the latest release.
 Upload the tested `.deb`, extension ZIP, source archive and checksums under Assets.

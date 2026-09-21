@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """Hud-only color presentation around Herdr's native direct-attach client.
 
-Input, mouse reports, resize and terminal control sequences pass through. Color
-assignments are removed so VTE owns the foreground/background, including scrollback.
+Input, mouse reports, resize and terminal control sequences pass through. SGR colors
+are preserved for filenames, syntax and CLI controls. OSC palette replacements are
+blocked so VTE retains the user-selected theme.
 No shell or agent process is created, signalled or reconfigured by this helper.
 """
 import errno
@@ -20,24 +21,6 @@ class DisplayFilter:
     def __init__(self):
         self.pending = bytearray()
         self.state = 'text'
-
-    @staticmethod
-    def sgr(sequence):
-        values = sequence[2:-1].decode('ascii').split(';')
-        kept = []
-        index = 0
-        while index < len(values):
-            value = values[index]
-            code = value.split(':')[0]
-            number = int(code or '0')
-            if number in (38, 48, 58):
-                if ':' not in value and index + 1 < len(values):
-                    mode = values[index + 1]
-                    index += 4 if mode == '2' else 2 if mode == '5' else 0
-            elif not (30 <= number <= 49 or 90 <= number <= 107 or number == 59):
-                kept.append(value)
-            index += 1
-        return b'\x1b[' + ';'.join(kept).encode() + b'm' if kept else b''
 
     def feed(self, data):
         output = bytearray()
@@ -74,12 +57,7 @@ class DisplayFilter:
                             self.state == 'osc' and (byte == 7 or self.pending.endswith(b'\x1b\\')))
                 if complete:
                     sequence = bytes(self.pending)
-                    if self.state == 'csi' and byte == ord('m'):
-                        try:
-                            output.extend(self.sgr(sequence))
-                        except (ValueError, UnicodeError):
-                            output.extend(sequence)
-                    elif self.state == 'osc' and sequence[2:].split(b';', 1)[0].rstrip(b'\x07\x1b\\') in (
+                    if self.state == 'osc' and sequence[2:].split(b';', 1)[0].rstrip(b'\x07\x1b\\') in (
                             b'4', b'10', b'11', b'12', b'104', b'110', b'111', b'112'):
                         # Queries still receive VTE's answer; assignments cannot override Hud.
                         if b'?' in sequence:

@@ -14,7 +14,7 @@ from app_info import VERSION, SNAP_NAME
 def stage(root):
     app = root / 'usr/lib/herdr-hud'
     app.mkdir(parents=True, exist_ok=True)
-    for name in ('hud.py', 'terminal_display.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
+    for name in ('hud.py', 'terminal_display.py', 'terminal_themes.py', 'theme_picker.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
         shutil.copy2(SOURCE / name, app / name)
     shutil.copy2(SOURCE / 'packaging/launch.py', app / 'launch.py')
     (root / 'usr/bin').mkdir(exist_ok=True)

@@ -1,4 +1,31 @@
-# Validation for the 1.0.0 release
+# Validation
+
+## 1.1.0 — 21 September 2026
+
+Target: Ubuntu 26.04 / GNOME Shell 50, amd64, stock Herdr 0.9.1.
+
+- All 37 Python unit tests passed, including palette definitions, fragmented
+  ANSI/indexed/RGB preservation, backend, updater and Debian payload checks.
+- Built `jax-herdr-hud_1.1.0-1_all.deb`. Extracted launcher reports 1.1.0.
+- Theme chooser smoke passed against the exact extracted Debian payload:
+  fresh GNOME Dark, GNOME Light toggle, 244 palettes, search, selection persistence,
+  classic palette and whole-window styling. Light/dark previews inspected.
+- Extracted sidebar smoke passed. The test now waits for a newly populated agent
+  list to receive its layout before dispatching its synthetic pointer click;
+  an initial run clicked before the row was ready.
+- Extracted real desktop smoke passed: live ANSI color output verified in VTE,
+  palette changes preserve attachments, CLI mouse controls, clipboard, agent
+  reports, workspace operations, last-terminal removal and safe detachment.
+- Extracted setup smoke passed, including release version and Christian Hergert /
+  Ptyxis attribution in About. All palette modules and license notices are bundled.
+- APT simulation upgrades 1.0.0-1 to 1.1.0-1 without removing packages.
+- `git diff --check` passed. Simulated-menu and isolated-session shutdown warnings
+  remain present. The unchanged extension retains its previous validation below.
+
+These checks do not replace clean-VM install, upgrade and removal testing.
+This release was built and tested without replacing the user's installed app.
+
+## Validation for the 1.0.0 release
 
 Status: source and Debian payload checks passed for stable release `v1.0.0`. Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.
 

@@ -12,13 +12,14 @@ app = data / 'herdr-hud'
 extension = data / 'gnome-shell/extensions/herdr-hud@alex-jax.github.io'
 for directory in [app, extension, data / 'applications', data / 'icons/hicolor/scalable/apps', home / '.local/bin']:
     directory.mkdir(parents=True, exist_ok=True)
-for name in ['hud.py', 'terminal_display.py', 'backend.py', 'app_info.py', 'updates.py', 'enable.py', 'runtime_env.py']:
+for name in ['hud.py', 'terminal_display.py', 'terminal_themes.py', 'theme_picker.py', 'backend.py', 'app_info.py', 'updates.py', 'enable.py', 'runtime_env.py']:
     shutil.copy2(source / name, app / name)
 for name in ['extension.js', 'metadata.json', 'stylesheet.css']:
     shutil.copy2(source / 'extension' / name, extension / name)
 for target in (app, extension):
     shutil.copy2(source / 'LICENSE', target / 'LICENSE')
     shutil.copy2(source / 'licenses/Alex-Finn-MIT.txt', target / 'Alex-Finn-MIT.txt')
+shutil.copy2(source / 'licenses/Ptyxis-copyright.txt', app / 'Ptyxis-copyright.txt')
 launcher = home / '.local/bin/herdr-hud'
 # A Python launcher avoids shell quoting and preserves every argument.
 launcher.write_text('#!/usr/bin/python3\nimport os, sys\nos.execv("/usr/bin/python3", ["/usr/bin/python3", ' + repr(str(app / 'hud.py')) + '] + sys.argv[1:])\n')

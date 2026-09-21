@@ -19,7 +19,7 @@ The native `.deb` installs the app and optional floating H extension, and APT
 resolves its system Python/GTK/VTE dependencies. Herdr and CLI agents are separate
 installations. Source installation and modification instructions are also included.
 
-**1.0.0 is the first stable GitHub release.**
+**1.1.0 brings full-window themes and improved space closing.**
 See the [release notes](CHANGELOG.md) and
 [validation record](docs/VALIDATION.md). Distribution is through GitHub;
 there is no Snap Store or App Center release.
@@ -61,15 +61,17 @@ Use **+** beside a space to add one. Agent terminals stay under their space, wit
 shortcuts in **Agents** to the same sessions. Search shows matching terminals or
 agents, including matches inside collapsed spaces. Each space collapses separately.
 Green dots mean working, yellow means unread activity, and hollow means read and
-idle. Any terminal can be closed; agent terminals ask for confirmation.
+idle. Closing the last terminal or agent removes its secondary space. The first
+space keeps its last terminal; closing other agent terminals asks for confirmation.
 Attach real terminals, add or rename spaces and terminals,
 search, copy with Shift+drag, click CLI controls, and paste with right-click. Hide keeps monitoring;
 Exit Hud disconnects only its clients. Explicit Close stops the targeted terminal
 or space. The floating H is optional; the main window works independently.
 
-Hud uses a white background with dark text in light mode, and a dark background
-with light text in dark mode. Terminal text is monochrome; bold, underline and
-selection highlighting remain. This applies to Codex, Grok, Claude Code and agy
+Settings → **Appearance** offers 244 Ubuntu terminal palettes with searchable
+preview cards and light/dark variants. **GNOME Dark** is the default for new installations; switching to light mode
+uses GNOME Light. **Hud classic** retains the previous white and dark backgrounds. Your choice colors the whole Hud immediately and is saved. Filenames, folders,
+syntax colors and selection highlighting are preserved. This applies to Codex, Grok, Claude Code and agy
 without synchronizing their themes or changing Herdr.
 
 The setup button locates Herdr automatically or lets you select its executable.
@@ -121,3 +123,10 @@ dbus-run-session -- python3 tests/smoke_extension.py
 GTK tests require a display; the extension test starts a separate headless GNOME
 session. Test output goes to temporary directories or `HUD_TEST_OUTPUT`.
 See the publishing guide for testing the extracted Debian package.
+
+## Color scheme credits
+
+Color schemes are borrowed from [Ptyxis](https://gitlab.gnome.org/chergert/ptyxis),
+created by **Christian Hergert**, with contributions from the Ptyxis and Gogh communities.
+Thank you for making these palettes available. See [NOTICE.md](NOTICE.md) for attribution
+and the retained license notices.

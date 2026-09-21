@@ -196,6 +196,26 @@ finally:
     assert app.dark != old
     app.toggle_theme()
     print('PASS: light/dark theme switching', flush=True)
+    attached_pid = terminal.pid
+    app.settings['terminal_palette'] = 'Horizon'
+    app.apply_theme()
+    expected = '#1C1E26' if app.dark else '#FDF0ED'
+    assert terminal.get_color_background_for_draw().to_string() == hud.rgba(expected).to_string()
+    app.toggle_theme()
+    expected = '#1C1E26' if app.dark else '#FDF0ED'
+    assert terminal.get_color_background_for_draw().to_string() == hud.rgba(expected).to_string()
+    assert app.terminals[key] is terminal and terminal.pid == attached_pid and terminal.alive
+    app.settings['terminal_palette'] = 'hud'
+    app.toggle_theme()
+    terminal.feed_child(b"printf '\\033[31mHUD_RED_FILE\\033[0m\\n'\r")
+    until(lambda: 'HUD_RED_FILE' in screen())
+    pump()
+    html = terminal.get_text_format(hud.Vte.Format.HTML)
+    (output_dir / 'terminal-colors.html').write_text(html)
+    expected_red = app.terminal_colors()[2][1].upper()
+    assert f'<font color="{expected_red}">HUD_RED_FILE</font>' in html, html
+    print('PASS: real shell ANSI filename color survives the PTY relay into VTE', flush=True)
+    print('PASS: imported palette and variant changes recolor live VTE without reconnecting', flush=True)
     app.hide()
     observed = []
     watcher = SessionWatcher(session, lambda *a: None, lambda s, m: observed.append(m))
@@ -272,10 +292,10 @@ finally:
         entry.set_text('Renamed terminal')
         dialog.response(Gtk.ResponseType.OK)
         return GLib.SOURCE_REMOVE
-    def pencil_action(row, index):
+    def pencil_action(row, index, close_label='Close'):
         row.rename_button.clicked()
         menu = Gtk.Menu.get_for_attach_widget(row.rename_button)[0]
-        assert [item.get_label() for item in menu.get_children()] == ['Rename', 'Close']
+        assert [item.get_label() for item in menu.get_children()] == ['Rename', close_label]
         menu.get_children()[index].activate()
         menu.popdown()
         menu.destroy()
@@ -349,26 +369,58 @@ finally:
     pump()
     assert request(path, 'session.snapshot')['snapshot']['panes']
     print('PASS: detaching Hud clients leaves server and shell running', flush=True)
-    # Closing the first/last pane leaves a usable empty workspace.
+    # The first space keeps its last pane, including an agent terminal.
+    assert not app.can_close_sidebar_item(('terminal', key))
+    app.close_sidebar_item(('terminal', key))
+    pump()
+    assert key in app.panes
+    assert len(request(path, 'session.snapshot')['snapshot']['panes']) == 1
     def confirm_agent_close():
         dialogs = [w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.MessageDialog)]
         assert len(dialogs) == 1
         dialogs[0].response(Gtk.ResponseType.OK)
         return False
-    if app.panes[key].get('agent'):
-        GLib.idle_add(confirm_agent_close)
-    app.close_sidebar_item(('terminal', key))
-    until(lambda: key not in app.panes)
-    pump()
-    empty_group = app.sidebar_rows[('group', (path, pane['workspace_id']))]
-    assert empty_group.get_visible() and empty_group.add_button.get_sensitive()
-    assert not request(path, 'session.snapshot')['snapshot']['panes']
-    empty_group.add_button.clicked()
-    until(lambda: app.selected is not None and app.selected in app.panes)
-    assert app.panes[app.selected]['workspace_label'] == snap['workspaces'][0]['label']
-    assert app.selected != key
-    assert len(request(path, 'session.snapshot')['snapshot']['panes']) == 1
-    print('PASS: first agent terminal can close; empty workspace creates exactly one replacement terminal', flush=True)
+    for agent in (False, True):
+        app.create_session('Disposable space')
+        until(lambda: not app.creating_session and app.selected != key)
+        closing_key = app.selected
+        closing_pane = app.panes[closing_key]
+        group_id = ('group', (path, closing_pane['workspace_id']))
+        if agent:
+            request(path, 'pane.report_agent', {'pane_id': closing_pane['pane_id'],
+                'source': 'custom:hud-test', 'agent': 'hud-test', 'state': 'working'})
+            app.snapshot_changed(session, request(path, 'session.snapshot')['snapshot'], None)
+            pump()
+            GLib.idle_add(confirm_agent_close)
+        row = app.sidebar_rows[('agent' if agent else 'terminal', closing_key)]
+        # Open the actual ListBox right-click menu, then activate Close.
+        rows = row.get_parent()
+        allocation = row.get_allocation()
+        event = Gdk.Event.new(Gdk.EventType.BUTTON_PRESS)
+        event.set_device(Gdk.Display.get_default().get_default_seat().get_pointer())
+        event.button.window = rows.get_window()
+        event.button.time = int(GLib.get_monotonic_time() / 1000) & 0xffffffff
+        event.button.x = allocation.x + 3
+        event.button.y = allocation.y + allocation.height / 2
+        event.button.button = 3
+        event.button.state = 0
+        rows.event(event)
+        menu = Gtk.Menu.get_for_attach_widget(row)[0]
+        assert [item.get_label() for item in menu.get_children()] == [
+            'Rename', 'Close terminal and stop agent' if agent else 'Close']
+        menu.get_children()[1].activate()
+        menu.popdown()
+        menu.destroy()
+        until(lambda: closing_key not in app.panes)
+        pump()
+        assert group_id not in app.sidebar_rows, 'Empty secondary space remained visible'
+        assert ('agent', closing_key) not in app.sidebar_rows
+        current = request(path, 'session.snapshot')['snapshot']
+        assert len(current['workspaces']) == len(current['panes']) == 1
+        assert current['panes'][0]['terminal_id'] == key[1]
+        assert app.selected == key
+    print('PASS: right-click Close on last shell or agent removes its secondary space; first space keeps its last pane and receives selection', flush=True)
+
 finally:
     app.exit_hud()
     try:

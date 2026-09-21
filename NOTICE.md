@@ -22,3 +22,11 @@ The rootless builder additionally records authenticated archive SHA-256 values
 and source package versions. See docs/PUBLISHING.md for source obligations before
 redistributing binary runtime libraries. The project source archive alone does
 not contain the corresponding source of the bundled Ubuntu packages.
+
+## Terminal palettes
+
+The 244 bundled palettes are extracted from Ubuntu's Ptyxis 50.1 (50.1-1ubuntu2),
+https://gitlab.gnome.org/chergert/ptyxis. Copyright 2017–2024 Christian Hergert,
+GPL-3.0-or-later; the distribution's copyright notice is retained in
+licenses/Ptyxis-copyright.txt. Original palette text and Gogh source references
+are retained in terminal_themes.py. Hud does not require Ptyxis at runtime.

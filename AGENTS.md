@@ -43,10 +43,10 @@ Do not modify artifacts incidentally; preserve existing ones when running tests.
   signals only VTE's display relay, which forwards SIGHUP to its direct-attach client. Never stop user Herdr
   servers, shell processes or agents as part of hide, exit, update or uninstall.
 - Explicit terminal/space **Close** is intentionally destructive and separate:
-  use `pane.close` / `workspace.close`, preserve the first-workspace guard in `can_close_sidebar_item()`. Any terminal
-  can close, including the first; agent terminals require confirmation. Keep actions
-  scoped to their selected server and object IDs. Empty spaces are retained in
-  memory and recreated on the same server when New terminal is used.
+  use `pane.close` / `workspace.close`, preserve the first-workspace guard in `can_close_sidebar_item()`. The first workspace
+  also protects its last terminal; other agent terminals require confirmation. Keep actions
+  scoped to their selected server and object IDs. Closing the last terminal in a
+  secondary space removes that space; do not retain empty-space placeholders.
 - New UI spaces call `create_shared_workspace()` on the `default` server, making
   them visible to bare `herdr`. Do not substitute a new named server per space.
 - Terminal identity is `(socket_path, terminal_id)`; groups use
@@ -191,7 +191,7 @@ need logout/login under this project's GNOME 50 workflow.
 
 ## Release packaging contracts
 
-- App version is `1.0.0` with stable release tag `v1.0.0`; extension revision is
+- App version is `1.1.0` with stable release tag `v1.1.0`; extension revision is
   separate. Keep app_info.py and retained packaging metadata synchronized.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID
   is `herdr-hud@alex-jax.github.io`; never enable it with the legacy UUID.
@@ -228,6 +228,12 @@ The source-install scripts are not Debian removal scripts.
 
 ## Display colors
 
-Hud filters CLI color assignments in terminal_display.py; it does not synchronize
+Hud preserves SGR colors and filters OSC palette replacements in terminal_display.py; it does not synchronize
 CLI themes or require a patched Herdr. Preserve non-color controls, mouse input,
 resize and attach-client ownership. Include the helper in every installer.
+
+The theme chooser in theme_picker.py uses 244 bundled Ptyxis palettes from
+terminal_themes.py. Include both modules and the Ptyxis license notice in installers.
+Keep ANSI/indexed/RGB text colors; palettes style the whole Hud and VTE
+without reconnecting terminals or changing external terminal/CLI preferences.
+Run tests/smoke_themes.py on a separate session bus for chooser changes.
