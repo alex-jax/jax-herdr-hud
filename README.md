@@ -20,7 +20,7 @@ resolves its system Python/GTK/VTE dependencies. Herdr and CLI agents are separa
 installations. Source installation and modification instructions are also included.
 
 **1.1.1 adds automatic floating H setup, compact Settings and a cleaner app icon.**
-The 1.1.1 package is built locally; the latest published release is still 1.1.0.
+Download the latest stable release, **1.1.1**, from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
 See the [release notes](CHANGELOG.md) and
 [validation record](docs/VALIDATION.md). Distribution is through GitHub;
 there is no Snap Store or App Center release.

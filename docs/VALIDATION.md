@@ -17,7 +17,8 @@
   launcher and extension passed isolated GNOME 50 lifecycle/pointer smoke tests.
 - Verified packaged source matches the checkout and the app icon has one blue
   circle with no badge. APT simulation accepts installation with no removals.
-- Package built locally; not installed or uploaded as a GitHub release. Clean-VM
+- Release artifacts: native Debian installer, source archive, extension ZIP and
+  SHA256SUMS. The release does not install or restart the local app. Clean-VM
   installation and upgrade/removal were not tested.
 
 

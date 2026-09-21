@@ -2,6 +2,8 @@
 
 ## 1.1.1 — 21 September 2026
 
+Stable GitHub release: `v1.1.1`.
+
 - Compact Settings sections and smaller buttons; all in-app attribution lives
   under Credits. The application icon is an H in a blue circle without a dot.
 
