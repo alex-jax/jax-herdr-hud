@@ -74,6 +74,14 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
             assert 'Log out and log back in' in app.extension_message.get_text()
             enable.assert_called_once()
         print('PASS: bundled H button runs off-thread, prevents duplicate requests and explains login')
+        with patch('hud.enable_extension', return_value='Ready') as enable:
+            app.auto_enable_floating_h()
+            app.auto_enable_floating_h()
+            until = time.monotonic() + 5
+            while app.extension_pending and time.monotonic() < until:
+                pump()
+            enable.assert_called_once_with(automatic=True)
+        print('PASS: startup enables H once without a separate off control')
         assert app.herdr_entry.get_text() == str(program)
         print('PASS: missing dependency, invalid path, executable with spaces, Retry and persisted selection')
         def close_about():
@@ -87,6 +95,26 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
         GLib.idle_add(close_about)
         app.show_about()
         print('PASS: release version and upstream/publisher attribution in About')
+        def descendants(widget):
+            yield widget
+            if isinstance(widget, Gtk.Container):
+                for child in widget.get_children():
+                    yield from descendants(child)
+        widgets = list(descendants(app.stack.get_child_by_name('setup')))
+        assert [w.get_label() for w in widgets if isinstance(w, Gtk.Frame)] == [
+            'Appearance', 'Floating H', 'Herdr connection']
+        assert app.appearance_button.get_halign() == Gtk.Align.START
+        assert app.appearance_button.get_allocated_height() <= 40
+        assert not any(isinstance(w, Gtk.Label) and 'Christian Hergert' in w.get_text() for w in widgets)
+        from gi.repository import Gdk
+        output = Path(os.environ.get('HUD_TEST_OUTPUT', tempfile.mkdtemp(prefix='hud-settings-preview-')))
+        output.mkdir(parents=True, exist_ok=True)
+        app.show_setup(); pump()
+        width, height = app.window.get_size()
+        pixels = Gdk.pixbuf_get_from_window(app.window.get_window(), 0, 0, width, height)
+        if pixels:
+            pixels.savev(str(output / 'settings.png'), 'png', [], [])
+        print('PASS: compact Settings sections; credits only in About. Screenshot:', output)
     finally:
         app.exit_hud()
         backend.configure_herdr()

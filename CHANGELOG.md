@@ -1,5 +1,14 @@
 # Release notes
 
+## 1.1.1 — 21 September 2026
+
+- Compact Settings sections and smaller buttons; all in-app attribution lives
+  under Credits. The application icon is an H in a blue circle without a dot.
+
+- Automatically enable the bundled floating H on startup, respecting GNOME
+  Extensions opt-outs. Hud and its floating H retain their shared exit behavior.
+- Explain the required logout/login after fresh installation or extension updates.
+
 ## 1.1.0 — 21 September 2026
 
 - Fresh installations use GNOME Dark by default, with GNOME Light when toggled.

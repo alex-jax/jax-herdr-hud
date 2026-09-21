@@ -6,12 +6,17 @@ For **Ubuntu 26.04 with GNOME 50**. The floating H is included in the download.
 2. **Install Herdr** using the [official instructions](https://herdr.dev/docs/install/). Skip this if you already have it.
 3. **Install Herdr Hud** by opening the downloaded `.deb` with your software installer.
 4. **Start Herdr once** by running `herdr` in a terminal.
-5. **Save your work, log out of Ubuntu, and log back in.**
-6. **Open Herdr Hud**, click the **gear** at the top left, then **Enable floating H**.
+5. **Open Herdr Hud once.** It automatically enables the bundled floating H.
+6. **Save your work, log out of Ubuntu, and log back in.** The floating H can now connect to Hud.
 
 **The logout/login step is important:** it lets GNOME discover the bundled H
-extension so it can connect to Hud. If you enabled H before logging out, reopen
-Hud after logging back in.
+extension so it can connect to Hud. Installing the `.deb` alone cannot reload
+GNOME. No manual enable step is normally needed. If H is not visible after login,
+open Hud and check the message in Settings.
+
+**Hud and H close together:** use **Exit Hud** to close the app and hide its
+floating H. There is no separate H off control. If you previously disabled the
+extension in GNOME Extensions, use **Enable floating H** in Hud Settings to restore it.
 
 Click **H** to show or hide Hud, or drag it wherever you like.
 
@@ -34,7 +39,9 @@ sudo apt install ./downloaded-file.deb
 Hud checks GitHub silently every six hours. When the download arrow appears,
 click it to download and install the new `.deb`. Approve Ubuntu's password prompt
 if shown, then restart Hud. Your settings and Herdr sessions are kept. If an update
-changes the H extension, log out and back in.
+changes the H extension, **save your work, log out and log back in** to load it.
+The first launch after upgrading enables H automatically. An extension disabled
+in GNOME Extensions stays disabled until you explicitly enable it in Hud Settings.
 
 You can also download the newer `.deb` under **Assets** on the release page and
 install it manually. No update notification pop-ups are shown.

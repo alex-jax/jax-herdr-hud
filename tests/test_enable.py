@@ -79,3 +79,13 @@ class EnableTests(unittest.TestCase):
     def test_extension_error_is_reported(self):
         self.info = {'state': 3, 'error': 'test failure'}
         self.assertIn('test failure', enable.enable_extension())
+
+    def test_automatic_enable_respects_desktop_opt_out(self):
+        self.assertIn('turned off in Extensions', enable.enable_extension(automatic=True))
+        self.settings.set_strv.assert_not_called()
+
+    def test_automatic_fresh_install_registers_before_login(self):
+        self.values['disabled-extensions'] = ['disabled@example']
+        self.info = {}
+        self.assertIn('Log out and log back in', enable.enable_extension(automatic=True))
+        self.assertIn(enable.EXTENSION_UUID, self.values['enabled-extensions'])

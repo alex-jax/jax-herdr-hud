@@ -135,6 +135,7 @@ class Hud(Gtk.Application):
             self.settings = {}
         configure_herdr(self.settings.get('herdr_path'))
         self.extension_pending = False
+        self.auto_h_checked = False
         self.setup_pending = False
         self.update_tag = None
         self.theme = self.settings.get('theme', 'dark')
@@ -170,8 +171,10 @@ class Hud(Gtk.Application):
         args = command_line.get_arguments()[1:]
         if '--quit' in args:
             self.exit_hud()
-        elif '--background' not in args:
-            self.show()
+        else:
+            self.auto_enable_floating_h()
+            if '--background' not in args:
+                self.show()
         self.publish()
         return 0
 
@@ -236,9 +239,15 @@ class Hud(Gtk.Application):
         self.setup_message.set_text(message or 'Use your existing Herdr installation. Tested with Herdr 0.9.1.')
         self.herdr_entry.set_text(self.settings.get('herdr_path') or '')
         self.stack.set_visible_child_name('setup')
-        self.active_title.set_text('Herdr setup')
+        self.active_title.set_text('Settings')
 
-    def enable_floating_h(self):
+    def auto_enable_floating_h(self):
+        if self.auto_h_checked or self.closing:
+            return
+        self.auto_h_checked = True
+        self.enable_floating_h(automatic=True)
+
+    def enable_floating_h(self, automatic=False):
         if self.extension_pending or self.closing:
             return
         self.extension_pending = True
@@ -246,9 +255,9 @@ class Hud(Gtk.Application):
         self.extension_message.set_text('Turning on the floating H…')
         def work():
             try:
-                message = enable_extension()
+                message = enable_extension(automatic=True) if automatic else enable_extension()
             except (GLib.Error, OSError) as exc:
-                message = 'Could not enable the floating H. Open Hud in a GNOME desktop session. ' + str(exc)
+                message = 'Could not change the floating H. Open Hud in a GNOME desktop session. ' + str(exc)
             idle(self.extension_enabled, message)
         threading.Thread(target=work, daemon=True).start()
 
@@ -419,34 +428,52 @@ class Hud(Gtk.Application):
         empty.pack_start(button, False, False, 0)
         self.stack.add_named(empty, 'empty')
         self.stack.add_named(Gtk.Label(label='Opening your terminal…'), 'loading')
-        setup = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin=24)
+        setup = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, margin=18)
+        setup.set_name('settings-panel')
         setup.set_valign(Gtk.Align.START)
-        self.appearance_button = Gtk.Button(label='Appearance · Choose a terminal theme')
+        def section(title):
+            frame = Gtk.Frame(label=title)
+            content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin=12)
+            frame.add(content)
+            setup.pack_start(frame, False, False, 0)
+            return content
+        appearance = section('Appearance')
+        self.appearance_button = Gtk.Button(label='Choose theme…')
+        self.appearance_button.set_halign(Gtk.Align.START)
         self.appearance_button.connect('clicked', lambda *_: self.show_appearance())
-        setup.pack_start(self.appearance_button, False, False, 0)
+        appearance.pack_start(self.appearance_button, False, False, 0)
+        floating = section('Floating H')
+        self.extension_message = Gtk.Label(
+            label='Enabled automatically. Log out and back in after installation or an extension update.',
+            wrap=True, xalign=0)
+        self.extension_message.set_max_width_chars(55)
+        floating.pack_start(self.extension_message, False, False, 0)
+        self.extension_button = Gtk.Button(label='Enable floating H')
+        self.extension_button.set_halign(Gtk.Align.START)
+        self.extension_button.connect('clicked', lambda *_: self.enable_floating_h())
+        floating.pack_start(self.extension_button, False, False, 0)
+        herdr = section('Herdr connection')
         self.setup_message = Gtk.Label(label='Use your existing Herdr installation.', wrap=True, xalign=0)
-        setup.pack_start(self.setup_message, False, False, 0)
-        setup.pack_start(Gtk.LinkButton(uri=HERDR_URL, label='Herdr installation instructions'), False, False, 0)
-        self.herdr_entry = Gtk.Entry(placeholder_text='Automatic discovery, or absolute path to Herdr')
+        self.setup_message.set_max_width_chars(55)
+        herdr.pack_start(self.setup_message, False, False, 0)
+        self.herdr_entry = Gtk.Entry(placeholder_text='Automatic, or choose the Herdr executable')
         self.herdr_entry.set_text(self.settings.get('herdr_path') or '')
         self.herdr_entry.connect('activate', lambda *_: self.retry_herdr())
-        setup.pack_start(self.herdr_entry, False, False, 0)
-        controls = Gtk.Box(spacing=8)
-        for label, callback in [('Browse…', self.choose_herdr), ('Retry', self.retry_herdr), ('Back', self.leave_setup)]:
+        herdr.pack_start(self.herdr_entry, False, False, 0)
+        controls = Gtk.Box(spacing=6)
+        for label, callback in [('Browse…', self.choose_herdr), ('Retry', self.retry_herdr)]:
             control = Gtk.Button(label=label)
             control.connect('clicked', lambda _, cb=callback: cb())
             controls.pack_start(control, False, False, 0)
             if label == 'Retry':
                 self.retry_button = control
-        setup.pack_start(controls, False, False, 0)
-        self.extension_message = Gtk.Label(
-            label='The floating H comes with Herdr Hud. Turn it on below to show or hide '
-                  'your terminals from your desktop. Requires GNOME 50.', wrap=True, xalign=0)
-        setup.pack_start(self.extension_message, False, False, 0)
-        self.extension_button = Gtk.Button(label='Enable floating H')
-        self.extension_button.set_halign(Gtk.Align.START)
-        self.extension_button.connect('clicked', lambda *_: self.enable_floating_h())
-        setup.pack_start(self.extension_button, False, False, 0)
+        install_link = Gtk.LinkButton(uri=HERDR_URL, label='Install Herdr')
+        controls.pack_start(install_link, False, False, 0)
+        herdr.pack_start(controls, False, False, 0)
+        back = Gtk.Button(label='Back to terminals')
+        back.set_halign(Gtk.Align.START)
+        back.connect('clicked', lambda *_: self.leave_setup())
+        setup.pack_start(back, False, False, 0)
         setup_scroll = Gtk.ScrolledWindow()
         setup_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         setup_scroll.add(setup)
@@ -622,6 +649,9 @@ class Hud(Gtk.Application):
             #divider-grip {{ background: {line}; border-radius: 2px; min-width: 3px; min-height: 28px; }}
             #sidebar-toggle {{ padding: 2px; min-width: 20px; min-height: 22px; border-radius: 4px; }}
             headerbar {{ min-height: 42px; }}
+            #settings-panel button {{ padding: 4px 10px; min-height: 22px; min-width: 0; }}
+            #settings-panel frame > border {{ border: 1px solid {line}; border-radius: 8px; }}
+            #settings-panel frame > label {{ font-weight: bold; }}
         '''.encode())
         self.theme_button.set_image(Gtk.Image.new_from_icon_name(
             'weather-clear-symbolic' if self.dark else 'weather-clear-night-symbolic', Gtk.IconSize.BUTTON))

@@ -1,5 +1,26 @@
 # Validation
 
+## 1.1.1: automatic H and compact Settings — 21 September 2026
+
+- 39 unit tests passed, including first-launch H registration, respecting GNOME
+  Extensions opt-outs, and preserving unrelated extension settings.
+- Native setup smoke passed: one automatic attempt per process, worker-thread
+  enabling, logout/login guidance, compact Settings sections, and Credits attribution.
+- Theme chooser smoke passed after removing its attribution link; all in-app
+  credits now appear under the Credits icon.
+- Isolated GNOME 50 extension smoke passed, including confirmation that disabling
+  the extension also exits Hud. Production extension lifecycle code is unchanged.
+- Settings screenshot inspected. Application icon is now a plain H in a blue
+  outline with no dot; the floating H's live unread indicator is unchanged.
+- Built `jax-herdr-hud_1.1.1-1_all.deb`; extracted launcher reports 1.1.1.
+- Extracted Debian payload passed native setup and theme smoke tests. The packaged
+  launcher and extension passed isolated GNOME 50 lifecycle/pointer smoke tests.
+- Verified packaged source matches the checkout and the app icon has one blue
+  circle with no badge. APT simulation accepts installation with no removals.
+- Package built locally; not installed or uploaded as a GitHub release. Clean-VM
+  installation and upgrade/removal were not tested.
+
+
 ## 1.1.0 — 21 September 2026
 
 Target: Ubuntu 26.04 / GNOME Shell 50, amd64, stock Herdr 0.9.1.

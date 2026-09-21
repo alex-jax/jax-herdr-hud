@@ -8,7 +8,7 @@ LEGACY_UUID = 'herdr-hud@local'
 INTERFACE = 'org.gnome.Shell.Extensions'
 
 
-def enable_extension():
+def enable_extension(automatic=False):
     bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
     def call(method, params=None, interface=INTERFACE):
@@ -26,6 +26,8 @@ def enable_extension():
         return 'The bundled H extension is missing. Reinstall Herdr Hud to restore it.'
 
     settings = Gio.Settings.new('org.gnome.shell')
+    if automatic and EXTENSION_UUID in settings.get_strv('disabled-extensions'):
+        return 'The floating H was turned off in Extensions. Enable it here to turn it back on.'
     enabled = [item for item in settings.get_strv('enabled-extensions') if item != LEGACY_UUID]
     if EXTENSION_UUID not in enabled:
         enabled.append(EXTENSION_UUID)

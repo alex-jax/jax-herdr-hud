@@ -158,7 +158,15 @@ try:
     logfile.flush()
     text = (output_dir / 'extension-test.log').read_text()
     assert 'extension.js:' not in text, text
-    print('PASS: companion window placement and clean extension disable', flush=True)
+    for _ in range(40):
+        owned = bus.call_sync('org.freedesktop.DBus', '/org/freedesktop/DBus',
+            'org.freedesktop.DBus', 'NameHasOwner', GLib.Variant('(s)', ('io.github.herdr.Hud',)),
+            None, Gio.DBusCallFlags.NONE, 3000, None).unpack()[0]
+        if not owned:
+            break
+        time.sleep(.05)
+    assert not owned, 'Disabling the extension must also exit Hud'
+    print('PASS: floating H and companion share exit lifecycle', flush=True)
 finally:
     try:
         Gio.DBusActionGroup.get(bus, 'io.github.herdr.Hud', '/io/github/herdr/Hud').activate_action('exit', None)

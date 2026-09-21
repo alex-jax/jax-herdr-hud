@@ -45,10 +45,6 @@ class ThemePicker(Gtk.Dialog):
                          xalign=0, wrap=True)
         note.get_style_context().add_class('dim-label')
         box.pack_start(note, False, False, 0)
-        credit = Gtk.LinkButton(uri='https://gitlab.gnome.org/chergert/ptyxis',
-                                label='Color schemes from Ptyxis · Christian Hergert and contributors')
-        credit.set_halign(Gtk.Align.START)
-        box.pack_start(credit, False, False, 0)
         self.cards = {}
         items = [('hud', dict(name='Hud classic', primary=True))]
         items += sorted(palettes().items(), key=lambda pair: pair[1]['name'].casefold())

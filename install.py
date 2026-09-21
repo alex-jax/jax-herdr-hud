@@ -45,7 +45,7 @@ Icon=io.github.herdr.Hud
 Terminal=false
 X-GNOME-Autostart-enabled=true
 ''')
-(data / 'icons/hicolor/scalable/apps/io.github.herdr.Hud.svg').write_text('''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><circle cx="64" cy="64" r="58" fill="#303030" stroke="#e95420" stroke-width="5"/><path fill="#fff" d="M39 34h11v24h28V34h11v60H78V69H50v25H39z"/><circle cx="108" cy="23" r="12" fill="#3584e4" stroke="#fff" stroke-width="3"/></svg>''')
+(data / 'icons/hicolor/scalable/apps/io.github.herdr.Hud.svg').write_text('''<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><circle cx="64" cy="64" r="58" fill="#303030" stroke="#008cff" stroke-width="5"/><path fill="#fff" d="M39 34h11v24h28V34h11v60H78V69H50v25H39z"/></svg>''')
 if shutil.which('update-desktop-database'):
     subprocess.run(['update-desktop-database', str(data / 'applications')], check=False)
 print('Installed Herdr Hud: ' + str(launcher))

@@ -20,12 +20,13 @@ Do not run these commands with sudo:
 
 ```sh
 python3 install.py
-python3 enable.py
 ~/.local/bin/herdr-hud
 ```
 
 The installer copies the application and extension into your home directory and
-adds background login startup. Log out/in to load the new extension. The source
+adds background login startup. Open Hud once to enable H automatically, then
+log out/in to load the new extension. Exit Hud closes the companion and hides H
+together; there is no independent H off control. The source
 installer and `.deb` use the same settings and desktop app identity; choose one.
 
 ### 3. Modify, test and reinstall

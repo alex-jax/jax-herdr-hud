@@ -5,7 +5,7 @@ GNOME Shell extension providing a floating **H** button. The project targets
 Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
-This manual describes the 1.1.0 stable release.
+This manual describes the 1.1.1 stable release.
 See [CHANGELOG.md](CHANGELOG.md) for release notes and publication status.
 
 A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).
@@ -28,8 +28,8 @@ See [NOTICE.md](NOTICE.md) for GPL and retained MIT notices. See
 1. Download the `*_all.deb` file under **Assets** on the
    [release page](https://github.com/alex-jax/jax-herdr-hud/releases).
 2. Install Herdr, then install the downloaded Hud package.
-3. Start `herdr` once, then **save your work, log out and log back in**.
-4. Open Hud, click the gear at the top left, then **Enable floating H**.
+3. Start `herdr` once, then open Hud once; it automatically enables the floating H.
+4. **Save your work, log out and log back in** so GNOME discovers and loads H.
 
 The fresh login is important: it lets GNOME discover the bundled extension and
 connect it to Hud. Follow any further message shown beside the enable button.
@@ -42,8 +42,10 @@ blank for automatic discovery. Browse selects a file; **Retry** validates it and
 saves the selection. If Herdr is missing, this setup view opens automatically.
 The app links to Herdr's own installation instructions; it never installs or
 upgrades Herdr. Newer versions may work but only 0.9.1 is tested. Protocol failures
-are reported rather than restarting servers. The About button shows version and
-publisher/original-project attribution.
+are reported rather than restarting servers. The Credits (information) button contains the app version and all in-app
+attribution, including Alex Finn, Alex Jax, and Christian Hergert / Ptyxis.
+Settings groups compact controls into Appearance, Floating H, and Herdr connection.
+The application icon is a plain H in a blue circle, without an activity dot.
 
 The following section is an alternative installation from source.
 
@@ -53,7 +55,6 @@ Run from the project directory as your desktop user:
 
 ```sh
 python3 install.py
-python3 enable.py
 ~/.local/bin/herdr-hud
 ```
 
@@ -252,8 +253,8 @@ individual drag. Configuration files do not store terminal contents or sessions.
 ## Update and uninstall
 
 Run `python3 install.py` again to copy changed files. Exit and reopen the companion
-for Python changes. After installation, `python3 activate.py` enables the extension
-and restarts the installed companion, appending output to `hud.log`.
+for Python changes. Opening Hud enables H automatically. `python3 activate.py`
+is an explicit manual re-enable/restart command and appends output to `hud.log`.
 
 For extension changes, log out and back in: the project's GNOME 50 workflow
 requires a fresh login to reload already loaded JavaScript. `activate.py` does
@@ -331,20 +332,28 @@ update never stops Herdr servers or agents. Extension changes still need logout/
 Source installations should use the source update procedure above; the built-in
 installer installs the Debian package. Do not mix per-user and system installations.
 
-## Turn on the bundled floating H
+## Automatic floating H
 
-The Debian package and source installer include the H extension. For a fresh
-installation: install Herdr and Hud, start `herdr` once, then save your work and
-log out of Ubuntu and back in. Open Hud, click the gear, then **Enable floating H**.
-No separate extension download is needed. The fresh login lets GNOME discover the
-bundled extension before you enable it.
+The Debian package and source installer include H for GNOME 50. Install Herdr
+and Hud, start `herdr` once, then **open Hud once**. Hud enables H automatically
+in the background. **Save your work, log out and log back in**: GNOME needs a
+fresh login to discover the bundled extension. No separate ZIP or manual enable
+step is normally needed. If H is still absent, open Hud and read its Settings message.
 
-If desktop extensions are globally off, setup explains how to turn them back on.
-Follow any additional message shown beside the button if H does not appear.
+**Exit Hud** closes the companion and hides H together. There is no separate H
+off control. Automatic startup respects a disabled extension in GNOME Extensions
+and never switches the global extensions setting on. Use **Enable floating H**
+in Hud Settings to explicitly restore it. If desktop extensions are globally off,
+Settings explains what to do.
+
+After an update that changes H, **log out and back in** to replace the loaded
+extension. On the first launch after upgrading from a manual-enable release,
+Hud enables H automatically unless it is disabled in GNOME Extensions. Opening or hiding
+Hud repeatedly does not repeat setup within that app process.
 
 ## Terminal display colors
 
-Open **Settings → Appearance · Choose a terminal theme** for preview cards.
+Open **Settings → Appearance → Choose theme…** for preview cards.
 The chooser includes all 244 palettes bundled with Ubuntu's Ptyxis 50.1, plus
 **Hud classic**. It starts with the 12 featured Ptyxis palettes and Hud classic;
 use **Show all palettes** or search by name to browse the complete collection.
