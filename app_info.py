@@ -1,6 +1,6 @@
 """Public release identity (kept separate from the GNOME extension revision)."""
-VERSION = '1.1.2'
-RELEASE_TAG = 'v1.1.2'
+VERSION = '1.1.3'
+RELEASE_TAG = 'v1.1.3'
 APP_NAME = 'Herdr Hud'
 SNAP_NAME = 'herdr-hud-alex-jax'
 EXTENSION_UUID = 'herdr-hud@alex-jax.github.io'

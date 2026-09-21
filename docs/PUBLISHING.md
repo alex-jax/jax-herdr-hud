@@ -1,10 +1,10 @@
 # Build and publish on GitHub
 
-Distribution uses the native Debian package and source installer. Release **1.1.2** uses tag **v1.1.2** and is a regular stable release.
+Distribution uses the native Debian package and source installer. Release **1.1.3** uses tag **v1.1.3** and is a regular stable release.
 
 ## Prepare the version
 
-Set `VERSION = '1.1.2'` and `RELEASE_TAG = 'v1.1.2'` in `app_info.py` before
+Set `VERSION = '1.1.3'` and `RELEASE_TAG = 'v1.1.3'` in `app_info.py` before
 building. The update checker uses the release tag, including prerelease ordering.
 The GNOME extension revision is separate; change it only when the extension changes.
 Review [CHANGELOG.md](../CHANGELOG.md), the manual and installation guide together.
@@ -44,7 +44,7 @@ Source test results do not establish that a new Debian artifact passed its check
 
 ## Publish
 
-Commit the reviewed source and documentation, tag the same commit `v1.1.2`, and
+Commit the reviewed source and documentation, tag the same commit `v1.1.3`, and
 push the commit and tag. Create a regular GitHub release with the approved release
 notes; leave **Set as a pre-release** unchecked and mark it as the latest release.
 Upload the tested `.deb`, extension ZIP, source archive and checksums under Assets.

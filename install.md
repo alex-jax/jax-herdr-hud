@@ -16,7 +16,7 @@ open Hud and check the message in Settings.
 
 **Hud and H close together:** use **Exit Hud** to close the app and hide its
 floating H. There is no separate H off control. If you previously disabled the
-extension in GNOME Extensions, use **Enable floating H** in Hud Settings to restore it.
+extension in GNOME Extensions, turn it back on in GNOME Extensions.
 
 Click **H** to show or hide Hud, or drag it wherever you like.
 
@@ -52,7 +52,7 @@ Exit Hud, then run `sudo apt remove jax-herdr-hud`. Herdr is a separate applicat
 
 ## Need help?
 
-- **H does not appear:** follow the message beside **Enable floating H** in settings.
+- **H does not appear:** read the **Floating H** status in Settings.
 - **Herdr is not found:** use the gear to select your Herdr executable, then click **Retry**.
 - [Source installation, building and troubleshooting](docs/INSTALL_ADVANCED.md)
 - [User manual](MANUAL.md) · [Validation record](docs/VALIDATION.md)

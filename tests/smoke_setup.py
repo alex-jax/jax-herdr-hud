@@ -63,17 +63,15 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
             assert threading.current_thread() is not threading.main_thread()
             return 'The floating H is ready. Log out and log back in once to show it.'
         with patch('hud.enable_extension', side_effect=enable_h) as enable:
-            app.extension_button.clicked()
-            assert not app.extension_button.get_sensitive()
-            app.extension_button.clicked()
+            app.enable_floating_h()
+            app.enable_floating_h()
             until = time.monotonic() + 5
             while app.extension_pending and time.monotonic() < until:
                 pump()
             assert not app.extension_pending
-            assert app.extension_button.get_sensitive()
             assert 'Log out and log back in' in app.extension_message.get_text()
             enable.assert_called_once()
-        print('PASS: bundled H button runs off-thread, prevents duplicate requests and explains login')
+        print('PASS: bundled H setup runs off-thread, prevents duplicate requests and explains login')
         with patch('hud.enable_extension', return_value='Ready') as enable:
             app.auto_enable_floating_h()
             app.auto_enable_floating_h()
@@ -82,6 +80,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
                 pump()
             enable.assert_called_once_with(automatic=True)
         print('PASS: startup enables H once without a separate off control')
+        assert not hasattr(app, 'extension_button')
         assert app.herdr_entry.get_text() == str(program)
         print('PASS: missing dependency, invalid path, executable with spaces, Retry and persisted selection')
         def close_about():

@@ -189,9 +189,22 @@ Companion changes need restart after copying; already loaded extension changes
 need logout/login under this project's GNOME 50 workflow.
 
 
+## Local update before publication
+
+- For app changes, always build and install the updated Debian package on this
+  local machine first, restart Hud, and verify that the installed files match the
+  changes and the app starts successfully before publishing to GitHub. Local
+  installation and restart are part of the requested app update unless the user
+  explicitly asks otherwise. Complete relevant source/package checks first.
+- Preserve all Herdr servers, terminals and agents during the local update;
+  restart only the Hud companion. Use Ubuntu's normal authentication prompt
+  when installation needs administrator privileges.
+- Documentation-only changes do not require installing or restarting the app.
+  Report local installation and GitHub publication as separate outcomes.
+
 ## Release packaging contracts
 
-- App version is `1.1.2` with stable release tag `v1.1.2`; extension revision is
+- App version is `1.1.3` with stable release tag `v1.1.3`; extension revision is
   separate. Keep app_info.py and retained packaging metadata synchronized.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID
   is `herdr-hud@alex-jax.github.io`; never enable it with the legacy UUID.
@@ -228,7 +241,7 @@ The source-install scripts are not Debian removal scripts.
 
 ## Display colors
 
-Hud preserves SGR colors and filters OSC palette replacements in terminal_display.py; it does not synchronize
+Hud preserves SGR foreground colors, maps explicit SGR backgrounds to the selected Hud background, and filters OSC palette replacements in terminal_display.py; it does not synchronize
 CLI themes or require a patched Herdr. Preserve non-color controls, mouse input,
 resize and attach-client ownership. Include the helper in every installer.
 

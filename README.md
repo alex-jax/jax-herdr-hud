@@ -19,8 +19,8 @@ The native `.deb` installs the app and optional floating H extension, and APT
 resolves its system Python/GTK/VTE dependencies. Herdr and CLI agents are separate
 installations. Source installation and modification instructions are also included.
 
-**1.1.2 shows the space name in the terminal header and follows space renames.**
-Download the latest stable release, **1.1.2**, from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
+**1.1.3 improves light/dark CLI backgrounds, simplifies Settings and clears text selection after paste.**
+Download the latest stable release, **1.1.3**, from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
 See the [release notes](CHANGELOG.md) and
 [validation record](docs/VALIDATION.md). Distribution is through GitHub;
 there is no Snap Store or App Center release.
@@ -31,16 +31,15 @@ right-click paste, light/dark display and a draggable floating H.
 
 ## Screenshots
 
-Interface examples with two shell terminals and Codex, Grok, Claude Code,
-Antigravity and OpenCode running in the AI Studio space.
+Current Herdr Hud sessions in the Nord palette, with spaces and agent shortcuts.
 
-**Dark theme** — compact spaces, terminal rows and agent shortcuts.
+**Nord dark**
 
-![Herdr Hud in dark mode with two shells and five AI CLIs](docs/screenshots/herdr-hud-fullscreen-dark.png)
+![Herdr Hud with Nord dark theme](docs/screenshots/herdr-hud-nord-dark.png)
 
-**Light theme** — the same workspace in light mode.
+**Nord light**
 
-![Herdr Hud in light mode with two shells and five AI CLIs](docs/screenshots/herdr-hud-fullscreen-light.png)
+![Herdr Hud with Nord light theme](docs/screenshots/herdr-hud-nord-light.png)
 
 ## Floating H
 
@@ -73,7 +72,7 @@ or space. The floating H is optional; the main window works independently.
 Settings → **Appearance** offers 244 Ubuntu terminal palettes with searchable
 preview cards and light/dark variants. **GNOME Dark** is the default for new installations; switching to light mode
 uses GNOME Light. **Hud classic** retains the previous white and dark backgrounds. Your choice colors the whole Hud immediately and is saved. Filenames, folders,
-syntax colors and selection highlighting are preserved. This applies to Codex, Grok, Claude Code and agy
+syntax text colors and reverse-video selection highlighting are preserved. CLI backgrounds follow the Hud theme. This applies to Codex, Grok, Claude Code and agy
 without synchronizing their themes or changing Herdr.
 
 The setup button locates Herdr automatically or lets you select its executable.

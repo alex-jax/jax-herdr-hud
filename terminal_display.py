@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """Hud-only color presentation around Herdr's native direct-attach client.
 
-Input, mouse reports, resize and terminal control sequences pass through. SGR colors
-are preserved for filenames, syntax and CLI controls. OSC palette replacements are
+Input, mouse reports, resize and terminal control sequences pass through. SGR foreground colors
+are preserved for filenames, syntax and CLI controls; explicit backgrounds use
+the selected Hud background. OSC palette replacements are
 blocked so VTE retains the user-selected theme.
 No shell or agent process is created, signalled or reconfigured by this helper.
 """
@@ -21,6 +22,37 @@ class DisplayFilter:
     def __init__(self):
         self.pending = bytearray()
         self.state = 'text'
+
+    @staticmethod
+    def theme_background(sequence):
+        # Parse complete SGR parameters so RGB components cannot be mistaken for
+        # standalone background codes. Unknown/malformed sequences pass through.
+        parts = sequence[2:-1].split(b';')
+        result = []
+        index = 0
+        while index < len(parts):
+            part = parts[index]
+            code = part.split(b':', 1)[0]
+            if code in (b'38', b'48', b'58'):
+                if b':' in part:
+                    result.append(b'49' if code == b'48' else part)
+                    index += 1
+                    continue
+                if index + 1 >= len(parts):
+                    return sequence
+                mode = parts[index + 1]
+                count = 5 if mode == b'2' else 3 if mode == b'5' else 0
+                if not count or index + count > len(parts):
+                    return sequence
+                result.extend([b'49'] if code == b'48' else parts[index:index + count])
+                index += count
+                continue
+            if part.isdigit() and (40 <= int(part) <= 47 or 100 <= int(part) <= 107):
+                result.append(b'49')
+            else:
+                result.append(part)
+            index += 1
+        return b'\x1b[' + b';'.join(result) + b'm'
 
     def feed(self, data):
         output = bytearray()
@@ -57,6 +89,8 @@ class DisplayFilter:
                             self.state == 'osc' and (byte == 7 or self.pending.endswith(b'\x1b\\')))
                 if complete:
                     sequence = bytes(self.pending)
+                    if self.state == 'csi' and sequence.endswith(b'm'):
+                        sequence = self.theme_background(sequence)
                     if self.state == 'osc' and sequence[2:].split(b';', 1)[0].rstrip(b'\x07\x1b\\') in (
                             b'4', b'10', b'11', b'12', b'104', b'110', b'111', b'112'):
                         # Queries still receive VTE's answer; assignments cannot override Hud.

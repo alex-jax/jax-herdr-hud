@@ -5,7 +5,7 @@ GNOME Shell extension providing a floating **H** button. The project targets
 Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
-This manual describes the 1.1.2 stable release.
+This manual describes the 1.1.3 stable release.
 See [CHANGELOG.md](CHANGELOG.md) for release notes and publication status.
 
 A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).
@@ -277,7 +277,7 @@ installation, exit Hud and use `sudo apt remove jax-herdr-hud` instead.
 | Missing GTK/VTE imports | Use the system Python with the distro GI libraries; a separate virtual environment may not expose them. |
 | Old behaviour after editing source | Installed files are copies. Reinstall and restart the relevant component. |
 | Broken layout after manually editing preferences | Exit the companion, back up `settings.json`, and move it aside to restore defaults. Coordinate extension-owned file resets with extension disable/reload so cached values do not overwrite edits. |
-| Terminal text has no syntax colours | Fully exit and reopen Hud after updating from the old monochrome version. The command or editor must emit color output; Hud preserves ANSI, indexed and RGB colors. |
+| Terminal text has no syntax colours | Fully exit and reopen Hud after updating. The command or editor must emit color output; Hud preserves ANSI, indexed and RGB text colors. |
 
 The current settings loader handles missing files and invalid JSON syntax, but
 does not validate every decoded value's type. Keep the configuration an object
@@ -342,8 +342,7 @@ step is normally needed. If H is still absent, open Hud and read its Settings me
 
 **Exit Hud** closes the companion and hides H together. There is no separate H
 off control. Automatic startup respects a disabled extension in GNOME Extensions
-and never switches the global extensions setting on. Use **Enable floating H**
-in Hud Settings to explicitly restore it. If desktop extensions are globally off,
+and never switches the global extensions setting on. Use GNOME Extensions to explicitly restore it. If desktop extensions are globally off,
 Settings explains what to do.
 
 After an update that changes H, **log out and back in** to replace the loaded
@@ -370,9 +369,11 @@ foreground, background, cursor and ANSI colors use the selected palette. Ptyxis 
 and Hud never writes to Ptyxis or CLI preferences.
 
 Hud classic uses a white background and dark text in light mode, and a dark
-background with light text in dark mode. Filename, folder, syntax and CLI colors
+background with light text in dark mode. Filename, folder, syntax and CLI text colors
 are preserved. ANSI colors follow the palette; explicitly requested RGB and
-256-color values retain the application’s colors. Palette changes recolor
+256-color foreground values retain the application’s colors. Explicit CLI background
+colors use the selected Hud background, keeping input bars consistent in light
+and dark mode. Reverse-video selection remains supported. Palette changes recolor
 default/ANSI scrollback, while application-specific RGB colors stay unchanged.
 Global palette replacement sequences are blocked to preserve your selection. Codex, Grok, Claude Code and agy keep their own
 settings and sessions, and look unchanged outside Hud. No patched Herdr build
@@ -391,3 +392,9 @@ and the retained license notices.
 
 The terminal header shows its space name and terminal title. Renaming a space
 updates the header too; named Herdr servers retain their prefix for clarity.
+
+Space, terminal and agent names do not show hover tooltips. Action buttons retain
+their short help labels.
+
+Pasting with right-click or the terminal paste shortcut clears the text selection
+automatically. Copied text remains available on the clipboard.

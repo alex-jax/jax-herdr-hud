@@ -56,6 +56,7 @@ class Terminal(Vte.Terminal):
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.connect('selection-changed', self.copy_selection)
+        self.connect_after('paste-clipboard', lambda *_: self.unselect_all())
         self.connect('child-exited', self.exited)
 
     def copy_selection(self, *_):
@@ -66,6 +67,7 @@ class Terminal(Vte.Terminal):
         if event.button == 3:
             self.grab_focus()
             self.paste_clipboard()
+            self.unselect_all()
             return True
         return Vte.Terminal.do_button_press_event(self, event)
 
@@ -251,7 +253,6 @@ class Hud(Gtk.Application):
         if self.extension_pending or self.closing:
             return
         self.extension_pending = True
-        self.extension_button.set_sensitive(False)
         self.extension_message.set_text('Turning on the floating H…')
         def work():
             try:
@@ -265,7 +266,6 @@ class Hud(Gtk.Application):
         self.extension_pending = False
         if self.closing:
             return
-        self.extension_button.set_sensitive(True)
         self.extension_message.set_text(message)
 
     def choose_herdr(self):
@@ -448,10 +448,6 @@ class Hud(Gtk.Application):
             wrap=True, xalign=0)
         self.extension_message.set_max_width_chars(55)
         floating.pack_start(self.extension_message, False, False, 0)
-        self.extension_button = Gtk.Button(label='Enable floating H')
-        self.extension_button.set_halign(Gtk.Align.START)
-        self.extension_button.connect('clicked', lambda *_: self.enable_floating_h())
-        floating.pack_start(self.extension_button, False, False, 0)
         herdr = section('Herdr connection')
         self.setup_message = Gtk.Label(label='Use your existing Herdr installation.', wrap=True, xalign=0)
         self.setup_message.set_max_width_chars(55)
@@ -897,7 +893,7 @@ class Hud(Gtk.Application):
                               'working' if 'working' in activity.values() else '')
             desired.append((('group', path), group_title,
                             counts,
-                            f"{group_title} — {counts}", not query or any(
+                            not query or any(
                                 key in visible for key, pane in members),
                             group_activity))
             for key, pane in members:
@@ -906,20 +902,19 @@ class Hud(Gtk.Application):
                 if pane.get('agent'):
                     status = {'blocked': 'Needs input', 'done': 'Finished'}.get(state, state.capitalize())
                     subtitle = f"{pane.get('display_agent') or pane['agent']} · {status} · {group_title}"
-                tooltip = f"{session['name']} / {pane['workspace_label']}\n{pane.get('foreground_cwd') or pane.get('cwd') or ''}"
                 desired.append((('terminal', key), titles[key],
-                                subtitle, tooltip, key in visible and
+                                subtitle, key in visible and
                                 (bool(query) or path not in self.collapsed_spaces),
                                 activity[key]))
                 if pane.get('agent'):
-                    desired.append((('agent', key), titles[key], subtitle, tooltip,
+                    desired.append((('agent', key), titles[key], subtitle,
                                     key in visible, activity[key]))
 
         wanted = {item[0] for item in desired}
         for identity in self.sidebar_rows.keys() - wanted:
             self.sidebar_rows.pop(identity).destroy()
         order_changed = False
-        for order, (identity, title, subtitle, tooltip, visible, active) in enumerate(desired):
+        for order, (identity, title, subtitle, visible, active) in enumerate(desired):
             row = self.sidebar_rows.get(identity)
             is_group = identity[0] == 'group'
             target_list = self.agent_rows if identity[0] == 'agent' else self.rows
@@ -1022,9 +1017,6 @@ class Hud(Gtk.Application):
                 row.title_label.set_text(title)
             if row.subtitle_label.get_text() != subtitle:
                 row.subtitle_label.set_text(subtitle)
-            tooltip_widget = row
-            if tooltip_widget.get_tooltip_text() != tooltip:
-                tooltip_widget.set_tooltip_text(tooltip)
             if row.get_visible() != visible:
                 row.set_visible(visible)
         if order_changed:

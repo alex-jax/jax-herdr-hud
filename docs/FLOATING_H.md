@@ -8,7 +8,8 @@ Installing a new extension version also requires logout/login.
 
 **Exit Hud** closes the companion and hides H together. There is no separate H
 off control. Automatic startup respects GNOME Extensions opt-outs and the global
-extensions switch; **Enable floating H** in Settings explicitly restores H.
+extensions switch. Restore a deliberately disabled H through GNOME Extensions.
+Hud Settings shows its status without a manual enable button.
 
 Click H to show or hide Hud; drag it to move it. Its outline follows the desktop
 accent colour, and its notification dot indicates unread activity. Hud also works

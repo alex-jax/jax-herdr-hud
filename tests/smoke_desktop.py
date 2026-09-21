@@ -131,7 +131,7 @@ try:
     copied = clip.wait_for_text()
     assert copied and 'HUD_INPUT_ABC' in copied, repr(copied)
     print('PASS: selection automatically copies to system clipboard', flush=True)
-    terminal.unselect_all()
+    assert terminal.get_has_selection()
     clip.set_text("printf 'HUD_PASTE_OK\\n'", -1)
     event = Gdk.EventButton()
     event.type = Gdk.EventType.BUTTON_PRESS
@@ -141,7 +141,15 @@ try:
     pump()
     terminal.feed_child(b'\r')
     until(lambda: 'HUD_PASTE_OK' in screen())
-    print('PASS: right-click pastes through the terminal', flush=True)
+    assert not terminal.get_has_selection(), 'Right-click paste left text selected'
+    assert clip.wait_for_text() == "printf 'HUD_PASTE_OK\\n'"
+    terminal.select_all(); pump()
+    clip.set_text("printf 'HUD_KEY_PASTE_OK\\n'", -1)
+    terminal.emit('paste-clipboard'); pump()
+    assert not terminal.get_has_selection(), 'Keyboard paste left text selected'
+    terminal.feed_child(b'\r')
+    until(lambda: 'HUD_KEY_PASTE_OK' in screen())
+    print('PASS: mouse and keyboard paste clear selection and preserve clipboard text', flush=True)
     # Exercise click reporting through VTE -> native attach -> Herdr -> child PTY.
     import shlex
     mouse_log = Path(temp.name) / 'mouse-input'
