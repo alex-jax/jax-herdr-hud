@@ -813,8 +813,18 @@ class Hud(Gtk.Application):
             idle(self.restore_workspace_selection)
             self.stack.set_visible_child_name('empty')
             self.active_title.set_text('Choose a terminal')
+        if (self.selected in panes and self.selected in self.terminals
+                and self.stack.get_visible_child() is self.terminals[self.selected]):
+            self.active_title.set_text(self.terminal_heading(panes[self.selected]))
         self.rebuild_sidebar()
         self.publish()
+
+    def terminal_heading(self, pane):
+        session_name = pane['session']['name']
+        space = pane.get('workspace_label') or session_name
+        if session_name != 'default':
+            space = session_name + ' / ' + space
+        return space + '  /  ' + self.pane_title(pane)
 
     def pane_title(self, pane):
         tab = pane.get('tab_label', '')
@@ -1213,7 +1223,7 @@ class Hud(Gtk.Application):
         self.snapshot_changed(session, snapshot, None)
         if self.selected in self.panes:
             pane = self.panes[self.selected]
-            self.active_title.set_text(pane['session']['name'] + '  /  ' + self.pane_title(pane))
+            self.active_title.set_text(self.terminal_heading(pane))
         idle(self.focus_selected_terminal)
 
     def new_terminal(self, path, workspace_id=None):
@@ -1311,7 +1321,7 @@ class Hud(Gtk.Application):
             terminal.show()
             terminal.launch([executable, '--session', pane['session']['name'], 'terminal', 'attach', pane['terminal_id']])
         self.stack.set_visible_child(terminal)
-        self.active_title.set_text(pane['session']['name'] + '  /  ' + self.pane_title(pane))
+        self.active_title.set_text(self.terminal_heading(pane))
         self.acknowledge()
         self.rebuild_sidebar()
         # GtkListBox grabs row focus after row-selected returns. Focus the terminal

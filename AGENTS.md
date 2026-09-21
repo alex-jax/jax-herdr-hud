@@ -191,7 +191,7 @@ need logout/login under this project's GNOME 50 workflow.
 
 ## Release packaging contracts
 
-- App version is `1.1.1` with stable release tag `v1.1.1`; extension revision is
+- App version is `1.1.2` with stable release tag `v1.1.2`; extension revision is
   separate. Keep app_info.py and retained packaging metadata synchronized.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID
   is `herdr-hud@alex-jax.github.io`; never enable it with the legacy UUID.

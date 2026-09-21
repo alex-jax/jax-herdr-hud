@@ -19,8 +19,8 @@ The native `.deb` installs the app and optional floating H extension, and APT
 resolves its system Python/GTK/VTE dependencies. Herdr and CLI agents are separate
 installations. Source installation and modification instructions are also included.
 
-**1.1.1 adds automatic floating H setup, compact Settings and a cleaner app icon.**
-Download the latest stable release, **1.1.1**, from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
+**1.1.2 shows the space name in the terminal header and follows space renames.**
+Download the latest stable release, **1.1.2**, from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
 See the [release notes](CHANGELOG.md) and
 [validation record](docs/VALIDATION.md). Distribution is through GitHub;
 there is no Snap Store or App Center release.
@@ -31,16 +31,16 @@ right-click paste, light/dark display and a draggable floating H.
 
 ## Screenshots
 
-Herdr Hud 1.0.0 with two shell terminals and Codex, Grok, Claude Code,
+Interface examples with two shell terminals and Codex, Grok, Claude Code,
 Antigravity and OpenCode running in the AI Studio space.
 
 **Dark theme** — compact spaces, terminal rows and agent shortcuts.
 
-![Herdr Hud 1.0.0 in dark mode with two shells and five AI CLIs](docs/screenshots/herdr-hud-1.0.0-fullscreen-dark.png)
+![Herdr Hud in dark mode with two shells and five AI CLIs](docs/screenshots/herdr-hud-fullscreen-dark.png)
 
 **Light theme** — the same workspace in light mode.
 
-![Herdr Hud 1.0.0 in light mode with two shells and five AI CLIs](docs/screenshots/herdr-hud-1.0.0-fullscreen-light.png)
+![Herdr Hud in light mode with two shells and five AI CLIs](docs/screenshots/herdr-hud-fullscreen-light.png)
 
 ## Floating H
 

@@ -75,6 +75,23 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
         assert app.window.get_visible()
         assert app.window.get_focus() == app.terminals[key], 'Session click did not focus the terminal'
     print('PASS: 30 GTK pointer clicks across two sessions and their terminals without destroying the active click target', flush=True)
+    heading_session = {**session, 'name': 'default'}
+    app.snapshot_changed(heading_session, snapshot, None)
+    app.select(targets[0]); pump()
+    heading_terminal = app.terminals[targets[0]]
+    assert app.active_title.get_text().startswith('Home  /  ')
+    renamed_snapshot = {**snapshot, 'workspaces': [{'workspace_id': 'w1', 'label': 'Studio'}]}
+    app.snapshot_changed(heading_session, renamed_snapshot, None); pump()
+    assert app.active_title.get_text().startswith('Studio  /  ')
+    assert app.terminals[targets[0]] is heading_terminal
+    app.show_setup()
+    app.snapshot_changed(heading_session, snapshot, None); pump()
+    assert app.active_title.get_text() == 'Settings'
+    app.snapshot_changed(session, snapshot, None)
+    app.select(key); pump()
+    assert app.active_title.get_text().startswith('Second session / Home  /  ')
+    print('PASS: header uses space names, follows renames and preserves Settings and terminal identity', flush=True)
+
     # Send right-clicks to GTK's actual ListBox input window, not menu helpers.
     selected_before = app.selected
     for session_path in (session['socket_path'], other_session['socket_path']):
