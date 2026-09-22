@@ -1,5 +1,11 @@
 # Release notes
 
+## Unreleased
+
+- Shift-drag at the terminal edge loads retained Herdr history and scrolls to extend selection.
+- Copy selections as plain text, without terminal formatting.
+- Top-bar actions return keyboard focus to the visible terminal.
+
 ## 1.1.3 — 21 September 2026
 
 - CLI input backgrounds follow the Hud theme while foreground and syntax colors remain intact.
