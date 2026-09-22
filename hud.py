@@ -61,6 +61,7 @@ class Terminal(Vte.Terminal):
         self.set_vexpand(True)
         self.connect('selection-changed', self.copy_selection)
         self.connect_after('paste-clipboard', lambda *_: self.unselect_all())
+        self.connect('key-press-event', self.handle_clipboard_paste)
         self.connect('child-exited', self.exited)
 
     def copy_selection(self, *_):
@@ -79,29 +80,26 @@ class Terminal(Vte.Terminal):
             return True
         return Vte.Terminal.do_button_press_event(self, event)
 
-    def do_key_press_event(self, event):
+    def handle_clipboard_paste(self, _terminal, event):
         # Speech-to-text tools commonly copy recognized words and synthesize
-        # Ctrl+V. Codex reserves Ctrl+V for image paste, so consume it as a
-        # clipboard text paste when the clipboard advertises a text target.
+        # Ctrl+V. Intercept the key signal before VTE/CLI key handling and ask
+        # GTK directly for text instead of relying on a particular MIME target.
         plain_paste = (event.keyval in (Gdk.KEY_v, Gdk.KEY_V) and
                        event.state & Gdk.ModifierType.CONTROL_MASK and
                        not event.state & (Gdk.ModifierType.SHIFT_MASK |
-                                          Gdk.ModifierType.ALT_MASK |
+                                          Gdk.ModifierType.MOD1_MASK |
                                           Gdk.ModifierType.SUPER_MASK))
-        if plain_paste:
-            clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-            clipboard.request_targets(self.clipboard_targets_received, event.copy())
-            return True
-        return Vte.Terminal.do_key_press_event(self, event)
+        if not plain_paste:
+            return False
+        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        clipboard.request_text(self.clipboard_text_received, event.copy())
+        return True
 
-    def clipboard_targets_received(self, clipboard, targets, event):
-        if not self.get_realized():
+    def clipboard_text_received(self, _clipboard, text, event):
+        if not self.get_realized() or not self.has_focus():
             return
-        target_names = {target.name() for target in targets}
-        text_targets = {'UTF8_STRING', 'STRING', 'TEXT', 'text/plain',
-                        'text/plain;charset=utf-8', 'text/plain;charset=UTF-8'}
-        if target_names & text_targets:
-            self.paste_clipboard()
+        if text is not None:
+            self.paste_text(text)
             self.unselect_all()
         else:
             # Keep Codex's Ctrl+V image-paste shortcut for image-only clipboards.
