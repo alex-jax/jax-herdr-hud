@@ -91,6 +91,16 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     app.select(key); pump()
     assert app.active_title.get_text().startswith('Second session / Home  /  ')
     print('PASS: header uses space names, follows renames and preserves Settings and terminal identity', flush=True)
+    for button in app.window.get_titlebar().get_children():
+        if isinstance(button, Gtk.Button):
+            assert not button.get_focus_on_click()
+    app.theme_button.grab_focus()
+    app.theme_button.clicked(); pump()
+    assert app.window.get_focus() is app.terminals[app.selected]
+    app.theme_button.clicked(); pump()
+    assert app.window.get_focus() is app.terminals[app.selected]
+    print('PASS: header buttons do not take click focus; theme actions return keyboard focus to terminal', flush=True)
+
 
     # Send right-clicks to GTK's actual ListBox input window, not menu helpers.
     selected_before = app.selected

@@ -150,6 +150,17 @@ try:
     terminal.feed_child(b'\r')
     until(lambda: 'HUD_KEY_PASTE_OK' in screen())
     print('PASS: mouse and keyboard paste clear selection and preserve clipboard text', flush=True)
+    terminal.grab_focus()
+    clip.set_text("printf 'HUD_SPEECH_TEXT_OK\\n'", -1)
+    paste_event = Gdk.Event.new(Gdk.EventType.KEY_PRESS)
+    paste_event.key.window = terminal.get_window()
+    paste_event.key.keyval = Gdk.KEY_v
+    paste_event.key.state = Gdk.ModifierType.CONTROL_MASK
+    assert terminal.emit('key-press-event', paste_event)
+    until(lambda: 'HUD_SPEECH_TEXT_OK' in screen())
+    terminal.feed_child(b'\r')
+    until(lambda: screen().count('HUD_SPEECH_TEXT_OK') >= 2)
+    print('PASS: Ctrl+V asks GTK for clipboard text and pastes it into VTE', flush=True)
     # Exercise click reporting through VTE -> native attach -> Herdr -> child PTY.
     import shlex
     mouse_log = Path(temp.name) / 'mouse-input'

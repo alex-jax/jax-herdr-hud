@@ -398,3 +398,20 @@ their short help labels.
 
 Pasting with right-click or the terminal paste shortcut clears the text selection
 automatically. Copied text remains available on the clipboard.
+
+While holding Shift and dragging a text selection, move the pointer to the top or
+bottom edge to scroll through terminal history. Release the mouse to stop.
+Top-bar actions return keyboard focus to the visible terminal; Settings and
+dialogs keep their own controls available.
+
+When a Shift-drag reaches the terminal edge, Hud loads up to 20,000 lines of
+retained Herdr history into a temporary selection view. Hold the mouse near the
+top or bottom to extend the selection. Esc, a normal click or typing returns to
+the live terminal; the agent stays connected throughout. History that the CLI
+or Herdr has not retained cannot be recovered this way.
+Selections copy as plain text, without fonts, colors, HTML or ANSI escape codes.
+
+Ctrl+V pastes text from the clipboard into the active terminal, including
+speech-to-text input. With an image-only clipboard, Ctrl+V is sent to the CLI
+so its image-paste shortcut remains available. Ctrl+Shift+V and right-click
+continue to use the terminal paste action.

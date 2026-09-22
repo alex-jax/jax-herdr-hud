@@ -2,6 +2,7 @@
 """Herdr Hud — native terminal companion for the GNOME floating H."""
 import json
 import os
+import re
 from pathlib import Path
 import signal
 import threading
@@ -16,6 +17,7 @@ from backend import (Monitor, attention, environment, ensure_session, create_ter
 from enable import enable_extension
 from updates import UpdateMonitor, install_update
 from terminal_themes import palettes, palette
+from terminal_display import DisplayFilter
 from theme_picker import ThemePicker
 from app_info import RELEASE_TAG, VERSION, ATTRIBUTION, AUTHOR_URL, UPSTREAM_URL, HERDR_URL
 
@@ -44,6 +46,8 @@ class Terminal(Vte.Terminal):
         super().__init__()
         self.pid = None
         self.alive = False
+        self.selection_start_y = None
+        self.history_handler = None
         self.set_margin_start(16)
         self.set_margin_end(16)
         self.set_margin_top(8)
@@ -57,6 +61,7 @@ class Terminal(Vte.Terminal):
         self.set_vexpand(True)
         self.connect('selection-changed', self.copy_selection)
         self.connect_after('paste-clipboard', lambda *_: self.unselect_all())
+        self.connect('key-press-event', self.handle_clipboard_paste)
         self.connect('child-exited', self.exited)
 
     def copy_selection(self, *_):
@@ -64,6 +69,10 @@ class Terminal(Vte.Terminal):
             self.copy_clipboard_format(Vte.Format.TEXT)
 
     def do_button_press_event(self, event):
+        if self.history_handler and self.history_handler(self, event):
+            return True
+        if event.button == 1:
+            self.selection_start_y = event.y if event.state & Gdk.ModifierType.SHIFT_MASK else None
         if event.button == 3:
             self.grab_focus()
             self.paste_clipboard()
@@ -71,7 +80,55 @@ class Terminal(Vte.Terminal):
             return True
         return Vte.Terminal.do_button_press_event(self, event)
 
+    def handle_clipboard_paste(self, _terminal, event):
+        # Speech-to-text tools commonly copy recognized words and synthesize
+        # Ctrl+V. Intercept the key signal before VTE/CLI key handling and ask
+        # GTK directly for text instead of relying on a particular MIME target.
+        plain_paste = (event.keyval in (Gdk.KEY_v, Gdk.KEY_V) and
+                       event.state & Gdk.ModifierType.CONTROL_MASK and
+                       not event.state & (Gdk.ModifierType.SHIFT_MASK |
+                                          Gdk.ModifierType.MOD1_MASK |
+                                          Gdk.ModifierType.SUPER_MASK))
+        if not plain_paste:
+            return False
+        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        clipboard.request_text(self.clipboard_text_received, event.copy())
+        return True
+
+    def clipboard_text_received(self, _clipboard, text, event):
+        if not self.get_realized() or not self.has_focus():
+            return
+        if text is not None:
+            self.paste_text(text)
+            self.unselect_all()
+        else:
+            # Keep Codex's Ctrl+V image-paste shortcut for image-only clipboards.
+            Vte.Terminal.do_key_press_event(self, event)
+
+    def do_motion_notify_event(self, event):
+        if self.history_handler and self.history_handler(self, event):
+            return True
+        # Trigger VTE's own selection autoscroll within one row of either edge.
+        # Keep ordinary CLI mouse reporting untouched and let VTE own the timer,
+        # selection anchor, release handling and scrollback bounds.
+        selecting = (event.state & Gdk.ModifierType.SHIFT_MASK and
+                     event.state & Gdk.ModifierType.BUTTON1_MASK)
+        if selecting:
+            edge = max(8, self.get_char_height())
+            height = self.get_allocated_height()
+            moved_vertically = (self.selection_start_y is not None and
+                                abs(event.y - self.selection_start_y) >= edge)
+            if moved_vertically and (event.y < edge or event.y >= height - edge):
+                copied = event.copy()
+                copied.motion.y = -edge if event.y < edge else height + edge
+                event = copied.motion
+        return Vte.Terminal.do_motion_notify_event(self, event)
+
     def do_button_release_event(self, event):
+        if self.history_handler and self.history_handler(self, event):
+            return True
+        if event.button == 1:
+            self.selection_start_y = None
         if event.button == 3:
             return True
         return Vte.Terminal.do_button_release_event(self, event)
@@ -109,6 +166,7 @@ class Hud(Gtk.Application):
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.window = None
+        self.history_selection = None
         self.terminals = {}
         self.panes = {}
         self.snapshots = {}
@@ -238,6 +296,7 @@ class Hud(Gtk.Application):
         dialog.destroy()
 
     def show_setup(self, message=None):
+        self.end_history_selection()
         self.setup_message.set_text(message or 'Use your existing Herdr installation. Tested with Herdr 0.9.1.')
         self.herdr_entry.set_text(self.settings.get('herdr_path') or '')
         self.stack.set_visible_child_name('setup')
@@ -362,6 +421,10 @@ class Hud(Gtk.Application):
             'Expand HUD', self.toggle_expanded)
         header.pack_end(self.expand_button)
         header.pack_end(self.icon_button('window-minimize-symbolic', 'Hide Hud', self.hide))
+        for button in header.get_children():
+            if isinstance(button, Gtk.Button):
+                button.set_focus_on_click(False)
+                button.connect_after('clicked', lambda *_: idle(self.focus_selected_terminal))
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.window.add(outer)
         self.split = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
@@ -474,7 +537,9 @@ class Hud(Gtk.Application):
         setup_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         setup_scroll.add(setup)
         self.stack.add_named(setup_scroll, 'setup')
-        right.pack_start(self.stack, True, True, 0)
+        self.display_overlay = Gtk.Overlay()
+        self.display_overlay.add(self.stack)
+        right.pack_start(self.display_overlay, True, True, 0)
         self.split.pack2(right, True, True)
         self.sidebar_toggle = self.icon_button('pan-start-symbolic', 'Collapse sidebar', self.toggle_sidebar)
         self.sidebar_toggle.set_name('sidebar-toggle')
@@ -531,6 +596,10 @@ class Hud(Gtk.Application):
         idle(self.focus_selected_terminal)
 
     def focus_selected_terminal(self):
+        selection = self.history_selection
+        if selection and selection.get('view'):
+            selection['view'].grab_focus()
+            return
         terminal = self.terminals.get(self.selected)
         if not self.closing and self.window.get_visible() and terminal and self.stack.get_visible_child() == terminal:
             terminal.grab_focus()
@@ -654,6 +723,8 @@ class Hud(Gtk.Application):
         self.theme_button.set_tooltip_text('Use light theme' if self.dark else 'Use dark theme')
         for terminal in self.terminals.values():
             self.color_terminal(terminal)
+        if self.history_selection and self.history_selection.get('view'):
+            self.color_terminal(self.history_selection['view'])
         if self.theme_picker is not None:
             self.theme_picker.refresh()
         self.publish()
@@ -794,6 +865,8 @@ class Hud(Gtk.Application):
         for key in list(self.terminals):
             if isinstance(key, tuple) and key not in panes:
                 terminal = self.terminals.pop(key)
+                if self.history_selection and self.history_selection['source'] is terminal:
+                    self.end_history_selection()
                 if self.window.get_focus() is terminal:
                     self.window.set_focus(None)
                 if self.stack.get_visible_child() is terminal:
@@ -1288,7 +1361,173 @@ class Hud(Gtk.Application):
         if self.selected is None and self.panes:
             self.select(next(iter(self.panes)))
 
+    @staticmethod
+    def terminal_input_window(terminal):
+        def find(window):
+            probe = Gdk.Event.new(Gdk.EventType.BUTTON_PRESS)
+            probe.button.window = window
+            if Gtk.get_event_widget(probe) is terminal:
+                return window
+            for child in window.get_children():
+                match = find(child)
+                if match:
+                    return match
+        return find(terminal.get_window())
+
+    def history_event(self, terminal, event):
+        selection = self.history_selection
+        if selection and selection['source'] is terminal:
+            if selection.get('view'):
+                if not selection.get('ready'):
+                    if event.type == Gdk.EventType.BUTTON_RELEASE:
+                        self.end_history_selection()
+                    elif event.type == Gdk.EventType.MOTION_NOTIFY:
+                        selection['motion'] = event.copy()
+                    return True
+                self.replay_selection_event(selection['view'], event)
+                return True
+            if event.type == Gdk.EventType.BUTTON_RELEASE:
+                self.end_history_selection()
+            elif event.type == Gdk.EventType.MOTION_NOTIFY:
+                selection['motion'] = event.copy()
+                edge = max(8, terminal.get_char_height())
+                if (abs(event.y - selection['press'].button.y) >= edge and
+                        (event.y < edge or event.y >= terminal.get_allocated_height() - edge)):
+                    selection['expand'] = True
+                    if 'text' in selection:
+                        self.history_ready(selection, selection['text'], selection.get('error'))
+            return False
+        if (event.type != Gdk.EventType.BUTTON_PRESS or event.button != 1 or
+                not event.state & Gdk.ModifierType.SHIFT_MASK):
+            return False
+        pane = self.panes.get(self.selected)
+        if not pane or self.terminals.get(self.selected) is not terminal:
+            return False
+        selection = {'source': terminal, 'key': self.selected, 'press': event.copy()}
+        self.history_selection = selection
+        # Herdr renders its attachment as a screen, not a PTY scrollback stream.
+        # Fetch retained history without changing the agent's viewport or input.
+        path, pane_id = pane['session']['socket_path'], pane['pane_id']
+        def work():
+            try:
+                reply = request(path, 'pane.read', {'pane_id': pane_id, 'source': 'recent',
+                                'lines': 20000, 'format': 'ansi', 'strip_ansi': False})
+                text = reply['read']['text']
+                if not isinstance(text, str):
+                    raise ValueError('Invalid history response')
+                idle(self.history_ready, selection, text, None)
+            except Exception as exc:
+                idle(self.history_ready, selection, None, str(exc))
+        threading.Thread(target=work, daemon=True).start()
+        return False
+
+    def replay_selection_event(self, view, event):
+        copied = event.copy()
+        if copied.type == Gdk.EventType.MOTION_NOTIFY:
+            copied.motion.window = self.terminal_input_window(view)
+        else:
+            copied.button.window = self.terminal_input_window(view)
+        view.event(copied)
+
+    def history_ready(self, selection, text, error):
+        if self.closing or self.history_selection is not selection:
+            return
+        if not selection.get('expand'):
+            selection['text'], selection['error'] = text, error
+            return
+        if error or self.selected != selection['key'] or not self.window.get_visible():
+            self.end_history_selection()
+            if error:
+                self.status.set_text('Could not load selection history: ' + error)
+            return
+        source = selection['source']
+        visible_lines = (source.get_text_format(Vte.Format.TEXT) or '').splitlines()
+        history_lines = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text).splitlines()
+        selection['offset'] = None
+        for row, line in enumerate(visible_lines):
+            if line.strip():
+                matches = [i for i, value in enumerate(history_lines) if value.rstrip() == line.rstrip()]
+                if matches:
+                    selection['offset'] = max(0, matches[-1] - row)
+                    break
+        # Finish the live VTE's drag before replaying it into the history view.
+        release = Gdk.Event.new(Gdk.EventType.BUTTON_RELEASE)
+        release.set_device(selection['press'].get_device())
+        release.button.window = self.terminal_input_window(source)
+        release.button.button = 1
+        release.button.x, release.button.y = selection['press'].button.x, selection['press'].button.y
+        Vte.Terminal.do_button_release_event(source, release.button)
+        source.selection_start_y = None
+        view = Terminal()
+        selection['view'] = view
+        view.set_font(source.get_font())
+        self.color_terminal(view)
+        self.display_overlay.add_overlay(view)
+        view.show()
+        def ready():
+            if self.history_selection is not selection:
+                return False
+            # Leave the last line unterminated so the snapshot's current viewport
+            # ends at the same row as the live attachment.
+            data = text.replace('\r\n', '\n').rstrip('\n').replace('\n', '\r\n').encode()
+            view.feed(DisplayFilter().feed(data))
+            GLib.timeout_add(50, begin)
+            return False
+        def begin():
+            if self.history_selection is not selection:
+                return False
+            if selection['offset'] is not None:
+                view.get_vadjustment().set_value(selection['offset'])
+            selection['ready'] = True
+            view.grab_focus()
+            self.replay_selection_event(view, selection['press'])
+            if selection.get('motion'):
+                self.replay_selection_event(view, selection['motion'])
+            view.connect('key-press-event', self.history_key, selection)
+            view.connect('button-press-event', self.history_click, selection)
+            self.status.set_text('Selecting history · Esc or click to return to the live terminal')
+            return False
+        GLib.idle_add(ready)
+
+    def history_key(self, view, event, selection):
+        if event.keyval in (Gdk.KEY_Shift_L, Gdk.KEY_Shift_R):
+            return False
+        if (event.keyval in (Gdk.KEY_c, Gdk.KEY_C) and
+                event.state & Gdk.ModifierType.CONTROL_MASK and
+                event.state & Gdk.ModifierType.SHIFT_MASK):
+            view.copy_clipboard_format(Vte.Format.TEXT)
+            return True
+        source = selection['source']
+        self.end_history_selection()
+        source.grab_focus()
+        if event.keyval != Gdk.KEY_Escape:
+            source.do_key_press_event(event)
+        return True
+
+    def history_click(self, view, event, selection):
+        if event.button == 1 and event.state & Gdk.ModifierType.SHIFT_MASK:
+            return False
+        source = selection['source']
+        self.end_history_selection()
+        source.grab_focus()
+        if event.button == 3:
+            source.paste_clipboard()
+            source.unselect_all()
+        return True
+
+    def end_history_selection(self):
+        selection = self.history_selection
+        self.history_selection = None
+        if selection and selection.get('view'):
+            view = selection['view']
+            selection['source'].unselect_all()
+            view.hide()
+            self.display_overlay.remove(view)
+            idle(view.destroy)
+            self.status.set_text('Shift+drag to copy · Click CLI controls · Right-click to paste')
+
     def select(self, key):
+        self.end_history_selection()
         pane = self.panes.get(key)
         if self.closing or not pane:
             return
@@ -1307,6 +1546,7 @@ class Hud(Gtk.Application):
                 self.show_setup(str(exc))
                 return
             terminal = Terminal()
+            terminal.history_handler = self.history_event
             self.terminals[key] = terminal
             self.color_terminal(terminal)
             self.stack.add_named(terminal, f'terminal-{len(self.terminals)}-{GLib.get_monotonic_time()}')
@@ -1407,6 +1647,7 @@ class Hud(Gtk.Application):
         self.acknowledge()
 
     def hide(self):
+        self.end_history_selection()
         self.save()
         self.window.hide()
         return True
@@ -1418,6 +1659,7 @@ class Hud(Gtk.Application):
             self.show()
 
     def exit_hud(self):
+        self.end_history_selection()
         if self.closing:
             return
         self.save()
