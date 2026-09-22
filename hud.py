@@ -79,6 +79,34 @@ class Terminal(Vte.Terminal):
             return True
         return Vte.Terminal.do_button_press_event(self, event)
 
+    def do_key_press_event(self, event):
+        # Speech-to-text tools commonly copy recognized words and synthesize
+        # Ctrl+V. Codex reserves Ctrl+V for image paste, so consume it as a
+        # clipboard text paste when the clipboard advertises a text target.
+        plain_paste = (event.keyval in (Gdk.KEY_v, Gdk.KEY_V) and
+                       event.state & Gdk.ModifierType.CONTROL_MASK and
+                       not event.state & (Gdk.ModifierType.SHIFT_MASK |
+                                          Gdk.ModifierType.ALT_MASK |
+                                          Gdk.ModifierType.SUPER_MASK))
+        if plain_paste:
+            clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            clipboard.request_targets(self.clipboard_targets_received, event.copy())
+            return True
+        return Vte.Terminal.do_key_press_event(self, event)
+
+    def clipboard_targets_received(self, clipboard, targets, event):
+        if not self.get_realized():
+            return
+        target_names = {target.name() for target in targets}
+        text_targets = {'UTF8_STRING', 'STRING', 'TEXT', 'text/plain',
+                        'text/plain;charset=utf-8', 'text/plain;charset=UTF-8'}
+        if target_names & text_targets:
+            self.paste_clipboard()
+            self.unselect_all()
+        else:
+            # Keep Codex's Ctrl+V image-paste shortcut for image-only clipboards.
+            Vte.Terminal.do_key_press_event(self, event)
+
     def do_motion_notify_event(self, event):
         if self.history_handler and self.history_handler(self, event):
             return True
@@ -1475,7 +1503,7 @@ class Hud(Gtk.Application):
         self.end_history_selection()
         source.grab_focus()
         if event.keyval != Gdk.KEY_Escape:
-            Vte.Terminal.do_key_press_event(source, event)
+            source.do_key_press_event(event)
         return True
 
     def history_click(self, view, event, selection):
