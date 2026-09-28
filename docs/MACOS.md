@@ -9,7 +9,8 @@ Macs and Rosetta are not supported. Public release is pending the checks in
 
 1. Install [Herdr separately](https://herdr.dev/docs/install/). Hud does not bundle,
    install or upgrade Herdr or your agents.
-2. Download `jax-herdr-hud-1.3-macos-arm64.dmg` from the supplied test-build link;
+2. Download the [test installer ZIP](https://github.com/alex-jax/jax-herdr-hud/actions/runs/36475705812/artifacts/10993551752)
+   and extract `jax-herdr-hud-1.3-macos-arm64.dmg` (GitHub sign-in may be required);
    after release, Mac installers will appear under
    [GitHub Releases → Assets](https://github.com/alex-jax/jax-herdr-hud/releases).
 3. Open the DMG and drag **Herdr Hud** to **Applications**. Eject the disk image.

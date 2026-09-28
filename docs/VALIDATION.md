@@ -13,8 +13,15 @@
   Herdr server remained running. The app starts successfully as version 1.3.
 - The isolated GNOME 50 extension smoke passed against the installed companion:
   pointer clicks/drag/Escape, accent changes, geometry, D-Bus messages and exit.
-- Full Mac app, installer and user validation are still pending. These results
-  do not establish macOS 27 support or complete feature/visual parity.
+- The final test DMG from `96d9cf9` passed automated bundled-app and real Herdr
+  integration on macOS 26.6.2 and 27.0, with Homebrew unavailable. This includes
+  arm64/dependency/signature/identity audits, clipboard, themes, floating H,
+  singleton launch, matching bundled terminal font metrics and session survival.
+  [Workflow](https://github.com/alex-jax/jax-herdr-hud/actions/runs/36475705812).
+- Hands-on Mac installation, complete visual/interaction parity, multiple monitors,
+  lock/sleep, login startup and replacement/removal remain pending on both versions.
+  The checksum and release checklist are in [Mac validation](MACOS_VALIDATION.md).
+  No stable 1.3 release has been published; `v1.2` remains unchanged.
 
 ## 1.2 — 28 September 2026
 
