@@ -55,7 +55,7 @@ Homebrew available to the builder:
 ```sh
 brew install python@3.14 pygobject3 gtk+3 vte3 adwaita-icon-theme
 /opt/homebrew/bin/python3.14 -m venv --system-site-packages build/mac-venv
-build/mac-venv/bin/python -m pip install pyinstaller==6.22.3 pyobjc-framework-Cocoa==12.2.2 pyobjc-framework-CoreText==12.2.2
+build/mac-venv/bin/python -m pip install pyinstaller==6.22.3 pyobjc-framework-Cocoa==12.2.2 pyobjc-framework-CoreText==12.2.2 certifi==2026.7.22
 build/mac-venv/bin/python scripts/build_macos.py
 ```
 

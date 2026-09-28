@@ -11,6 +11,8 @@
   smoke checks. Installed that Debian package locally, restarted only Hud,
   verified installed application files match source and confirmed the existing
   Herdr server remained running. The app starts successfully as version 1.3.
+- The isolated GNOME 50 extension smoke passed against the installed companion:
+  pointer clicks/drag/Escape, accent changes, geometry, D-Bus messages and exit.
 - Full Mac app, installer and user validation are still pending. These results
   do not establish macOS 27 support or complete feature/visual parity.
 

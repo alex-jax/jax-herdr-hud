@@ -21,6 +21,8 @@ def run(argv, **kwargs):
 
 
 def licenses(destination):
+    if destination.exists():
+        shutil.rmtree(destination)
     destination.mkdir(parents=True, exist_ok=True)
     # Retain exact build dependency metadata and the license files from each keg.
     data = json.loads(subprocess.check_output(['brew', 'info', '--json=v2', '--installed']))
@@ -38,12 +40,15 @@ def licenses(destination):
                     # Do not recurse into headers, examples or unrelated cached source.
                     if path.stat().st_size > 1024 * 1024:
                         continue
-                    target = destination / 'homebrew' / name / path.relative_to(keg)
+                    # A directory named Python.framework is interpreted as code by
+                    # codesign even when it contains only license text. Flatten it.
+                    key = hashlib.sha256(str(path.relative_to(keg)).encode()).hexdigest()[:12]
+                    target = destination / 'homebrew' / name / (key + '-' + path.name + '.txt')
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(path, target)
     for distribution in importlib.metadata.distributions():
         name = distribution.metadata.get('Name', 'unknown')
-        if not name.lower().startswith(('pyobjc', 'pyinstaller', 'pygobject', 'pycairo')):
+        if not name.lower().startswith(('pyobjc', 'pyinstaller', 'pygobject', 'pycairo', 'certifi')):
             continue
         for path in distribution.files or []:
             if any(word in path.name.lower() for word in ('license', 'copying', 'copyright')):

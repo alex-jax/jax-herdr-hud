@@ -8,6 +8,9 @@ import time
 
 
 def main():
+    import ssl
+    import certifi
+    assert ssl.create_default_context(cafile=certifi.where()).get_ca_certs()
     import hud
     from hud import Gtk, GLib, Vte
     class NoMonitor:
@@ -58,6 +61,12 @@ def main():
             assert 'HUD_RELAY_OK' in terminal.get_text_format(Vte.Format.TEXT)
             assert terminal.pid is not None
             result['frozen_relay'] = True
+            import cairo
+            output = Path(os.environ['HUD_SMOKE_RESULT']).parent
+            width, height = app.window.get_size()
+            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+            app.window.draw(cairo.Context(surface))
+            surface.write_to_png(str(output / 'macos-hud-dark.png'))
             terminal.select_all()
             pump()
             clip = Gtk.Clipboard.get(hud.Gdk.SELECTION_CLIPBOARD)
@@ -68,7 +77,10 @@ def main():
             assert app.desktop.toast is not None and app.desktop.toast.isVisible()
             app.desktop.suspend()
             assert not app.desktop.panel.isVisible()
+            app.desktop.suspend('lock')
             app.desktop.resume()
+            assert not app.desktop.panel.isVisible(), 'Waking must not clear a separate screen lock'
+            app.desktop.resume('lock')
             assert app.desktop.panel.isVisible()
             app.hide()
             assert terminal.alive

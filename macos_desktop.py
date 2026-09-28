@@ -32,6 +32,9 @@ def numbers(value, names):
 
 
 class BubbleView(A.NSView):
+    def acceptsFirstResponder(self):
+        return True
+
     def acceptsFirstMouse_(self, event):
         return True
 
@@ -65,6 +68,8 @@ class BubbleView(A.NSView):
         origin = self.window().frame().origin
         self.owner.drag = (point.x, point.y, origin.x, origin.y)
         self.owner.moved = False
+        self.window().makeKeyWindow()
+        self.window().makeFirstResponder_(self)
 
     def mouseDragged_(self, event):
         if self.owner.drag is None:
@@ -88,6 +93,20 @@ class BubbleView(A.NSView):
         self.owner.end_drag()
 
 
+class BubblePanel(A.NSPanel):
+    def canBecomeKeyWindow(self):
+        return True
+
+    def canBecomeMainWindow(self):
+        return False
+
+
+class ReopenHandler(F.NSObject):
+    def handleReopen_withReplyEvent_(self, event, reply):
+        if not self.owner.closed:
+            self.owner.app.show()
+
+
 class MacDesktop:
     def __init__(self, app, config):
         self.app, self.config = app, Path(config)
@@ -101,6 +120,7 @@ class MacDesktop:
         self.drag = None
         self.moved = False
         self.suspended = False
+        self.suspensions = set()
         self.closed = False
         self.restored = False
         self.last_dark = None
@@ -121,6 +141,14 @@ class MacDesktop:
         return F.NSUserDefaults.standardUserDefaults().stringForKey_('AppleInterfaceStyle') == 'Dark'
 
     def ready(self):
+        from gi.repository import Gio
+        quit_action = Gio.SimpleAction.new('quit', None)
+        quit_action.connect('activate', lambda *_: self.app.exit_hud())
+        self.app.add_action(quit_action)
+        self.reopen = ReopenHandler.alloc().init()
+        self.reopen.owner = self
+        F.NSAppleEventManager.sharedAppleEventManager().setEventHandler_andSelector_forEventClass_andEventID_(
+            self.reopen, b'handleReopen:withReplyEvent:', 0x61657674, 0x72617070)
         self.panel = self.make_panel(56, 56)
         self.view = BubbleView.alloc().initWithFrame_(F.NSMakeRect(0, 0, 56, 56))
         self.view.owner = self
@@ -136,14 +164,14 @@ class MacDesktop:
         self.last_dark = self.prefers_dark()
         self.app.window.connect('configure-event', self.window_configured)
         self.observe(F.NSDistributedNotificationCenter.defaultCenter(),
-                     'com.apple.screenIsLocked', lambda _: self.suspend())
+                     'com.apple.screenIsLocked', lambda _: self.suspend('lock'))
         self.observe(F.NSDistributedNotificationCenter.defaultCenter(),
-                     'com.apple.screenIsUnlocked', lambda _: self.resume())
+                     'com.apple.screenIsUnlocked', lambda _: self.resume('lock'))
         workspace = A.NSWorkspace.sharedWorkspace().notificationCenter()
-        for name in (A.NSWorkspaceSessionDidResignActiveNotification, A.NSWorkspaceWillSleepNotification):
-            self.observe(workspace, name, lambda _: self.suspend())
-        for name in (A.NSWorkspaceSessionDidBecomeActiveNotification, A.NSWorkspaceDidWakeNotification):
-            self.observe(workspace, name, lambda _: self.resume())
+        self.observe(workspace, A.NSWorkspaceSessionDidResignActiveNotification, lambda _: self.suspend('session'))
+        self.observe(workspace, A.NSWorkspaceWillSleepNotification, lambda _: self.suspend('sleep'))
+        self.observe(workspace, A.NSWorkspaceSessionDidBecomeActiveNotification, lambda _: self.resume('session'))
+        self.observe(workspace, A.NSWorkspaceDidWakeNotification, lambda _: self.resume('sleep'))
         self.observe(F.NSNotificationCenter.defaultCenter(), A.NSApplicationDidChangeScreenParametersNotification,
                      lambda _: self.screens_changed())
         self.observe(F.NSNotificationCenter.defaultCenter(), A.NSApplicationWillTerminateNotification,
@@ -151,7 +179,7 @@ class MacDesktop:
         self.timer = GLib.timeout_add(250, self.tick)
 
     def make_panel(self, width, height):
-        panel = A.NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
+        panel = BubblePanel.alloc().initWithContentRect_styleMask_backing_defer_(
             F.NSMakeRect(0, 0, width, height),
             A.NSWindowStyleMaskBorderless | A.NSWindowStyleMaskNonactivatingPanel,
             A.NSBackingStoreBuffered, False)
@@ -194,23 +222,30 @@ class MacDesktop:
         self.panel.setFrameOrigin_(F.NSMakePoint(x, y))
 
     def end_drag(self):
+        was_dragging = self.drag is not None
         self.drag = None
         self.moved = False
         self.clamp_bubble()
         if self.panel:
+            if was_dragging:
+                self.panel.resignKeyWindow()
             point = self.panel.frame().origin
             write_object(self.config / 'bubble.json', {'x': point.x, 'y': point.y})
 
-    def suspend(self):
+    def suspend(self, reason='manual'):
+        self.suspensions.add(reason)
         self.suspended = True
         self.end_drag()
         self.hide_toast()
         self.panel.orderOut_(None)
 
-    def resume(self):
+    def resume(self, reason='manual'):
         if self.closed:
             return
-        self.suspended = False
+        self.suspensions.discard(reason)
+        self.suspended = bool(self.suspensions)
+        if self.suspended:
+            return
         self.clamp_bubble()
         self.panel.orderFrontRegardless()
 
@@ -345,6 +380,8 @@ class MacDesktop:
         for center, token in self.observers:
             center.removeObserver_(token)
         self.observers.clear()
+        F.NSAppleEventManager.sharedAppleEventManager().removeEventHandlerForEventClass_andEventID_(
+            0x61657674, 0x72617070)
         if self.panel:
             self.panel.close()
         if self.toast:

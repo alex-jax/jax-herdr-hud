@@ -18,6 +18,14 @@ UPDATE_GUIDE_URL = 'https://github.com/alex-jax/jax-herdr-hud/blob/'
 API_URL = 'https://api.github.com/repos/alex-jax/jax-herdr-hud/releases?per_page=100'
 
 
+def open_url(request, timeout):
+    if sys.platform == 'darwin' and getattr(sys, 'frozen', False):
+        import ssl
+        import certifi
+        return urlopen(request, timeout=timeout, context=ssl.create_default_context(cafile=certifi.where()))
+    return urlopen(request, timeout=timeout)
+
+
 def version_key(tag):
     """Order numeric releases and SemVer prereleases (including preview.10)."""
     if not isinstance(tag, str):
@@ -41,7 +49,7 @@ def fetch_releases():
     request = Request(API_URL, headers={'Accept': 'application/vnd.github+json',
                       'User-Agent': 'Herdr-Hud-update-check',
                       'X-GitHub-Api-Version': '2022-11-28'})
-    with urlopen(request, timeout=10) as response:
+    with open_url(request, timeout=10) as response:
         data = response.read(1024 * 1024 + 1)
     if len(data) > 1024 * 1024:
         raise ValueError('Release response too large')
@@ -141,7 +149,7 @@ def install_update(tag, progress=lambda message: None):
         package = Path(directory) / filename
         checksum = hashlib.sha256()
         total = 0
-        with urlopen(Request(url, headers={'User-Agent': 'Herdr-Hud-update'}), timeout=30) as response, package.open('wb') as output:
+        with open_url(Request(url, headers={'User-Agent': 'Herdr-Hud-update'}), timeout=30) as response, package.open('wb') as output:
             while chunk := response.read(128 * 1024):
                 total += len(chunk)
                 if total > size:
