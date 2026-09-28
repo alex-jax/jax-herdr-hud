@@ -36,3 +36,5 @@ Mac builds retain Ubuntu and Ubuntu Mono fonts under the Ubuntu Font Licence;
 see `licenses/Ubuntu-fonts.txt`. The bundled Python, PyGObject, GTK, VTE, PyObjC
 and supporting libraries retain their own licenses, copied with the build
 dependency manifest into the app's `licenses/third-party` resources.
+Mac controls and symbols also include the reference Ubuntu Yaru-blue GTK theme
+and selected Yaru icons; see the retained `licenses/yaru-theme-*.txt` notices.

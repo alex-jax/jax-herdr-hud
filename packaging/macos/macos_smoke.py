@@ -63,10 +63,14 @@ def main():
             result['frozen_relay'] = True
             import cairo
             output = Path(os.environ['HUD_SMOKE_RESULT']).parent
-            width, height = app.window.get_size()
+            width, height = app.window.get_allocated_width(), app.window.get_allocated_height()
             surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
             app.window.draw(cairo.Context(surface))
             surface.write_to_png(str(output / 'macos-hud-dark.png'))
+            result['screen_dpi'] = hud.Gdk.Screen.get_default().get_resolution()
+            result['ui_font'] = Gtk.Settings.get_default().get_property('gtk-font-name')
+            result['terminal_font'] = terminal.get_font().to_string()
+            result['terminal_cell'] = [terminal.get_char_width(), terminal.get_char_height()]
             terminal.select_all()
             pump()
             clip = Gtk.Clipboard.get(hud.Gdk.SELECTION_CLIPBOARD)

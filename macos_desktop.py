@@ -1,6 +1,7 @@
 """AppKit floating H and desktop lifecycle, running on GTK's Quartz main thread."""
 import json
 import math
+import os
 from pathlib import Path
 import plistlib
 import sys
@@ -129,13 +130,21 @@ class MacDesktop:
         # Fonts belong to this process, never to the user's system font library.
         import CoreText
         root = Path(getattr(sys, '_MEIPASS', Path(__file__).parent / 'packaging/macos'))
+        if '_HUD_HOST_ENV' not in os.environ:
+            from runtime_env import RUNTIME_KEYS
+            os.environ['_HUD_HOST_ENV'] = json.dumps({key: os.environ.get(key) for key in RUNTIME_KEYS})
+        os.environ['GTK_DATA_PREFIX'] = str(root)
         for path in (root / 'fonts').glob('*.ttf'):
             CoreText.CTFontManagerRegisterFontsForURL(F.NSURL.fileURLWithPath_(str(path)),
                                                       CoreText.kCTFontManagerScopeProcess, None)
         from gi.repository import Gtk
+        # Match the reference GTK layout in logical pixels; Quartz handles Retina scaling.
+        Gtk.Settings.get_default().set_property('gtk-xft-dpi', 96 * 1024)
+        Gdk.Screen.get_default().set_resolution(96)
         Gtk.Settings.get_default().set_property('gtk-font-name', 'Ubuntu Sans 11')
-        Gtk.Settings.get_default().set_property('gtk-theme-name', 'Adwaita')
-        Gtk.Settings.get_default().set_property('gtk-icon-theme-name', 'Adwaita')
+        Gtk.Settings.get_default().set_property('gtk-theme-name', 'Yaru-blue')
+        Gtk.IconTheme.get_default().prepend_search_path(str(root / 'share/icons'))
+        Gtk.Settings.get_default().set_property('gtk-icon-theme-name', 'HerdrReference')
 
     def prefers_dark(self):
         return F.NSUserDefaults.standardUserDefaults().stringForKey_('AppleInterfaceStyle') == 'Dark'
