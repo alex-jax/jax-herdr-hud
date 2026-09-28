@@ -28,6 +28,11 @@ checkout and local source directory may differ.
 | `tests/test_backend.py` | Unit tests for attention transitions and fragmented/error socket replies. |
 | `tests/smoke_desktop.py` | Real GTK/VTE and disposable Herdr integration. |
 | `tests/smoke_sidebar.py` | Native GTK click/layout regressions with mocked monitor and terminal launch. |
+| `tests/smoke_selection.py` / `tests/smoke_history.py` | Native VTE edge dragging and retained Herdr history selection. |
+| `tests/smoke_cli_selection.py` | Full-screen CLI transcript selection, including real-pointer checks in both directions. |
+| `tests/smoke_links.py` | Ctrl+click plain and OSC 8 URLs using a recorded desktop launcher. |
+| `tests/test_history_overlap.py` | Transcript overlap with pinned or changing CLI controls. |
+| `tests/smoke_themes.py` | Fresh VS Code Dark defaults, chooser behavior and saved choices. |
 | `tests/smoke_extension.py` | Isolated headless GNOME lifecycle and pointer integration. |
 | `tests/pointer_test_hooks.js` | Instrumentation injected only into the extension test's temporary copy. |
 
@@ -78,6 +83,26 @@ Do not modify artifacts incidentally; preserve existing ones when running tests.
   modifier; normal left dragging selects and copies plain text, and right-click pastes. Sidebar
   context menus are separate; ListBox owns its input window, so resolve row hits
   from ListBox coordinates.
+
+### Terminal interaction and selection
+
+- Choose selection versus CLI mouse reporting at press time and retain that choice
+  through release, even if Shift changes. Ctrl+click HTTP/HTTPS links uses the
+  asynchronous desktop default URI launcher; do not send that click to the CLI.
+- Edge dragging must extend selection in both directions, preserve rendered colors
+  and finish on release with terminal focus restored. Do not introduce a text-only
+  mode or require Escape before typing. Stop timers and restore event compression
+  when selection ends or the terminal disappears.
+- For live CLI history, keep the original VTE visible and focused. Highlight overlays
+  must not take input or change terminal geometry. Move VTE's cached mouse position
+  into the transcript before sending wheel events; scroll-event coordinates alone
+  are insufficient. Keep pane reads off the GTK thread.
+- Bound captured history to 20,000 lines. Match overlapping transcript rows while
+  allowing pinned/changing controls; pause if output cannot be matched safely.
+- Copy plain text only. Ctrl+V requests clipboard text asynchronously; when no text
+  is available, preserve the CLI's image-paste key handling. Paste clears selection.
+- Header actions restore terminal focus after GTK handles the click. Settings and
+  dialogs keep their own focus. Never send Enter to a previously clicked header button.
 
 ### Backend and notification semantics
 
@@ -130,6 +155,9 @@ Choose integration tests according to the changed behaviour:
 | RPC, state transitions, backend creation | Unit suite; desktop smoke for Herdr integration. |
 | Sidebar, menus, row placement, search, focus, dividers, maximize | Sidebar smoke; desktop smoke for real mutations. |
 | VTE, clipboard, attach/detach, creation, notifications | Desktop smoke. |
+| Edge selection and CLI history | Selection, history and CLI selection smoke; real-pointer checks in both directions; overlap unit tests. |
+| Terminal links | Link smoke with recorded desktop launcher. |
+| Palette defaults and chooser | Theme smoke with fresh and saved preferences. |
 | Shell pointer, geometry, theme, D-Bus or lifecycle | Extension smoke with a matching installed companion. |
 | Documentation only | Check statements and commands against source; do not install or restart the user's desktop merely to validate prose. |
 
@@ -160,7 +188,7 @@ extension copy. `HUD_TEST_EXTENSION` selects an unpacked release ZIP. Logs and
 screenshots use temporary directories or `HUD_TEST_OUTPUT`. Do not run headless Shell on the user's bus.
 
 Tests do not run through a unified runner: unittest discovery executes only the
-backend and distribution unit tests, not `smoke_*.py`. Report exactly which checks ran and any
+unit tests, not `smoke_*.py`. Report exactly which checks ran and any
 failure or missing prerequisite. Existing PASS messages in saved logs are not
 evidence for a new change. Add regression coverage for behavioural fixes; avoid
 tests that simply repeat implementation or unnecessary tests for prose changes.
@@ -250,3 +278,8 @@ terminal_themes.py. Include both modules and the Ptyxis license notice in instal
 Keep ANSI/indexed/RGB text colors; palettes style the whole Hud and VTE
 without reconnecting terminals or changing external terminal/CLI preferences.
 Run tests/smoke_themes.py on a separate session bus for chooser changes.
+
+Fresh preferences use `terminal_palette: "Vs Code"` and `theme: "dark"`.
+Preserve saved choices; selecting a new default must not reset existing preferences.
+Use CONTRIBUTING.md for isolated real-pointer test commands and record actual
+results separately from fixtures or assumed vendor CLI compatibility.

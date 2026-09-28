@@ -27,7 +27,9 @@ there is no Snap Store or App Center release.
 
 Features include collapsible spaces with compact terminal rows, agent shortcuts,
 live status and notifications, search, Shift+click CLI controls, drag to copy,
-right-click paste, light/dark display and a draggable floating H.
+right-click and Ctrl+V text paste, Ctrl+click browser links, light/dark display
+and a draggable floating H. Drag to either terminal edge to extend copying beyond
+the visible text; release to finish and continue typing.
 
 ## Screenshots
 

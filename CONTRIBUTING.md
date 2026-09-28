@@ -29,6 +29,26 @@ dbus-run-session -- python3 tests/smoke_extension.py
 The desktop test changes the clipboard. The extension test requires GNOME 50 and
 starts an isolated headless compositor. See AGENTS.md for test output settings.
 
+## Terminal interaction checks
+
+Run the relevant checks sequentially. Xvfb provides an isolated X11 display;
+real-pointer checks also require `xdotool`. Herdr history checks start disposable
+servers. These tests may change the clipboard.
+
+```sh
+xvfb-run -a dbus-run-session -- python3 tests/smoke_history.py
+xvfb-run -a dbus-run-session -- python3 tests/smoke_links.py
+xvfb-run -a dbus-run-session -- python3 tests/smoke_themes.py
+HUD_TEST_POINTER=1 xvfb-run -a dbus-run-session -- python3 tests/smoke_selection.py
+HUD_TEST_POINTER=1 xvfb-run -a -s '-screen 0 1920x1200x24' dbus-run-session -- python3 tests/smoke_cli_selection.py
+HUD_TEST_POINTER=1 HUD_TEST_DIRECTION=up xvfb-run -a -s '-screen 0 1920x1200x24' dbus-run-session -- python3 tests/smoke_cli_selection.py
+```
+
+Set `HUD_TEST_SOURCE` to an extracted package's `usr/lib/herdr-hud` directory to
+check that payload. CLI fixtures do not establish compatibility with every CLI;
+link tests record launcher calls without opening a browser. Theme tests verify
+VS Code Dark for fresh preferences and preservation of saved choices.
+
 ## Release artifacts
 
 ```sh
