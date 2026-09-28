@@ -130,7 +130,7 @@ class MacDesktop:
         import CoreText
         root = Path(getattr(sys, '_MEIPASS', Path(__file__).parent / 'packaging/macos'))
         for path in (root / 'fonts').glob('*.ttf'):
-            CoreText.CTFontManagerRegisterFontsForURL_(F.NSURL.fileURLWithPath_(str(path)),
+            CoreText.CTFontManagerRegisterFontsForURL(F.NSURL.fileURLWithPath_(str(path)),
                                                       CoreText.kCTFontManagerScopeProcess, None)
         from gi.repository import Gtk
         Gtk.Settings.get_default().set_property('gtk-font-name', 'Ubuntu 11')
