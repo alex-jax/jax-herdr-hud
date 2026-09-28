@@ -1,0 +1,40 @@
+name: Apple silicon runtime gate
+on:
+  push:
+    branches: [macos-apple-silicon]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  runtime:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '26.0'
+      GDK_BACKEND: quartz
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          brew install python@3.14 pygobject3 gtk+3 vte3 adwaita-icon-theme
+          /opt/homebrew/bin/python3.14 -m venv --system-site-packages build/mac-venv
+          build/mac-venv/bin/python -m pip install pyinstaller==6.22.3
+      - name: Exercise native GTK and VTE
+        run: |
+          HUD_PROBE_RESULT="$RUNNER_TEMP/native.json" build/mac-venv/bin/python packaging/macos/runtime_probe.py
+      - name: Bundle runtime
+        run: |
+          build/mac-venv/bin/python -m PyInstaller --noconfirm --clean --windowed --name HudRuntimeProbe --osx-bundle-identifier io.github.herdr.Hud.RuntimeProbe --target-arch arm64 packaging/macos/runtime_probe.py
+      - name: Exercise bundled runtime
+        run: |
+          env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/bundle.json" dist/HudRuntimeProbe.app/Contents/MacOS/HudRuntimeProbe
+          cat "$RUNNER_TEMP/native.json" "$RUNNER_TEMP/bundle.json"
+          codesign --verify --deep --strict dist/HudRuntimeProbe.app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-runtime-gate
+          path: |
+            ${{ runner.temp }}/native.json
+            ${{ runner.temp }}/bundle.json
+            build/HudRuntimeProbe/warn-HudRuntimeProbe.txt
