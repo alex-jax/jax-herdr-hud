@@ -24,6 +24,10 @@ def main():
         from macos_smoke import main as smoke
         smoke()
         return 0
+    if '--integration-test' in sys.argv:
+        from macos_integration import main as integration
+        integration()
+        return 0
     from desktop import config_directory
     from macos_instance import Instance
     from gi.repository import GLib

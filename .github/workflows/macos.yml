@@ -26,11 +26,15 @@ jobs:
         run: build/mac-venv/bin/python scripts/build_macos.py
       - name: Verify full app without Homebrew
         run: |
+          curl -fL https://github.com/herdrdev/herdr/releases/download/v0.9.1/herdr-macos-aarch64 -o "$RUNNER_TEMP/herdr"
+          echo "5fc7a7e7adfaca56fa80aa89dcb025693357268dab8285b9ce2d08a2313c89de  $RUNNER_TEMP/herdr" | shasum -a 256 -c -
+          chmod +x "$RUNNER_TEMP/herdr"
           ditto "build/macos/dist/Herdr Hud.app" "$RUNNER_TEMP/Herdr Hud.app"
           sudo mv /opt/homebrew /opt/homebrew-hud-test
           trap 'sudo mv /opt/homebrew-hud-test /opt/homebrew' EXIT
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/app-runtime.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --runtime-check
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin HUD_SMOKE_RESULT="$RUNNER_TEMP/app-smoke.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --smoke-test
+          env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_TEST_HERDR="$RUNNER_TEMP/herdr" HUD_INTEGRATION_RESULT="$RUNNER_TEMP/app-integration.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --integration-test
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -39,6 +43,7 @@ jobs:
             dist/macos/
             ${{ runner.temp }}/app-runtime.json
             ${{ runner.temp }}/app-smoke.json
+            ${{ runner.temp }}/app-integration.json
             ${{ runner.temp }}/macos-hud-dark.png
             build/macos/pyinstaller/herdr_hud/warn-herdr_hud.txt
       - uses: actions/upload-artifact@v4
@@ -67,10 +72,14 @@ jobs:
           ditto "$RUNNER_TEMP/hud-image/Herdr Hud.app" "$RUNNER_TEMP/Herdr Hud.app"
           hdiutil detach "$RUNNER_TEMP/hud-image"
           codesign --verify --deep --strict "$RUNNER_TEMP/Herdr Hud.app"
+          curl -fL https://github.com/herdrdev/herdr/releases/download/v0.9.1/herdr-macos-aarch64 -o "$RUNNER_TEMP/herdr"
+          echo "5fc7a7e7adfaca56fa80aa89dcb025693357268dab8285b9ce2d08a2313c89de  $RUNNER_TEMP/herdr" | shasum -a 256 -c -
+          chmod +x "$RUNNER_TEMP/herdr"
           sudo mv /opt/homebrew /opt/homebrew-hud-test
           trap 'sudo mv /opt/homebrew-hud-test /opt/homebrew' EXIT
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/macos-27-runtime.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --runtime-check
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_SMOKE_RESULT="$RUNNER_TEMP/macos-27-smoke.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --smoke-test
+          env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_TEST_HERDR="$RUNNER_TEMP/herdr" HUD_INTEGRATION_RESULT="$RUNNER_TEMP/macos-27-integration.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --integration-test
       - uses: actions/upload-artifact@v4
         if: always()
         with:

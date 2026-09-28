@@ -133,7 +133,7 @@ class MacDesktop:
             CoreText.CTFontManagerRegisterFontsForURL(F.NSURL.fileURLWithPath_(str(path)),
                                                       CoreText.kCTFontManagerScopeProcess, None)
         from gi.repository import Gtk
-        Gtk.Settings.get_default().set_property('gtk-font-name', 'Ubuntu 11')
+        Gtk.Settings.get_default().set_property('gtk-font-name', 'Ubuntu Sans 11')
         Gtk.Settings.get_default().set_property('gtk-theme-name', 'Adwaita')
         Gtk.Settings.get_default().set_property('gtk-icon-theme-name', 'Adwaita')
 
@@ -264,7 +264,17 @@ class MacDesktop:
         x, y = window.get_position()
         if numbers(saved, ('x', 'y', 'width', 'height')):
             x, y, width, height = [int(saved[k]) for k in ('x', 'y', 'width', 'height')]
-        monitor = display.get_monitor_at_point(x + width // 2, y + height // 2)
+            monitor = display.get_monitor_at_point(x + width // 2, y + height // 2)
+        else:
+            # Quartz uses a bottom-left origin; GDK uses the desktop union's top-left.
+            screens = [screen.frame() for screen in A.NSScreen.screens()]
+            point = self.panel.frame().origin
+            bx = int(point.x - min(screen.origin.x for screen in screens))
+            by = int(max(screen.origin.y + screen.size.height for screen in screens) - point.y - 56)
+            monitor = display.get_monitor_at_point(bx + 28, by + 28)
+            area = monitor.get_workarea()
+            x = bx + 68 if bx < area.x + area.width / 2 else bx - width - 12
+            y = by - 30
         area = monitor.get_workarea()
         width, height = min(max(620, width), area.width), min(max(360, height), area.height)
         x, y = max(area.x, min(x, area.x + area.width - width)), max(area.y, min(y, area.y + area.height - height))
