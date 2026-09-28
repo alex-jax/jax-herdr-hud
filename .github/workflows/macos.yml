@@ -35,6 +35,7 @@ jobs:
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/app-runtime.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --runtime-check
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin HUD_SMOKE_RESULT="$RUNNER_TEMP/app-smoke.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --smoke-test
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_TEST_HERDR="$RUNNER_TEMP/herdr" HUD_INTEGRATION_RESULT="$RUNNER_TEMP/app-integration.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --integration-test
+          /bin/bash packaging/macos/check_launch.sh "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" "$RUNNER_TEMP/normal-launch"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -44,6 +45,7 @@ jobs:
             ${{ runner.temp }}/app-runtime.json
             ${{ runner.temp }}/app-smoke.json
             ${{ runner.temp }}/app-integration.json
+            ${{ runner.temp }}/normal-launch/launch.log
             ${{ runner.temp }}/macos-hud-dark.png
             build/macos/pyinstaller/herdr_hud/warn-herdr_hud.txt
       - uses: actions/upload-artifact@v4
@@ -58,6 +60,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: macos-installer
@@ -80,6 +83,7 @@ jobs:
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/macos-27-runtime.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --runtime-check
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_SMOKE_RESULT="$RUNNER_TEMP/macos-27-smoke.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --smoke-test
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_TEST_HERDR="$RUNNER_TEMP/herdr" HUD_INTEGRATION_RESULT="$RUNNER_TEMP/macos-27-integration.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --integration-test
+          /bin/bash "$GITHUB_WORKSPACE/packaging/macos/check_launch.sh" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" "$RUNNER_TEMP/normal-launch"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -87,3 +91,4 @@ jobs:
           path: |
             ${{ runner.temp }}/macos-27-*.json
             ${{ runner.temp }}/macos-hud-dark.png
+            ${{ runner.temp }}/normal-launch/launch.log
