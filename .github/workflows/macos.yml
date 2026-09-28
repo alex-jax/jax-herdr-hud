@@ -22,22 +22,6 @@ jobs:
       - name: Exercise native GTK and VTE
         run: |
           HUD_PROBE_RESULT="$RUNNER_TEMP/native.json" build/mac-venv/bin/python packaging/macos/runtime_probe.py
-      - name: Bundle runtime
-        run: |
-          build/mac-venv/bin/python -m PyInstaller --noconfirm --clean --windowed --name HudRuntimeProbe --osx-bundle-identifier io.github.herdr.Hud.RuntimeProbe --target-arch arm64 --additional-hooks-dir packaging/macos/hooks packaging/macos/runtime_probe.py
-      - name: Exercise bundled runtime
-        run: |
-          env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/bundle.json" dist/HudRuntimeProbe.app/Contents/MacOS/HudRuntimeProbe
-          cat "$RUNNER_TEMP/native.json" "$RUNNER_TEMP/bundle.json"
-          codesign --verify --deep --strict dist/HudRuntimeProbe.app
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: macos-runtime-gate
-          path: |
-            ${{ runner.temp }}/native.json
-            ${{ runner.temp }}/bundle.json
-            build/HudRuntimeProbe/warn-HudRuntimeProbe.txt
       - name: Build and audit app and disk image
         run: build/mac-venv/bin/python scripts/build_macos.py
       - name: Verify full app without Homebrew
@@ -57,3 +41,40 @@ jobs:
             ${{ runner.temp }}/app-smoke.json
             ${{ runner.temp }}/macos-hud-dark.png
             build/macos/pyinstaller/herdr_hud/warn-herdr_hud.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-installer
+          path: |
+            dist/macos/*.dmg
+            dist/macos/*.sha256
+          if-no-files-found: error
+  macos-27:
+    needs: runtime
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-installer
+          path: installer
+      - name: Test the same disk image on macOS 27
+        run: |
+          test "$(sw_vers -productVersion | cut -d. -f1)" = 27
+          cd installer
+          shasum -a 256 -c *.sha256
+          mkdir "$RUNNER_TEMP/hud-image"
+          hdiutil attach -readonly -nobrowse -mountpoint "$RUNNER_TEMP/hud-image" ./*.dmg
+          ditto "$RUNNER_TEMP/hud-image/Herdr Hud.app" "$RUNNER_TEMP/Herdr Hud.app"
+          hdiutil detach "$RUNNER_TEMP/hud-image"
+          codesign --verify --deep --strict "$RUNNER_TEMP/Herdr Hud.app"
+          sudo mv /opt/homebrew /opt/homebrew-hud-test
+          trap 'sudo mv /opt/homebrew-hud-test /opt/homebrew' EXIT
+          env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/macos-27-runtime.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --runtime-check
+          env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_SMOKE_RESULT="$RUNNER_TEMP/macos-27-smoke.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --smoke-test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-27-validation
+          path: |
+            ${{ runner.temp }}/macos-27-*.json
+            ${{ runner.temp }}/macos-hud-dark.png
