@@ -20,6 +20,9 @@ extension in GNOME Extensions, turn it back on in GNOME Extensions.
 
 Click **H** to show or hide Hud, or drag it wherever you like.
 
+New installations start with **VS Code Dark**. Change the palette in Settings →
+Appearance or use the sun/moon button for light mode. Updates keep your saved choice.
+
 <details>
 <summary>If the .deb does not open in a software installer</summary>
 
@@ -41,7 +44,7 @@ click it to download and install the new `.deb`. Approve Ubuntu's password promp
 if shown, then restart Hud. Your settings and Herdr sessions are kept. If an update
 changes the H extension, **save your work, log out and log back in** to load it.
 The first launch after upgrading enables H automatically. An extension disabled
-in GNOME Extensions stays disabled until you explicitly enable it in Hud Settings.
+in GNOME Extensions can be turned back on there; Hud Settings shows its status.
 
 You can also download the newer `.deb` under **Assets** on the release page and
 install it manually. No update notification pop-ups are shown.

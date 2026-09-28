@@ -116,15 +116,15 @@ try:
             data.button = 1
         terminal.event(event)
         pump(0.05)
-    mouse(Gdk.EventType.BUTTON_PRESS, 2, row * ch + ch / 2, Gdk.ModifierType.SHIFT_MASK)
+    mouse(Gdk.EventType.BUTTON_PRESS, 2, row * ch + ch / 2, 0)
     for i in range(1, 14):
         mouse(Gdk.EventType.MOTION_NOTIFY, i * cw, row * ch + ch / 2, Gdk.ModifierType.BUTTON1_MASK | Gdk.ModifierType.SHIFT_MASK)
     mouse(Gdk.EventType.BUTTON_RELEASE, 13 * cw, row * ch + ch / 2, Gdk.ModifierType.BUTTON1_MASK | Gdk.ModifierType.SHIFT_MASK)
     width, height = app.window.get_size()
     pixels = Gdk.pixbuf_get_from_window(app.window.get_window(), 0, 0, width, height)
     if pixels and os.environ.get('GDK_BACKEND') == 'x11': pixels.savev(str(output_dir / 'hud-preview.png'), 'png', [], [])
-    assert terminal.get_has_selection(), 'Shift+drag did not select text'
-    print('PASS: Shift+drag selects terminal text', flush=True)
+    assert terminal.get_has_selection(), 'Drag did not select text'
+    print('PASS: Drag selects terminal text', flush=True)
     terminal.select_all()
     pump()
     clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
@@ -150,6 +150,17 @@ try:
     terminal.feed_child(b'\r')
     until(lambda: 'HUD_KEY_PASTE_OK' in screen())
     print('PASS: mouse and keyboard paste clear selection and preserve clipboard text', flush=True)
+    terminal.grab_focus()
+    clip.set_text("printf 'HUD_SPEECH_TEXT_OK\\n'", -1)
+    paste_event = Gdk.Event.new(Gdk.EventType.KEY_PRESS)
+    paste_event.key.window = terminal.get_window()
+    paste_event.key.keyval = Gdk.KEY_v
+    paste_event.key.state = Gdk.ModifierType.CONTROL_MASK
+    assert terminal.emit('key-press-event', paste_event)
+    until(lambda: 'HUD_SPEECH_TEXT_OK' in screen())
+    terminal.feed_child(b'\r')
+    until(lambda: screen().count('HUD_SPEECH_TEXT_OK') >= 2)
+    print('PASS: Ctrl+V asks GTK for clipboard text and pastes it into VTE', flush=True)
     # Exercise click reporting through VTE -> native attach -> Herdr -> child PTY.
     import shlex
     mouse_log = Path(temp.name) / 'mouse-input'
@@ -179,7 +190,7 @@ finally:
     until(mouse_ready.exists)
     pump(.3)
     terminal.unselect_all()
-    mouse(Gdk.EventType.BUTTON_PRESS, 6 * cw, ch / 2)
+    mouse(Gdk.EventType.BUTTON_PRESS, 6 * cw, ch / 2, Gdk.ModifierType.SHIFT_MASK)
     mouse(Gdk.EventType.BUTTON_RELEASE, 6 * cw, ch / 2, Gdk.ModifierType.BUTTON1_MASK)
     until(lambda: mouse_log.exists() and b'm' in mouse_log.read_bytes())
     clicks = mouse_log.read_bytes()
@@ -188,17 +199,17 @@ finally:
     assert re.search(rb'\x1b\[<0;\d+;\d+m', clicks), clicks
     assert not terminal.get_has_selection(), 'CLI click unexpectedly selected text'
     shift = Gdk.ModifierType.SHIFT_MASK
-    mouse(Gdk.EventType.BUTTON_PRESS, 2, ch / 2, shift)
+    mouse(Gdk.EventType.BUTTON_PRESS, 2, ch / 2, 0)
     for column in range(1, 15):
         mouse(Gdk.EventType.MOTION_NOTIFY, column * cw, ch / 2, shift | Gdk.ModifierType.BUTTON1_MASK)
     mouse(Gdk.EventType.BUTTON_RELEASE, 14 * cw, ch / 2, shift | Gdk.ModifierType.BUTTON1_MASK)
-    assert terminal.get_has_selection(), 'Shift+drag did not select in mouse-reporting mode'
+    assert terminal.get_has_selection(), 'Drag did not select in mouse-reporting mode'
     assert 'HUD_MOUSE' in (clip.wait_for_text() or '')
-    assert mouse_log.read_bytes() == clicks, 'Shift+drag leaked mouse clicks to the CLI'
+    assert mouse_log.read_bytes() == clicks, 'Drag leaked mouse clicks to the CLI'
     terminal.unselect_all()
     terminal.feed_child(b'q')
     until(mouse_done.exists)
-    print('PASS: native CLI receives left-button press/release; Shift+drag selects and copies without sending clicks', flush=True)
+    print('PASS: Shift+click: native CLI receives unmodified left-button press/release; Drag selects and copies without sending clicks', flush=True)
     old = app.dark
     app.toggle_theme()
     assert app.dark != old
