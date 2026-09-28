@@ -1,4 +1,4 @@
-name: Apple silicon runtime gate
+name: Apple silicon build and checks
 on:
   push:
     branches: [macos-apple-silicon]
@@ -18,7 +18,7 @@ jobs:
         run: |
           brew install python@3.14 pygobject3 gtk+3 vte3 adwaita-icon-theme
           /opt/homebrew/bin/python3.14 -m venv --system-site-packages build/mac-venv
-          build/mac-venv/bin/python -m pip install pyinstaller==6.22.3
+          build/mac-venv/bin/python -m pip install pyinstaller==6.22.3 pyobjc-framework-Cocoa==12.2.2 pyobjc-framework-CoreText==12.2.2
       - name: Exercise native GTK and VTE
         run: |
           HUD_PROBE_RESULT="$RUNNER_TEMP/native.json" build/mac-venv/bin/python packaging/macos/runtime_probe.py
@@ -38,3 +38,21 @@ jobs:
             ${{ runner.temp }}/native.json
             ${{ runner.temp }}/bundle.json
             build/HudRuntimeProbe/warn-HudRuntimeProbe.txt
+      - name: Build and audit app and disk image
+        run: build/mac-venv/bin/python scripts/build_macos.py
+      - name: Verify full app without Homebrew
+        run: |
+          ditto "build/macos/dist/Herdr Hud.app" "$RUNNER_TEMP/Herdr Hud.app"
+          sudo mv /opt/homebrew /opt/homebrew-hud-test
+          trap 'sudo mv /opt/homebrew-hud-test /opt/homebrew' EXIT
+          env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/app-runtime.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --runtime-check
+          env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin HUD_SMOKE_RESULT="$RUNNER_TEMP/app-smoke.json" "$RUNNER_TEMP/Herdr Hud.app/Contents/MacOS/Herdr Hud" --smoke-test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: herdr-hud-macos-arm64-test
+          path: |
+            dist/macos/
+            ${{ runner.temp }}/app-runtime.json
+            ${{ runner.temp }}/app-smoke.json
+            build/macos/pyinstaller/herdr_hud/warn-herdr_hud.txt

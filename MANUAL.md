@@ -6,6 +6,9 @@ Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
 This manual describes the 1.2 stable release.
+The 1.3 Apple silicon port retains these terminal interactions, with native Mac
+desktop integration. See [the Mac guide](docs/MACOS.md) for platform setup,
+preferences, login startup, installer behavior and validation status.
 See [CHANGELOG.md](CHANGELOG.md) for release notes and publication status.
 
 A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).

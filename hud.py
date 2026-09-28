@@ -10,12 +10,14 @@ import time
 import sys
 import gi
 gi.require_version('Gtk', '3.0')
+gi.require_version('Gdk', '3.0')
 gi.require_version('Vte', '2.91')
 from gi.repository import Gtk, Gdk, Gio, GLib, Pango, Vte
 from backend import (Monitor, attention, environment, ensure_session, create_terminal,
                      create_shared_workspace, request, resolve_herdr, configure_herdr,
                      check_herdr, HerdrUnavailable)
 from enable import enable_extension
+from desktop import IS_MAC, config_directory, create_desktop, relay_command
 from updates import UpdateMonitor, install_update
 from terminal_themes import palettes, palette
 from terminal_display import DisplayFilter
@@ -23,7 +25,7 @@ from theme_picker import ThemePicker
 from app_info import RELEASE_TAG, VERSION, ATTRIBUTION, AUTHOR_URL, UPSTREAM_URL, HERDR_URL
 
 APP_ID = 'io.github.herdr.Hud'
-CONFIG = Path(os.environ.get('XDG_CONFIG_HOME', str(Path.home() / '.config'))) / 'herdr-hud'
+CONFIG = config_directory()
 SHELL_PATH = '/org/gnome/Shell/Extensions/HerdrHud'
 SHELL_IFACE = 'org.gnome.Shell.Extensions.HerdrHud'
 
@@ -237,7 +239,7 @@ class Terminal(Vte.Terminal):
     def launch(self, argv):
         self.alive = True
         env = [f'{key}={value}' for key, value in environment().items()]
-        argv = [sys.executable, str(Path(__file__).with_name("terminal_display.py")), *argv]
+        argv = relay_command(argv)
         self.spawn_async(Vte.PtyFlags.DEFAULT, str(Path.home()), argv, env,
                          GLib.SpawnFlags.DEFAULT, None, None, -1, None, self.spawned, None)
 
@@ -260,7 +262,9 @@ class Terminal(Vte.Terminal):
 
 class Hud(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE |
+                         (Gio.ApplicationFlags.NON_UNIQUE if IS_MAC else Gio.ApplicationFlags.FLAGS_NONE))
+        self.desktop = create_desktop(self, CONFIG)
         self.window = None
         self.history_selection = None
         self.terminals = {}
@@ -310,8 +314,7 @@ class Hud(Gtk.Application):
             action = Gio.SimpleAction.new(name, None)
             action.connect('activate', lambda action, value, cb=callback: cb())
             self.add_action(action)
-        self.system_settings = Gio.Settings.new('org.gnome.desktop.interface')
-        self.system_settings.connect('changed::color-scheme', lambda *_: self.apply_theme())
+        self.desktop.start()
         self.build_window()
         self.monitor = Monitor(lambda *a: idle(self.snapshot_changed, *a),
                                lambda *a: idle(self.event_received, *a),
@@ -320,8 +323,11 @@ class Hud(Gtk.Application):
         self.update_monitor = UpdateMonitor(CONFIG / 'updates.json', RELEASE_TAG,
             lambda tag: idle(self.update_available, tag))
         self.update_monitor.start()
-        self.shell_watch = Gio.bus_watch_name(Gio.BusType.SESSION, 'org.gnome.Shell',
-                             Gio.BusNameWatcherFlags.NONE, lambda *_: self.publish(), None)
+        self.desktop.ready()
+
+    def do_activate(self):
+        if self.window is not None:
+            self.show()
 
     def do_command_line(self, command_line):
         args = command_line.get_arguments()[1:]
@@ -373,6 +379,8 @@ class Hud(Gtk.Application):
         self.update_button.set_sensitive(True)
         if error:
             self.status.set_text('Update not installed: ' + error + ' Click the update arrow to retry.')
+        elif IS_MAC:
+            self.status.set_text('Installer opened. Exit Hud, replace it in Applications, then reopen. Your sessions keep running.')
         else:
             self.installed_update = self.update_tag
             self.update_button.hide()
@@ -382,7 +390,7 @@ class Hud(Gtk.Application):
     def show_about(self):
         dialog = Gtk.AboutDialog(transient_for=self.window, modal=True,
             program_name='Herdr Hud', version=VERSION,
-            comments=ATTRIBUTION + '\nIndependent Ubuntu companion for Herdr.\nColor schemes from Ptyxis by Christian Hergert and contributors.',
+            comments=ATTRIBUTION + '\nIndependent desktop companion for Herdr.\nColor schemes from Ptyxis by Christian Hergert and contributors.',
             website=AUTHOR_URL, website_label='Alex Jax on GitHub',
             authors=['Alex Jax', 'Original Herdr HUD: Alex Finn — ' + UPSTREAM_URL,
                      'Ptyxis color schemes: Christian Hergert and contributors — https://gitlab.gnome.org/chergert/ptyxis'],
@@ -405,6 +413,9 @@ class Hud(Gtk.Application):
         self.enable_floating_h(automatic=True)
 
     def enable_floating_h(self, automatic=False):
+        if IS_MAC:
+            self.extension_enabled(self.desktop.enable())
+            return
         if self.extension_pending or self.closing:
             return
         self.extension_pending = True
@@ -474,14 +485,7 @@ class Hud(Gtk.Application):
     def shell_call(self, method, signature='', values=()):
         if self.closing and method != 'ExitHud':
             return
-        def completed(connection, result):
-            try:
-                connection.call_finish(result)
-            except GLib.Error:
-                pass  # Companion remains usable before the next GNOME login.
-        Gio.bus_get_sync(Gio.BusType.SESSION, None).call('org.gnome.Shell', SHELL_PATH,
-            SHELL_IFACE, method, GLib.Variant('(' + signature + ')', values), None,
-            Gio.DBusCallFlags.NONE, 1000, None, completed)
+        self.desktop.call(method, signature, values)
 
     def publish(self, message=''):
         self.shell_call('SetStatus', 'usb', (len(self.unread), message, self.dark))
@@ -603,7 +607,8 @@ class Hud(Gtk.Application):
         appearance.pack_start(self.appearance_button, False, False, 0)
         floating = section('Floating H')
         self.extension_message = Gtk.Label(
-            label='Enabled automatically. Log out and back in after installation or an extension update.',
+            label=('Enabled automatically with Hud.' if IS_MAC else
+                   'Enabled automatically. Log out and back in after installation or an extension update.'),
             wrap=True, xalign=0)
         self.extension_message.set_max_width_chars(55)
         floating.pack_start(self.extension_message, False, False, 0)
@@ -755,7 +760,7 @@ class Hud(Gtk.Application):
 
     def apply_theme(self):
         self.dark = self.theme == 'dark' or (self.theme == 'system' and
-                     self.system_settings.get_string('color-scheme') == 'prefer-dark')
+                     self.desktop.prefers_dark())
         fg, bg, ansi = self.terminal_colors()
         def blend(first, second, amount):
             a, b = rgba(first), rgba(second)
@@ -864,6 +869,7 @@ class Hud(Gtk.Application):
         return False
 
     def save(self):
+        self.desktop.save()
         width, height = self.window.get_size()
         if self.window.is_maximized():
             width = self.settings.get('width', 1040)
@@ -2038,7 +2044,7 @@ class Hud(Gtk.Application):
             for terminal in self.terminals.values():
                 terminal.detach()
         self.closing = True
-        Gio.bus_unwatch_name(self.shell_watch)
+        self.desktop.stop()
         Gtk.Application.do_shutdown(self)
 
 

@@ -1,5 +1,19 @@
 # Validation
 
+## 1.3 development — 28 September 2026
+
+- Apple silicon runtime gate passed on macOS 26.6.2: native Quartz GTK/VTE,
+  PTY output, frozen runtime launch and strict bundle signature verification.
+  [Runtime workflow](https://github.com/alex-jax/jax-herdr-hud/actions/runs/36470757930).
+- Linux: 53 unit tests passed. Source setup, updates, themes, sidebar, real Herdr
+  desktop and link smoke tests passed, sequentially under separate session buses.
+- The extracted 1.3 Debian payload passed theme, update and real Herdr desktop
+  smoke checks. Installed that Debian package locally, restarted only Hud,
+  verified installed application files match source and confirmed the existing
+  Herdr server remained running. The app starts successfully as version 1.3.
+- Full Mac app, installer and user validation are still pending. These results
+  do not establish macOS 27 support or complete feature/visual parity.
+
 ## 1.2 — 28 September 2026
 
 Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.

@@ -30,3 +30,9 @@ https://gitlab.gnome.org/chergert/ptyxis. Copyright 2017–2024 Christian Herger
 GPL-3.0-or-later; the distribution's copyright notice is retained in
 licenses/Ptyxis-copyright.txt. Original palette text and Gogh source references
 are retained in terminal_themes.py. Hud does not require Ptyxis at runtime.
+# Mac runtime
+
+Mac builds retain Ubuntu and Ubuntu Mono fonts under the Ubuntu Font Licence;
+see `licenses/Ubuntu-fonts.txt`. The bundled Python, PyGObject, GTK, VTE, PyObjC
+and supporting libraries retain their own licenses, copied with the build
+dependency manifest into the app's `licenses/third-party` resources.

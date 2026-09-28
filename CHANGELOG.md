@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.3 — in development
+
+- Add an Apple silicon macOS port using the shared GTK/VTE interface and terminal logic.
+- Add an AppKit floating H, desktop messages, window placement and per-user singleton.
+- Bundle the Mac runtime, fonts and icons in an ad-hoc-signed DMG; keep Herdr separate.
+- Add platform-specific downloads, executable discovery and Mac installation documentation.
+- Mac test builds are not notarized. Public release awaits validation on macOS 26 and 27.
+
 ## 1.2 — 28 September 2026
 
 - Default new installations to VS Code Dark; preserve saved theme choices.

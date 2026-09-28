@@ -1,6 +1,10 @@
-# Herdr Hud for Ubuntu
+# Herdr Hud
 
 A native GTK/VTE companion for local Herdr terminals and agents on Ubuntu 26.04.
+
+An **Apple silicon macOS 26/27 port is in development for 1.3**, retaining the 1.2
+interface and terminal behavior. [Mac installation and build instructions](docs/MACOS.md)
+describe the test builds; Mac release validation is still pending.
 
 **A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).**
 Original: [Herdr HUD for Omarchy](https://github.com/finna/omarchy-herdr-hud).
