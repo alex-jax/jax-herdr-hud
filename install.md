@@ -39,6 +39,10 @@ sudo apt install ./downloaded-file.deb
 
 ## Updating
 
+**Moving to 1.2:** download and install the `.deb` under **Assets** manually.
+Earlier update checkers do not recognize the new two-part version format.
+Version 1.2 supports this format for future update checks.
+
 Hud checks GitHub silently every six hours. When the download arrow appears,
 click it to download and install the new `.deb`. Approve Ubuntu's password prompt
 if shown, then restart Hud. Your settings and Herdr sessions are kept. If an update

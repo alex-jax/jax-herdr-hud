@@ -19,8 +19,8 @@ The native `.deb` installs the app and optional floating H extension, and APT
 resolves its system Python/GTK/VTE dependencies. Herdr and CLI agents are separate
 installations. Source installation and modification instructions are also included.
 
-**1.1.3 improves light/dark CLI backgrounds, simplifies Settings and clears text selection after paste.**
-Download the latest stable release, **1.1.3**, from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
+**1.2 improves scrolling text selection, clipboard input and browser links, and defaults new installations to VS Code Dark.**
+Download the latest stable release, **1.2**, from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
 See the [release notes](CHANGELOG.md) and
 [validation record](docs/VALIDATION.md). Distribution is through GitHub;
 there is no Snap Store or App Center release.

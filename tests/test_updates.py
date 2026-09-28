@@ -40,6 +40,15 @@ class UpdateTests(unittest.TestCase):
         self.assertIsNone(updates.newer_tag('v0.1.2-preview.1', 'v1.0.0'))
         self.assertIsNone(updates.newer_tag('v0.1.1-preview.10', 'v0.1.1'))
 
+    def test_two_part_versions_and_legacy_versions(self):
+        self.assertEqual(updates.newer_tag('v1.2', 'v1.1.3'), 'v1.2')
+        self.assertEqual(updates.newer_tag('v1.10', 'v1.2'), 'v1.10')
+        self.assertEqual(updates.version_key('v1.2'), updates.version_key('v1.2.0'))
+        self.assertIsNone(updates.newer_tag('v1.2.0', 'v1.2'))
+        self.assertEqual(updates.newer_tag('v1.2', 'v1.2-preview.1'), 'v1.2')
+        with patch('updates.fetch_releases', return_value=[{'tag_name': 'v1.3'}]):
+            self.assertEqual(updates.check_updates(self.path, 'v1.2', self.now)[0], 'v1.3')
+
     def test_upgrade_hides_cached_icon_without_an_extra_request(self):
         with patch('updates.fetch_releases', return_value=[{'tag_name': 'v0.1.2'}]) as fetch:
             updates.check_updates(self.path, self.current, self.now)

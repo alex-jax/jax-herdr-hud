@@ -1,6 +1,6 @@
 # Validation
 
-## Current unreleased update
+## 1.2 — 28 September 2026
 
 Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.
 
@@ -26,30 +26,15 @@ Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.
 - Theme smoke tests check VS Code Dark for fresh preferences, its light variant,
   chooser filtering and preservation of saved palette/appearance choices.
 
-Final PR checks (28 September 2026): 46 unit tests passed. Source theme and
-link smoke checks passed. Rebuilt `jax-herdr-hud_1.1.3-1_all.deb`; theme and
-real Herdr desktop smoke checks passed against its extracted payload. Installed
-that package locally, verified installed `hud.py`, `theme_picker.py` and
-`terminal_display.py` against source, and restarted the normal Hud launcher
-successfully. Existing user sessions were retained.
+Release checks (28 September 2026): 47 unit tests passed, including two-part
+version ordering, legacy-version compatibility and future update discovery.
+Source theme and link smoke checks passed during PR verification. The 1.2 Debian
+payload passed theme and real Herdr desktop smoke checks; after the version-parser
+change, the rebuilt final payload passed the update smoke check. Installed
+`jax-herdr-hud_1.2-1_all.deb` locally, verified installed application modules
+against source, confirmed the launcher reports 1.2, and restarted Hud successfully.
+Existing user sessions were retained.
 
 Limitations: no automated end-to-end test of every vendor CLI or the Voquill app;
-no clean-VM installation/upgrade/removal test. No release is published by this PR.
-
-## 1.1.3 — 21 September 2026
-
-Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.
-
-- 40 unit tests passed, including fragmented SGR input, background normalization,
-  preserved foreground components, controls and reverse video.
-- Native sidebar, setup and real Herdr desktop checks passed during development.
-- Real mouse and keyboard paste clear selection and preserve clipboard contents.
-- A separate VTE rendering check sampled white and dark input-row backgrounds
-  despite an explicit CLI RGB background.
-- Clean-VM installation, upgrade and removal were not tested.
-
-- Extracted release package passed setup and real Herdr desktop smoke checks.
-  The first desktop attempt timed out at initial shell output; the repeat passed.
-- Installed the release package locally, verified installed Python files against
-  the source and restarted the normal launcher successfully before publication.
-- Captured current sessions in Nord dark and light for the README.
+no clean-VM installation/upgrade/removal test. The older update checker cannot
+recognize two-part release tags, so existing users must download 1.2 manually.

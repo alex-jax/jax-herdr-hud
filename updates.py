@@ -20,14 +20,14 @@ def version_key(tag):
     """Order numeric releases and SemVer prereleases (including preview.10)."""
     if not isinstance(tag, str):
         return None
-    match = re.fullmatch(r'v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
+    match = re.fullmatch(r'v?(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?'
                          r'(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?', tag)
     if not match:
         return None
     major, minor, patch, preview = match.groups()
     parts = tuple((0, int(p)) if p.isdigit() else (1, p)
                   for p in preview.split('.')) if preview else ()
-    return (int(major), int(minor), int(patch), preview is None, parts)
+    return (int(major), int(minor), int(patch or 0), preview is None, parts)
 
 
 def newer_tag(tag, current):
