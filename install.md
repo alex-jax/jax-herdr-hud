@@ -1,4 +1,15 @@
-# Install Herdr Hud on Ubuntu
+# Install Herdr Hud
+
+## macOS — Apple silicon
+
+The 1.3 Mac port targets macOS 26 and 27. Test builds use a self-contained `.app`
+inside `jax-herdr-hud-1.3-macos-arm64.dmg`; public release validation is pending.
+Install Herdr separately, open the DMG, drag Hud to Applications, and launch it.
+The first build is not notarized and may require **Privacy & Security → Open Anyway**.
+See the [Mac installation, updates and removal guide](docs/MACOS.md) for complete
+steps and the current validation status. No Homebrew or Python is needed by users.
+
+## Ubuntu
 
 For **Ubuntu 26.04 with GNOME 50**. The floating H is included in the download.
 

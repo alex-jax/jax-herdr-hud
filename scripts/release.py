@@ -42,7 +42,7 @@ def main():
     prefix = 'jax-herdr-hud-' + VERSION
     source_files = [p for p in SOURCE.iterdir() if p.is_file() and
                     (p.suffix in ('.py', '.md') or p.name in ('LICENSE', '.gitignore'))]
-    for folder in ('extension', 'packaging', 'scripts', 'snap', 'tests', 'licenses', 'docs'):
+    for folder in ('.github', 'extension', 'packaging', 'scripts', 'snap', 'tests', 'licenses', 'docs'):
         source_files.extend(p for p in (SOURCE / folder).rglob('*') if p.is_file()
                             and '__pycache__' not in p.parts and p.suffix not in ('.pyc', '.log'))
     with (out / (prefix + '-source.tar.gz')).open('wb') as stream:

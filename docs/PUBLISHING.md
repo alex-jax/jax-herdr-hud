@@ -1,5 +1,19 @@
 # Build and publish on GitHub
 
+## Pending 1.3 cross-platform release
+
+Version metadata is now 1.3; the existing published stable release remains 1.2.
+Use `scripts/build_macos.py` on Apple silicon or the Mac workflow to produce the
+DMG. See [Mac build instructions](MACOS.md) and [release gates](MACOS_VALIDATION.md).
+Do not publish `v1.3` until Mac validation passes on both supported OS versions
+and the exact Debian package has passed its checks and local installation.
+Build both platforms from the same final commit; retain the `v1.2` tag unchanged.
+Upload the DMG beside the Debian, extension and source assets, with checksums for
+all files. Record ad-hoc signing and lack of notarization in the release notes.
+
+The following records the existing 1.2 release procedure; substitute 1.3 only when
+its release gates are complete.
+
 Distribution uses the native Debian package and source installer. Release **1.2** uses tag **v1.2** and is a regular stable release.
 
 ## Prepare the version

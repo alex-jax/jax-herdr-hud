@@ -1,6 +1,7 @@
 """Separate the bundled UI runtime from host shells and Herdr processes."""
 import json
 import os
+import sys
 
 # Only runtime variables are recorded; credentials are never serialized.
 RUNTIME_KEYS = ('PATH', 'HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME',
@@ -8,7 +9,9 @@ RUNTIME_KEYS = ('PATH', 'HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME',
                 'LD_LIBRARY_PATH', 'LD_PRELOAD', 'PYTHONHOME', 'PYTHONPATH',
                 'GI_TYPELIB_PATH', 'GIO_MODULE_DIR', 'GIO_EXTRA_MODULES',
                 'GSETTINGS_SCHEMA_DIR', 'GTK_PATH', 'GTK_EXE_PREFIX',
-                'GTK_DATA_PREFIX', 'GTK_MODULES', 'GDK_PIXBUF_MODULE_FILE', 'GDK_PIXBUF_MODULEDIR')
+                'GTK_DATA_PREFIX', 'GTK_MODULES', 'GDK_PIXBUF_MODULE_FILE', 'GDK_PIXBUF_MODULEDIR',
+                'DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH', 'GDK_BACKEND',
+                'PANGO_LIBDIR', 'PANGO_SYSCONFDIR', 'PANGOCAIRO_BACKEND', 'FONTCONFIG_FILE', 'FONTCONFIG_PATH')
 
 
 def host_environment(source=None):
@@ -22,7 +25,15 @@ def host_environment(source=None):
             else:
                 env[key] = values[key]
     for key in list(env):
-        if key == 'SNAP' or key.startswith(('HERDR_', 'SNAP_', '_HUD_HOST_')):
+        if key == 'SNAP' or key.startswith(('HERDR_', 'SNAP_', '_HUD_HOST_', '_PYI_')):
             del env[key]
+    if sys.platform == 'darwin':
+        # Finder has a minimal PATH. Keep the user's order, then add normal CLI locations.
+        parts = env.get('PATH', os.defpath).split(os.pathsep)
+        for path in (os.path.join(env.get('HOME', os.path.expanduser('~')), '.local/bin'),
+                     '/opt/homebrew/bin', '/usr/local/bin'):
+            if path not in parts:
+                parts.append(path)
+        env['PATH'] = os.pathsep.join(parts)
     env['TERM'] = 'xterm-256color'
     return env

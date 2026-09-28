@@ -30,7 +30,7 @@ def build(output):
             target.write_text(text)
             target.chmod(mode)
 
-        for name in ('hud.py', 'terminal_display.py', 'terminal_themes.py', 'theme_picker.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
+        for name in ('hud.py', 'desktop.py', 'terminal_display.py', 'terminal_themes.py', 'theme_picker.py', 'backend.py', 'app_info.py', 'runtime_env.py', 'updates.py', 'enable.py'):
             copy(name, 'usr/lib/herdr-hud/' + name)
         write('usr/bin/herdr-hud', '''#!/usr/bin/python3
 from pathlib import Path

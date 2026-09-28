@@ -233,7 +233,8 @@ need logout/login under this project's GNOME 50 workflow.
 ## Release packaging contracts
 
 - Public app versions use major.minor (for example `1.2`), without a third component.
-- App version is `1.2` with stable release tag `v1.2`; extension revision is
+- Development app version is `1.3`, targeting tag `v1.3`; published stable remains
+  `v1.2` until Mac release gates pass. Extension revision is
   separate. Keep app_info.py and retained packaging metadata synchronized.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID
   is `herdr-hud@alex-jax.github.io`; never enable it with the legacy UUID.
@@ -284,3 +285,14 @@ Fresh preferences use `terminal_palette: "Vs Code"` and `theme: "dark"`.
 Preserve saved choices; selecting a new default must not reset existing preferences.
 Use CONTRIBUTING.md for isolated real-pointer test commands and record actual
 results separately from fixtures or assumed vendor CLI compatibility.
+
+## Apple silicon port
+
+- `desktop.py` is the desktop boundary; `macos_desktop.py` owns the AppKit bubble,
+  geometry, messages and login integration. Keep Cocoa work on the GTK/Quartz main thread.
+- `macos_instance.py` supplies private per-user singleton IPC without D-Bus.
+  `packaging/macos/launch.py` dispatches frozen relay execution before GUI imports.
+- `scripts/build_macos.py` builds only on arm64 macOS. Bundle runtime dependencies,
+  fonts and licenses, never Herdr. Preserve the Linux system-library package.
+- Follow `docs/MACOS_VALIDATION.md`; a runtime/build success is not full Mac parity.
+  Do not publish the Mac release until both macOS 26 and 27 validation passes.

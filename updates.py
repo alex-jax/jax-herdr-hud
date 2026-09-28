@@ -9,11 +9,21 @@ import math
 import re
 import threading
 import time
+import sys
 from urllib.request import Request, urlopen
+from desktop import cache_directory
 
 INTERVAL = 6 * 60 * 60
 UPDATE_GUIDE_URL = 'https://github.com/alex-jax/jax-herdr-hud/blob/'
 API_URL = 'https://api.github.com/repos/alex-jax/jax-herdr-hud/releases?per_page=100'
+
+
+def open_url(request, timeout):
+    if sys.platform == 'darwin' and getattr(sys, 'frozen', False):
+        import ssl
+        import certifi
+        return urlopen(request, timeout=timeout, context=ssl.create_default_context(cafile=certifi.where()))
+    return urlopen(request, timeout=timeout)
 
 
 def version_key(tag):
@@ -39,7 +49,7 @@ def fetch_releases():
     request = Request(API_URL, headers={'Accept': 'application/vnd.github+json',
                       'User-Agent': 'Herdr-Hud-update-check',
                       'X-GitHub-Api-Version': '2022-11-28'})
-    with urlopen(request, timeout=10) as response:
+    with open_url(request, timeout=10) as response:
         data = response.read(1024 * 1024 + 1)
     if len(data) > 1024 * 1024:
         raise ValueError('Release response too large')
@@ -77,7 +87,10 @@ def check_updates(path, current, now=None):
         save()
         releases = fetch_releases()
         candidates = [r['tag_name'] for r in releases if not r.get('draft', False)
-                      and newer_tag(r.get('tag_name'), current)]
+                      and newer_tag(r.get('tag_name'), current)
+                      and (sys.platform != 'darwin' or any(
+                          a.get('name') == 'jax-herdr-hud-' + r['tag_name'].removeprefix('v') + '-macos-arm64.dmg'
+                          for a in r.get('assets', []) if isinstance(a, dict)))]
         tag = max(candidates, key=version_key) if candidates else None
         state['tag'] = tag
         save()
@@ -117,16 +130,18 @@ def install_update(tag, progress=lambda message: None):
     if release is None:
         raise ValueError('This release is no longer available on GitHub.')
     version = tag.removeprefix('v')
-    filename = 'jax-herdr-hud_' + version + '-1_all.deb'
+    mac = sys.platform == 'darwin'
+    filename = ('jax-herdr-hud-' + version + '-macos-arm64.dmg' if mac else
+                'jax-herdr-hud_' + version + '-1_all.deb')
     asset = next((a for a in release.get('assets', []) if a.get('name') == filename), None)
     if not asset:
-        raise ValueError('This release does not contain the Ubuntu installer yet.')
+        raise ValueError('This release does not contain the ' + ('Apple silicon' if mac else 'Ubuntu') + ' installer yet.')
     url = 'https://github.com/alex-jax/jax-herdr-hud/releases/download/' + tag + '/' + filename
     if asset.get('browser_download_url') != url:
         raise ValueError('Unexpected installer download URL.')
     size = asset.get('size')
     digest = asset.get('digest', '')
-    if not isinstance(size, int) or not 0 < size <= 64 * 1024 * 1024:
+    if not isinstance(size, int) or not 0 < size <= (512 if mac else 64) * 1024 * 1024:
         raise ValueError('Invalid installer size.')
     if not isinstance(digest, str) or not re.fullmatch(r'sha256:[0-9a-fA-F]{64}', digest):
         raise ValueError('GitHub has not provided an installer checksum. Please update from the release page.')
@@ -134,7 +149,7 @@ def install_update(tag, progress=lambda message: None):
         package = Path(directory) / filename
         checksum = hashlib.sha256()
         total = 0
-        with urlopen(Request(url, headers={'User-Agent': 'Herdr-Hud-update'}), timeout=30) as response, package.open('wb') as output:
+        with open_url(Request(url, headers={'User-Agent': 'Herdr-Hud-update'}), timeout=30) as response, package.open('wb') as output:
             while chunk := response.read(128 * 1024):
                 total += len(chunk)
                 if total > size:
@@ -143,6 +158,20 @@ def install_update(tag, progress=lambda message: None):
                 output.write(chunk)
         if total != size or checksum.hexdigest() != digest[7:].lower():
             raise ValueError('Installer checksum verification failed; nothing was installed.')
+        if mac:
+            # Keep the verified image after returning; Finder mounts it asynchronously.
+            subprocess.run(['/usr/bin/hdiutil', 'verify', str(package)], check=True,
+                           capture_output=True, timeout=120)
+            destination = cache_directory() / 'updates' / filename
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            import shutil
+            temporary = destination.with_suffix('.part')
+            shutil.copyfile(package, temporary)
+            temporary.replace(destination)
+            progress('Opening the verified Mac installer…')
+            subprocess.run(['/usr/bin/open', str(destination)], check=True,
+                           capture_output=True, timeout=15)
+            return
         metadata = subprocess.run(['/usr/bin/dpkg-deb', '--show',
             '--showformat=${Package}\\n${Version}\\n${Architecture}', str(package)],
             capture_output=True, text=True, check=True, timeout=15).stdout.splitlines()
