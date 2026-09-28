@@ -26,15 +26,21 @@ def main():
 
     def finish():
         text = terminal.get_text_format(Vte.Format.TEXT)
+        result['screen'] = text
         result['pty'] = 'HUD_MAC_PTY_OK' in text
         Path(os.environ['HUD_PROBE_RESULT']).write_text(json.dumps(result, indent=2))
         Gtk.main_quit()
         return False
 
+    def spawned(_terminal, pid, error, *_):
+        result['pid'] = pid
+        result['spawn_error'] = str(error) if error else None
+
+    terminal.connect('child-exited', lambda _terminal, status: result.update(exit_status=status))
     terminal.spawn_async(Vte.PtyFlags.DEFAULT, '/tmp',
                          ['/bin/sh', '-c', 'printf "HUD_MAC_PTY_OK\\n"; sleep 2'],
                          ['PATH=/usr/bin:/bin', 'TERM=xterm-256color'],
-                         GLib.SpawnFlags.DEFAULT, None, None, -1, None, None, None)
+                         GLib.SpawnFlags.DEFAULT, None, None, -1, None, spawned, None)
     GLib.timeout_add_seconds(4, finish)
     Gtk.main()
     assert result.get('pty'), result
