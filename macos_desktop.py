@@ -140,7 +140,9 @@ class MacDesktop:
         for path in (root / 'fonts').glob('*.ttf'):
             CoreText.CTFontManagerRegisterFontsForURL(F.NSURL.fileURLWithPath_(str(path)),
                                                       CoreText.kCTFontManagerScopeProcess, None)
-        from gi.repository import Gtk
+        from gi.repository import Gtk, PangoCairo
+        # GTK may have cached the system families before our process fonts were registered.
+        PangoCairo.FontMap.get_default().changed()
         # Match the reference GTK layout in logical pixels; Quartz handles Retina scaling.
         Gtk.Settings.get_default().set_property('gtk-xft-dpi', 96 * 1024)
         Gdk.Screen.get_default().set_resolution(96)

@@ -71,6 +71,14 @@ def main():
             result['ui_font'] = Gtk.Settings.get_default().get_property('gtk-font-name')
             result['terminal_font'] = terminal.get_font().to_string()
             result['terminal_cell'] = [terminal.get_char_width(), terminal.get_char_height()]
+            context = terminal.get_pango_context()
+            loaded = context.load_font(terminal.get_font())
+            result['resolved_terminal_font'] = loaded.describe().to_string()
+            result['font_backend'] = type(context.get_font_map()).__name__
+            result['ubuntu_families'] = [family.get_name() for family in context.list_families()
+                                         if 'Ubuntu' in family.get_name()]
+            Path(os.environ['HUD_SMOKE_RESULT']).write_text(json.dumps(result, indent=2))
+            assert 7 <= terminal.get_char_width() <= 9, result
             terminal.select_all()
             pump()
             clip = Gtk.Clipboard.get(hud.Gdk.SELECTION_CLIPBOARD)
