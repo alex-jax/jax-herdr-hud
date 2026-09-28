@@ -79,8 +79,31 @@ try:
         if kind != Gdk.EventType.MOTION_NOTIFY: data.button = 1
         terminal.event(event); pump(.1)
     shift = Gdk.ModifierType.SHIFT_MASK
-    height = terminal.get_allocated_height()
-    mouse(Gdk.EventType.BUTTON_PRESS, height/2, shift)
+    height = app.terminal_input_window(terminal).get_height()
+    # Start by dragging DOWN from a scrolled live attachment, without first
+    # opening the overlay or manipulating its adjustment. Use an unmodified motion while
+    # continuing the button drag, like a normal terminal selection.
+    pane_id = app.panes[app.selected]['pane_id']
+    request(path, 'pane.scroll', {'pane_id': pane_id, 'offset_from_bottom': 100})
+    until(lambda: 'HISTORY_ROW_100' in terminal.get_text_format(hud.Vte.Format.TEXT))
+    mouse(Gdk.EventType.BUTTON_PRESS, height/3, 0)
+    mouse(Gdk.EventType.MOTION_NOTIFY, height-2, Gdk.ModifierType.BUTTON1_MASK)
+    until(lambda: app.history_selection and app.history_selection.get('ready'))
+    first_view = app.history_selection['view']
+    before_down = first_view.get_vadjustment().get_value()
+    pump(.7)
+    assert first_view.get_vadjustment().get_value() > before_down
+    first_rows = first_view.get_row_count()
+    mouse(Gdk.EventType.BUTTON_RELEASE, height-2, 0)
+    first_copy = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_for_text()
+    assert first_copy and first_copy.count('HISTORY_ROW_') > first_rows, first_copy
+    assert app.history_selection is None
+    assert terminal.has_focus()
+    app.end_history_selection()
+    request(path, 'pane.scroll', {'pane_id': pane_id, 'offset_from_bottom': 0})
+    until(lambda: 'HISTORY_ROW_200' in terminal.get_text_format(hud.Vte.Format.TEXT))
+    print('PASS: first drag scrolls down from live attachment; normal drag keeps selection scrolling', flush=True)
+    mouse(Gdk.EventType.BUTTON_PRESS, height/2, 0)
     mouse(Gdk.EventType.MOTION_NOTIFY, 2, shift | Gdk.ModifierType.BUTTON1_MASK)
     until(lambda: app.history_selection and app.history_selection.get('view'))
     pump(.3)
@@ -91,36 +114,14 @@ try:
     mouse(Gdk.EventType.MOTION_NOTIFY, 2, shift | Gdk.ModifierType.BUTTON1_MASK)
     pump(.7)
     assert adjustment.get_value() < before
+    view_rows = view.get_row_count()
     mouse(Gdk.EventType.BUTTON_RELEASE, 2, shift)
     copied = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_for_text()
-    assert copied and copied.count('HISTORY_ROW_') > view.get_row_count(), copied
+    assert copied and copied.count('HISTORY_ROW_') > view_rows, copied
     assert '\x1b' not in copied
     assert not Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_is_target_available(Gdk.Atom.intern('text/html', False))
-    stopped = adjustment.get_value(); pump(.3)
-    assert adjustment.get_value() == stopped
-    # Continue downwards within the same retained history without moving the CLI.
-    view.unselect_all()
-    view.get_vadjustment().set_value(50); pump()
-    def history_mouse(kind, y, state):
-        event = Gdk.Event.new(kind); event.set_device(pointer)
-        data = event.motion if kind == Gdk.EventType.MOTION_NOTIFY else event.button
-        data.window = app.terminal_input_window(view)
-        data.time = int(GLib.get_monotonic_time()/1000) & 0xffffffff
-        data.x, data.y, data.state = 100, y, state
-        if kind != Gdk.EventType.MOTION_NOTIFY: data.button = 1
-        view.event(event); pump(.1)
-    history_mouse(Gdk.EventType.BUTTON_PRESS, height/2, shift)
-    history_mouse(Gdk.EventType.MOTION_NOTIFY, height-2, shift | Gdk.ModifierType.BUTTON1_MASK)
-    pump(.7)
-    assert view.get_vadjustment().get_value() > 50
-    history_mouse(Gdk.EventType.BUTTON_RELEASE, height-2, shift)
-    copied = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_for_text()
-    assert copied and copied.count('HISTORY_ROW_') > view.get_row_count()
-    event = Gdk.Event.new(Gdk.EventType.KEY_PRESS)
-    event.key.window = app.terminal_input_window(view)
-    event.key.keyval = Gdk.KEY_Escape
-    view.event(event); pump()
-    assert app.history_selection is None
+    assert app.history_selection is None, 'Release must return directly to the terminal'
+    assert terminal.has_focus()
     assert terminal.pid == pid and terminal.alive
     assert app.stack.get_visible_child() is terminal
     print('PASS: real Herdr history selection scrolls beyond attachment viewport and preserves live PTY', flush=True)

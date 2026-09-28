@@ -158,11 +158,10 @@ input, control sequences and terminal size changes go through that client.
 Switching rows retains attached terminals and up to 20,000 VTE scrollback lines.
 The configured font is `Ubuntu Mono 12`, with 16-pixel side margins.
 
-- Hold **Shift** and drag with the left mouse button to select text and automatically copy it.
+- Click and drag with the left mouse button to select text and automatically copy it.
 - Right-click inside the terminal to paste the clipboard.
-- Interactive terminal apps receive normal left clicks and drags when they request
-  mouse input, so their buttons work. Hold **Shift** while dragging to select and
-  copy text instead. Right-click remains paste. GNOME-reserved shortcuts stay with
+- Hold **Shift** while clicking or dragging to interact with CLI controls.
+  Normal dragging selects and automatically copies plain text. Right-click remains paste. GNOME-reserved shortcuts stay with
   the desktop.
 - If a client disconnects, select its terminal again to create a new attachment.
 
@@ -189,7 +188,7 @@ Moving the bubble does not reposition an already tracked window.
   to change their relative heights.
 - Use **Expand HUD** to maximize and **Restore window** to return to normal size.
   Maximizing does not overwrite saved normal dimensions.
-- Use the sun/moon button to switch between light and dark. Fresh installations use GNOME Dark; choosing light or dark saves an explicit override.
+- Use the sun/moon button to switch between light and dark. Fresh installations use VS Code Dark; choosing light or dark saves an explicit override.
   Settings → Appearance offers **Follow desktop**, **Light**, and **Dark**.
 - **Hide**, including a window-manager close request, keeps monitoring and
   attachments alive. **Exit Hud** disconnects only its attach clients and hides
@@ -242,7 +241,7 @@ The launcher and Herdr binary paths remain under `~/.local/bin`.
 | `~/.local/state/herdr-hud/server-start.log` | Output from servers started by the backend. |
 | `~/.local/state/herdr-hud/hud.log` | Companion output when launched by `activate.py`. |
 
-`settings.json` defaults are `terminal_palette: "gnome"`, `theme: "dark"`, `width: 1040`, `height: 660`,
+`settings.json` defaults are `terminal_palette: "Vs Code"`, `theme: "dark"`, `width: 1040`, `height: 660`,
 `sidebar_width: 245`, `section_position: 260`, and both `spaces_expanded` and
 `agents_expanded` true. `sidebar_expanded_width` restores the last expanded width,
 falling back to the saved sidebar width or 245. The window minimum is 620 × 360.
@@ -358,8 +357,8 @@ The chooser includes all 244 palettes bundled with Ubuntu's Ptyxis 50.1, plus
 use **Show all palettes** or search by name to browse the complete collection.
 Click a card to apply it immediately to every open terminal. A checkmark and blue
 outline identify the selection, which is saved for future launches. **Done**
-closes the chooser; selecting GNOME restores the default palette. Fresh installations start in Dark
-mode; switching to Light uses GNOME’s light variant. Saved choices are retained.
+closes the chooser; selecting VS Code restores the default palette. Fresh installations start in Dark
+mode; switching to Light uses VS Code’s light variant. Saved choices are retained.
 
 **Follow desktop**, **Light**, and **Dark** control Hud's appearance. Palettes with
 light and dark variants switch with this setting and the header's sun/moon button.
@@ -371,9 +370,9 @@ and Hud never writes to Ptyxis or CLI preferences.
 Hud classic uses a white background and dark text in light mode, and a dark
 background with light text in dark mode. Filename, folder, syntax and CLI text colors
 are preserved. ANSI colors follow the palette; explicitly requested RGB and
-256-color foreground values retain the application’s colors. Explicit CLI background
-colors use the selected Hud background, keeping input bars consistent in light
-and dark mode. Reverse-video selection remains supported. Palette changes recolor
+256-color foreground and background values retain the application’s colors.
+Highlight color pairs stay intact so pasted text and hovered controls remain
+readable. Reverse-video selection remains supported. Palette changes recolor
 default/ANSI scrollback, while application-specific RGB colors stay unchanged.
 Global palette replacement sequences are blocked to preserve your selection. Codex, Grok, Claude Code and agy keep their own
 settings and sessions, and look unchanged outside Hud. No patched Herdr build
@@ -399,19 +398,34 @@ their short help labels.
 Pasting with right-click or the terminal paste shortcut clears the text selection
 automatically. Copied text remains available on the clipboard.
 
-While holding Shift and dragging a text selection, move the pointer to the top or
-bottom edge to scroll through terminal history. Release the mouse to stop.
+Drag with the left mouse button to select text, then move the pointer to the
+top or bottom edge of the terminal (or just beyond its border) to scroll through retained history. You can
+change Shift during the drag without changing the gesture; keep holding the mouse button. Release the mouse
+button to stop scrolling.
 Top-bar actions return keyboard focus to the visible terminal; Settings and
 dialogs keep their own controls available.
 
-When a Shift-drag reaches the terminal edge, Hud loads up to 20,000 lines of
-retained Herdr history into a temporary selection view. Hold the mouse near the
-top or bottom to extend the selection. Esc, a normal click or typing returns to
-the live terminal; the agent stays connected throughout. History that the CLI
-or Herdr has not retained cannot be recovered this way.
-Selections copy as plain text, without fonts, colors, HTML or ANSI escape codes.
+Keep holding the left mouse button at either edge to extend the selection.
+The terminal keeps its CLI colors and keyboard focus. Release the mouse to finish
+copying and type directly into the CLI; no Escape step or text-only mode is needed.
+Shift+click continues to interact with CLI controls.
+
+Hud uses retained terminal history where available. For full-screen CLIs that own
+their conversation history, it scrolls the live transcript and collects newly
+revealed text, preserving the selection's starting point. Capture is limited to
+20,000 lines and pauses if output changes without a matching overlap.
+Copied selections are plain text, without fonts, colors, HTML or ANSI escape codes;
+the terminal display itself retains its colors.
 
 Ctrl+V pastes text from the clipboard into the active terminal, including
 speech-to-text input. With an image-only clipboard, Ctrl+V is sent to the CLI
 so its image-paste shortcut remains available. Ctrl+Shift+V and right-click
 continue to use the terminal paste action.
+
+Ctrl+click an HTTP or HTTPS link in a terminal to open it in your desktop's
+default browser, including links printed by remote CLIs. Shift+clicks go to the CLI. Both labelled terminal hyperlinks and visible web addresses work.
+
+Hud palettes set the terminal's default colors. CLI foreground and background
+colors remain paired, so pasted-text highlights and hovered controls keep their
+contrast. Copied selections are still plain text; their appearance after pasting
+is controlled by the destination application.

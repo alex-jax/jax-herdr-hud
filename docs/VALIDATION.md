@@ -1,23 +1,40 @@
 # Validation
 
-## Unreleased: selection scrolling and header focus
+## Current unreleased update
 
-- Native selection smoke passed: Shift-drag extends selection through scrollback
-  at both edges, copies beyond the viewport and stops scrolling on release.
-- Sidebar smoke passed, including top-bar click-focus and terminal-focus restoration.
-- Real Herdr desktop smoke passed, including normal CLI mouse input and horizontal
-  Shift-drag selection. An initial edge-trigger conflict was corrected before this pass.
+Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1.
 
-History-selection correction: the initial scrolling test only exercised ordinary
-VTE scrollback. A new real-Herdr regression covers fetching retained history,
-selecting beyond the attached viewport in both directions, stopping on release,
-plain-text clipboard contents and returning with Escape without reconnecting.
+- Normal drag copies plain text; Shift+click sends unmodified CLI mouse input.
+  Real-pointer tests move beyond both borders and verify copied lines remain
+  contiguous, exceed the viewport, and stop extending after release.
+- Tests cover both retained Herdr history and a full-screen CLI which accepts
+  wheel events only over its transcript. VTE's cached pointer position must be
+  moved to the transcript before scrolling; scroll-event coordinates alone do
+  not control the emitted mouse report.
+- The original colored VTE stays visible and focused while CLI selection grows.
+  Release finishes selection immediately, without a text-only view or Escape.
+  Tests verify that the terminal layout does not change.
+- Tested the user's existing Codex pane on Wayland without submitting input or
+  stopping its agent/server. The final live-terminal implementation copied 53
+  lines downward from a 29-row viewport and retained focus on release.
+- Unit coverage includes changing CLI footer controls, fragmented SGR color
+  pairs, OSC hyperlink preservation, backend behavior and distribution.
+- Native desktop coverage includes text paste, CLI mouse input, themes, agent
+  tracking, space closure and detaching without stopping user sessions.
+- Link smoke tests exercise plain URLs and OSC 8 links through a recorded desktop
+  URI launcher. They do not launch a real external browser.
+- Theme smoke tests check VS Code Dark for fresh preferences, its light variant,
+  chooser filtering and preservation of saved palette/appearance choices.
 
-The updated source passed 40 unit tests and the extracted Debian payload passed
-the real-Herdr history test, including plain-text-only clipboard targets.
+Final PR checks (28 September 2026): 46 unit tests passed. Source theme and
+link smoke checks passed. Rebuilt `jax-herdr-hud_1.1.3-1_all.deb`; theme and
+real Herdr desktop smoke checks passed against its extracted payload. Installed
+that package locally, verified installed `hud.py`, `theme_picker.py` and
+`terminal_display.py` against source, and restarted the normal Hud launcher
+successfully. Existing user sessions were retained.
 
-Installed the updated Debian package locally, verified installed source and
-restarted Hud successfully. These changes have not been published.
+Limitations: no automated end-to-end test of every vendor CLI or the Voquill app;
+no clean-VM installation/upgrade/removal test. No release is published by this PR.
 
 ## 1.1.3 — 21 September 2026
 

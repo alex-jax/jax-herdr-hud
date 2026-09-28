@@ -26,7 +26,7 @@ See the [release notes](CHANGELOG.md) and
 there is no Snap Store or App Center release.
 
 Features include collapsible spaces with compact terminal rows, agent shortcuts,
-live status and notifications, search, clickable CLI controls, Shift+drag to copy,
+live status and notifications, search, Shift+click CLI controls, drag to copy,
 right-click paste, light/dark display and a draggable floating H.
 
 ## Screenshots
@@ -65,14 +65,14 @@ Green dots mean working, yellow means unread activity, and hollow means read and
 idle. Closing the last terminal or agent removes its secondary space. The first
 space keeps its last terminal; closing other agent terminals asks for confirmation.
 Attach real terminals, add or rename spaces and terminals,
-search, copy with Shift+drag, click CLI controls, and paste with right-click. Hide keeps monitoring;
+search, copy by dragging, Shift+click CLI controls, and paste with right-click. Hide keeps monitoring;
 Exit Hud disconnects only its clients. Explicit Close stops the targeted terminal
 or space. The floating H is optional; the main window works independently.
 
 Settings → **Appearance** offers 244 Ubuntu terminal palettes with searchable
-preview cards and light/dark variants. **GNOME Dark** is the default for new installations; switching to light mode
-uses GNOME Light. **Hud classic** retains the previous white and dark backgrounds. Your choice colors the whole Hud immediately and is saved. Filenames, folders,
-syntax text colors and reverse-video selection highlighting are preserved. CLI backgrounds follow the Hud theme. This applies to Codex, Grok, Claude Code and agy
+preview cards and light/dark variants. **VS Code Dark** is the default for new installations; switching to light mode
+uses VS Code Light. **Hud classic** retains the previous white and dark backgrounds. Your choice colors the whole Hud immediately and is saved. Filenames, folders,
+syntax text colors and reverse-video selection highlighting are preserved. CLI foreground/background color pairs stay intact so input and hover highlights remain readable. This applies to Codex, Grok, Claude Code and agy
 without synchronizing their themes or changing Herdr.
 
 The setup button locates Herdr automatically or lets you select its executable.

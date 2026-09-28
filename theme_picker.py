@@ -81,17 +81,17 @@ class ThemePicker(Gtk.Dialog):
         if query:
             return query in item['name'].casefold()
         return (self.all_palettes.get_active() or item['primary'] or
-                key == self.app.settings.get('terminal_palette', 'gnome'))
+                key == self.app.settings.get('terminal_palette', 'Vs Code'))
 
     def filter_cards(self):
         self.flow.invalidate_filter()
         count = sum(self.matches(child) for child in self.flow.get_children())
-        selected = self.app.settings.get('terminal_palette', 'gnome')
-        name = self.cards.get(selected, self.cards['gnome'])[0]['name']
+        selected = self.app.settings.get('terminal_palette', 'Vs Code')
+        name = self.cards.get(selected, self.cards['Vs Code'])[0]['name']
         self.summary.set_text(f'{name} selected · {count} themes' if count else 'No themes match your search')
 
     def refresh(self):
-        selected = self.app.settings.get('terminal_palette', 'gnome')
+        selected = self.app.settings.get('terminal_palette', 'Vs Code')
         for key, (item, button, title, sample, swatches, css) in self.cards.items():
             fg, bg, colors = self.app.terminal_colors(key)
             mark = '  ✓' if key == selected else ''

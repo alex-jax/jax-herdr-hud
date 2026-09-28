@@ -35,13 +35,13 @@ with tempfile.TemporaryDirectory(prefix='hud-themes-') as tmp:
     app.show()
     try:
         assert app.theme == 'dark' and app.dark
-        assert app.settings['terminal_palette'] == 'gnome'
+        assert app.settings['terminal_palette'] == 'Vs Code'
         from terminal_themes import palette
-        assert app.terminal_colors()[1] == palette('gnome', True)['background']
+        assert app.terminal_colors()[1] == palette('Vs Code', True)['background']
         app.toggle_theme()
-        assert app.terminal_colors()[1] == palette('gnome', False)['background']
+        assert app.terminal_colors()[1] == palette('Vs Code', False)['background']
         app.toggle_theme()
-        print('PASS: fresh install defaults to GNOME Dark; light toggle uses GNOME Light')
+        print('PASS: fresh install defaults to VS Code Dark; light toggle uses VS Code Light')
         app.show_setup()
         app.appearance_button.clicked(); pump()
         picker = app.theme_picker

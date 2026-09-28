@@ -116,15 +116,15 @@ try:
             data.button = 1
         terminal.event(event)
         pump(0.05)
-    mouse(Gdk.EventType.BUTTON_PRESS, 2, row * ch + ch / 2, Gdk.ModifierType.SHIFT_MASK)
+    mouse(Gdk.EventType.BUTTON_PRESS, 2, row * ch + ch / 2, 0)
     for i in range(1, 14):
         mouse(Gdk.EventType.MOTION_NOTIFY, i * cw, row * ch + ch / 2, Gdk.ModifierType.BUTTON1_MASK | Gdk.ModifierType.SHIFT_MASK)
     mouse(Gdk.EventType.BUTTON_RELEASE, 13 * cw, row * ch + ch / 2, Gdk.ModifierType.BUTTON1_MASK | Gdk.ModifierType.SHIFT_MASK)
     width, height = app.window.get_size()
     pixels = Gdk.pixbuf_get_from_window(app.window.get_window(), 0, 0, width, height)
     if pixels and os.environ.get('GDK_BACKEND') == 'x11': pixels.savev(str(output_dir / 'hud-preview.png'), 'png', [], [])
-    assert terminal.get_has_selection(), 'Shift+drag did not select text'
-    print('PASS: Shift+drag selects terminal text', flush=True)
+    assert terminal.get_has_selection(), 'Drag did not select text'
+    print('PASS: Drag selects terminal text', flush=True)
     terminal.select_all()
     pump()
     clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
@@ -190,7 +190,7 @@ finally:
     until(mouse_ready.exists)
     pump(.3)
     terminal.unselect_all()
-    mouse(Gdk.EventType.BUTTON_PRESS, 6 * cw, ch / 2)
+    mouse(Gdk.EventType.BUTTON_PRESS, 6 * cw, ch / 2, Gdk.ModifierType.SHIFT_MASK)
     mouse(Gdk.EventType.BUTTON_RELEASE, 6 * cw, ch / 2, Gdk.ModifierType.BUTTON1_MASK)
     until(lambda: mouse_log.exists() and b'm' in mouse_log.read_bytes())
     clicks = mouse_log.read_bytes()
@@ -199,17 +199,17 @@ finally:
     assert re.search(rb'\x1b\[<0;\d+;\d+m', clicks), clicks
     assert not terminal.get_has_selection(), 'CLI click unexpectedly selected text'
     shift = Gdk.ModifierType.SHIFT_MASK
-    mouse(Gdk.EventType.BUTTON_PRESS, 2, ch / 2, shift)
+    mouse(Gdk.EventType.BUTTON_PRESS, 2, ch / 2, 0)
     for column in range(1, 15):
         mouse(Gdk.EventType.MOTION_NOTIFY, column * cw, ch / 2, shift | Gdk.ModifierType.BUTTON1_MASK)
     mouse(Gdk.EventType.BUTTON_RELEASE, 14 * cw, ch / 2, shift | Gdk.ModifierType.BUTTON1_MASK)
-    assert terminal.get_has_selection(), 'Shift+drag did not select in mouse-reporting mode'
+    assert terminal.get_has_selection(), 'Drag did not select in mouse-reporting mode'
     assert 'HUD_MOUSE' in (clip.wait_for_text() or '')
-    assert mouse_log.read_bytes() == clicks, 'Shift+drag leaked mouse clicks to the CLI'
+    assert mouse_log.read_bytes() == clicks, 'Drag leaked mouse clicks to the CLI'
     terminal.unselect_all()
     terminal.feed_child(b'q')
     until(mouse_done.exists)
-    print('PASS: native CLI receives left-button press/release; Shift+drag selects and copies without sending clicks', flush=True)
+    print('PASS: Shift+click: native CLI receives unmodified left-button press/release; Drag selects and copies without sending clicks', flush=True)
     old = app.dark
     app.toggle_theme()
     assert app.dark != old

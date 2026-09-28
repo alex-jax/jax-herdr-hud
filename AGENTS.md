@@ -74,8 +74,8 @@ Do not modify artifacts incidentally; preserve existing ones when running tests.
   guards. Cancel pending sidebar refresh on exit and ignore late worker results.
 - Defer terminal focus until GTK finishes processing selection. Preserve selection,
   focus and scrollback during snapshots, search and Spaces/Agents reparenting.
-- VTE forwards normal left clicks/drags to mouse-aware CLIs; Shift+drag selects
-  and copies text, and right-click pastes. Sidebar
+- VTE forwards Shift+left clicks/drags to mouse-aware CLIs without the Shift
+  modifier; normal left dragging selects and copies plain text, and right-click pastes. Sidebar
   context menus are separate; ListBox owns its input window, so resolve row hits
   from ListBox coordinates.
 
@@ -241,7 +241,7 @@ The source-install scripts are not Debian removal scripts.
 
 ## Display colors
 
-Hud preserves SGR foreground colors, maps explicit SGR backgrounds to the selected Hud background, and filters OSC palette replacements in terminal_display.py; it does not synchronize
+Hud preserves paired SGR foreground/background colors and filters OSC palette replacements in terminal_display.py; it does not synchronize
 CLI themes or require a patched Herdr. Preserve non-color controls, mouse input,
 resize and attach-client ownership. Include the helper in every installer.
 
