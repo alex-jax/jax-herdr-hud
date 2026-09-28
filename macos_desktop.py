@@ -41,8 +41,10 @@ class BubbleView(A.NSView):
 
     def drawRect_(self, rect):
         owner = self.owner
-        circle = A.NSBezierPath.bezierPathWithOvalInRect_(F.NSMakeRect(2, 2, 52, 52))
-        A.NSColor.colorWithCalibratedWhite_alpha_(.188 if owner.dark else .98, 1).setFill()
+        circle = A.NSBezierPath.bezierPathWithOvalInRect_(F.NSMakeRect(1, 1, 54, 54))
+        background = (A.NSColor.colorWithCalibratedWhite_alpha_(48/255, 1) if owner.dark else
+                      A.NSColor.colorWithCalibratedRed_green_blue_alpha_(250/255, 249/255, 248/255, 1))
+        background.setFill()
         circle.fill()
         A.NSColor.controlAccentColor().setStroke()
         circle.setLineWidth_(2)
@@ -51,11 +53,12 @@ class BubbleView(A.NSView):
         font = A.NSFontManager.sharedFontManager().convertFont_toHaveTrait_(font, A.NSBoldFontMask)
         label = F.NSAttributedString.alloc().initWithString_attributes_('H', {
             A.NSFontAttributeName: font,
-            A.NSForegroundColorAttributeName: A.NSColor.whiteColor() if owner.dark else A.NSColor.darkGrayColor()})
+            A.NSForegroundColorAttributeName: A.NSColor.whiteColor() if owner.dark else
+                A.NSColor.colorWithCalibratedWhite_alpha_(44/255, 1)})
         size = label.size()
         label.drawAtPoint_(F.NSMakePoint((56 - size.width) / 2, (56 - size.height) / 2))
         if owner.unread:
-            badge = A.NSBezierPath.bezierPathWithOvalInRect_(F.NSMakeRect(42, 42, 12, 12))
+            badge = A.NSBezierPath.bezierPathWithOvalInRect_(F.NSMakeRect(43, 43, 12, 12))
             A.NSColor.colorWithCalibratedRed_green_blue_alpha_(.208, .518, .894, 1).setFill()
             badge.fill()
             A.NSColor.whiteColor().setStroke()
@@ -166,7 +169,8 @@ class MacDesktop:
         screen = A.NSScreen.mainScreen().visibleFrame()
         saved = read_object(self.config / 'bubble.json')
         x, y = ((saved['x'], saved['y']) if numbers(saved, ('x', 'y')) else
-                (screen.origin.x + screen.size.width - 76, screen.origin.y + 80))
+                (screen.origin.x + screen.size.width - 80,
+                 screen.origin.y + screen.size.height - round(screen.size.height / 2) - 56))
         self.panel.setFrameOrigin_(F.NSMakePoint(x, y))
         self.clamp_bubble()
         self.panel.orderFrontRegardless()
@@ -355,14 +359,21 @@ class MacDesktop:
             self.toast.contentView().layer().setBackgroundColor_(A.NSColor.colorWithCalibratedWhite_alpha_(.14, 1).CGColor())
             self.toast.contentView().layer().setCornerRadius_(10)
             self.toast_label = A.NSTextField.wrappingLabelWithString_('')
-            self.toast_label.setFrame_(F.NSMakeRect(16, 10, 328, 48))
+            self.toast_label.setFont_(A.NSFont.fontWithName_size_('UbuntuSans-Regular', 12) or
+                                      A.NSFont.systemFontOfSize_(12))
             self.toast_label.setTextColor_(A.NSColor.whiteColor())
             self.toast.contentView().addSubview_(self.toast_label)
         self.toast_label.setStringValue_(message[:180])
+        natural = self.toast_label.attributedStringValue().size()
+        width = min(440, math.ceil(natural.width) + 32)
+        content = self.toast_label.cell().cellSizeForBounds_(F.NSMakeRect(0, 0, width - 32, 1000))
+        height = math.ceil(content.height) + 24
+        self.toast.setContentSize_(F.NSMakeSize(width, height))
+        self.toast_label.setFrame_(F.NSMakeRect(16, 12, width - 32, height - 24))
         point = self.panel.frame().origin
         screen = self.panel.screen().visibleFrame()
-        x = max(screen.origin.x + 8, min(point.x - 304, screen.origin.x + screen.size.width - 368))
-        y = point.y + 66 if point.y + 134 < screen.origin.y + screen.size.height else point.y - 78
+        x = max(screen.origin.x + 8, min(point.x - width + 56, screen.origin.x + screen.size.width - width - 8))
+        y = point.y + 66 if point.y + 68 + height < screen.origin.y + screen.size.height else point.y - height - 10
         self.toast.setFrameOrigin_(F.NSMakePoint(x, y))
         self.toast.orderFrontRegardless()
         def expire():
