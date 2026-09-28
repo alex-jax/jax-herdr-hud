@@ -5,6 +5,10 @@ import json
 from pathlib import Path
 import plistlib
 import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from app_info import VERSION
 
 MACHO = {b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf', b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca'}
 
@@ -13,6 +17,8 @@ def audit(bundle):
     bundle = bundle.resolve()
     info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
     assert info['LSMinimumSystemVersion'] == '26.0', info
+    assert info['CFBundleIdentifier'] == 'io.github.herdr.Hud', info
+    assert info['CFBundleShortVersionString'] == info['CFBundleVersion'] == VERSION, info
     count = 0
     for path in bundle.rglob('*'):
         if path.is_symlink():

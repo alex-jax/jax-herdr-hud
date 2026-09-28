@@ -140,6 +140,8 @@ class MacDesktop:
         for path in (root / 'fonts').glob('*.ttf'):
             CoreText.CTFontManagerRegisterFontsForURL(F.NSURL.fileURLWithPath_(str(path)),
                                                       CoreText.kCTFontManagerScopeProcess, None)
+        import gi
+        gi.require_version('PangoCairo', '1.0')
         from gi.repository import Gtk, PangoCairo
         # GTK may have cached the system families before our process fonts were registered.
         PangoCairo.FontMap.get_default().changed()
