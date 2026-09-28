@@ -3,7 +3,8 @@
 set -eu
 app=$1
 root=$2
-mkdir -p "$root/config" "$root/cache"
+mkdir -p "$root/config/herdr-hud" "$root/cache"
+printf '%s\n' '{"herdr_path":"/dev/null"}' > "$root/config/herdr-hud/settings.json"
 export XDG_CONFIG_HOME="$root/config" XDG_CACHE_HOME="$root/cache"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 "$app" --background > "$root/launch.log" 2>&1 &
