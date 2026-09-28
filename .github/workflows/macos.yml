@@ -24,7 +24,7 @@ jobs:
           HUD_PROBE_RESULT="$RUNNER_TEMP/native.json" build/mac-venv/bin/python packaging/macos/runtime_probe.py
       - name: Bundle runtime
         run: |
-          build/mac-venv/bin/python -m PyInstaller --noconfirm --clean --windowed --name HudRuntimeProbe --osx-bundle-identifier io.github.herdr.Hud.RuntimeProbe --target-arch arm64 packaging/macos/runtime_probe.py
+          build/mac-venv/bin/python -m PyInstaller --noconfirm --clean --windowed --name HudRuntimeProbe --osx-bundle-identifier io.github.herdr.Hud.RuntimeProbe --target-arch arm64 --additional-hooks-dir packaging/macos/hooks packaging/macos/runtime_probe.py
       - name: Exercise bundled runtime
         run: |
           env -u PYTHONPATH -u GI_TYPELIB_PATH -u DYLD_LIBRARY_PATH PATH=/usr/bin:/bin:/usr/sbin:/sbin HUD_PROBE_RESULT="$RUNNER_TEMP/bundle.json" dist/HudRuntimeProbe.app/Contents/MacOS/HudRuntimeProbe
