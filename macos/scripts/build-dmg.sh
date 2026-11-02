@@ -46,6 +46,8 @@ with zipfile.ZipFile(sys.argv[2], 'w', compression=zipfile.ZIP_DEFLATED, compres
         if revision != pin['state']['revision']:
             raise SystemExit(f"Dependency revision mismatch: {pin['identity']}")
         for name in tracked(directory):
+            if any(part in {'.build', '.swiftpm', '.git', '__pycache__', '.DS_Store'} for part in name.parts) or name.suffix in {'.pyc', '.pyo'}:
+                continue
             path = directory / name
             if path.is_file() and not path.is_symlink():
                 archive.write(path, 'jax-herdr-hud/dependencies/' + pin['identity'] + '/' + str(name))
