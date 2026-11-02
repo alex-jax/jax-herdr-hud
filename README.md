@@ -1,8 +1,8 @@
 # Herdr Hud for Ubuntu
 
-**Native macOS preview:** An AppKit/SwiftTerm port for macOS 27 on Apple silicon
-is available in [`macos/`](macos/README.md), with local build and installation
-instructions. The Ubuntu installation below remains separate.
+**Native macOS app:** An AppKit/SwiftTerm port for macOS 27 on Apple silicon
+is available in [`macos/`](macos/README.md), with build and installation
+instructions. Download the Apple silicon DMG from [Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest). The Ubuntu installation below remains separate.
 
 A native GTK/VTE companion for local Herdr terminals and agents on Ubuntu 26.04.
 

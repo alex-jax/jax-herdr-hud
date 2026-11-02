@@ -17,5 +17,13 @@ checks and distinguish simulated activity/geometry from physical lock/monitor te
 UI and terminal view operations belong on the main queue; socket and CLI operations
 belong on workers. Keep terminal instances keyed by socket path and terminal ID.
 Use scripts/export-palettes.py after changes to the shared Ubuntu palette source.
-Build a release bundle after debug tests before installing. Public distribution
-requires a separate signing/notarization workflow; local ad-hoc signing is intentional.
+Build a release bundle after debug tests before installing. Distribution uses
+GitHub and an ad-hoc signed DMG; Developer ID enrollment and Apple notarization
+are not required for this project. Do not label releases as previews solely
+because they use ad-hoc signing. Retain factual macOS first-launch instructions.
+
+Updates must leave one installed app at ~/Applications/Herdr Hud.app. Keep build
+bundles in dist/build.noindex and backups as ZIP files in dist/backups.noindex;
+never retain launchable .previous.*.app backups. Run cleanup-apps.py through the
+installer to archive old generated bundles and refresh LaunchServices registration.
+Preserve Herdr sessions and skip cleanup of any build that is still running.

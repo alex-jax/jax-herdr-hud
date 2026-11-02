@@ -3,9 +3,9 @@ set -euo pipefail
 MAC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_DIR="$(dirname "$MAC_DIR")"
 "$MAC_DIR/scripts/build-app.sh" release
-APP="$MAC_DIR/dist/Herdr Hud.app"
+APP="$MAC_DIR/dist/build.noindex/Herdr Hud.app"
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")
-NAME="Herdr-Hud-${VERSION}-macOS-27-arm64-preview"
+NAME="Herdr-Hud-${VERSION}-macOS-27-arm64"
 DMG="$MAC_DIR/dist/$NAME.dmg"
 STAGE=$(mktemp -d "$MAC_DIR/dist/.dmg-stage.XXXXXX")
 WORK=$(mktemp -d "$MAC_DIR/dist/.dmg-work.XXXXXX")

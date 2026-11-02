@@ -1,7 +1,7 @@
-# Herdr Hud 1.2 — native macOS preview 2
+# Herdr Hud 1.2 — native macOS app
 
 Native AppKit/SwiftTerm build for Apple silicon and macOS 27 or later.
-Herdr must be installed separately. This preview uses an ad-hoc signature and
+Herdr must be installed separately. This release uses an ad-hoc signature and
 is not Developer ID signed or Apple notarized.
 
 - Port Ubuntu 1.2's normal drag-to-select and plain-text automatic copy. Hold
@@ -15,6 +15,8 @@ is not Developer ID signed or Apple notarized.
   the CLI's keyboard-protocol encoding for image-only paste shortcuts.
 - Preserve CLI foreground/background pairs so highlights remain readable.
 - Default fresh preferences to VS Code Dark and retain saved theme choices.
+- Keep one installed app during updates, with ZIP backups and unindexed build
+  bundles instead of extra launchable app copies.
 - Restore terminal focus after header actions. Release selection and type without
   an Escape step.
 

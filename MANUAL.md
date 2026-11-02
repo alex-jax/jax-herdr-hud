@@ -1,6 +1,6 @@
 # Herdr Hud manual
 
-For the native macOS 27 preview, see the [Mac guide](macos/README.md). The
+For the native macOS 27 app, see the [Mac guide](macos/README.md). The
 instructions in this manual describe the Ubuntu implementation; the Mac port
 preserves its session, terminal identity, close protection, and attention rules.
 

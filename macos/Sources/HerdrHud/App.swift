@@ -910,7 +910,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   }
   @objc func about() {
     NSApp.orderFrontStandardAboutPanel(options: [
-      .applicationName: "Herdr Hud", .applicationVersion: "1.2 · macOS preview 2",
+      .applicationName: "Herdr Hud", .applicationVersion: "1.2 · macOS",
       .credits: NSAttributedString(
         string:
           "Native macOS port of Alex Jax’s independent Ubuntu remix.\nOriginal Herdr HUD: Alex Finn.\nPalettes: Christian Hergert / Ptyxis. Terminal: SwiftTerm contributors.\nGPL-3.0-or-later; retained MIT and Ptyxis notices are bundled."

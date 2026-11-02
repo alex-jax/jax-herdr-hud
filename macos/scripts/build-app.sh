@@ -8,7 +8,7 @@ if [[ "$CONFIGURATION" != release && "$CONFIGURATION" != debug ]]; then
 fi
 swift build --package-path "$MAC_DIR" -c "$CONFIGURATION" --product HerdrHud
 BIN_DIR="$(swift build --package-path "$MAC_DIR" -c "$CONFIGURATION" --show-bin-path)"
-APP="$MAC_DIR/dist/Herdr Hud.app"
+APP="$MAC_DIR/dist/build.noindex/Herdr Hud.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 chmod -R u+w "$APP"
 cp "$BIN_DIR/HerdrHud" "$APP/Contents/MacOS/HerdrHud"
@@ -28,7 +28,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>Herdr Hud</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.2</string>
-<key>CFBundleVersion</key><string>2</string>
+<key>CFBundleVersion</key><string>3</string>
 <key>LSMinimumSystemVersion</key><string>27.0</string>
 <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
 <key>NSHighResolutionCapable</key><true/>

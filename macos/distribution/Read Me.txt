@@ -1,4 +1,4 @@
-HERDR HUD — macOS preview 1.2
+HERDR HUD — macOS 1.2
 Ubuntu 1.2 terminal interaction update: plain-text drag selection and history,
 clipboard text paste, browser links, paired CLI colors, focus, and VS Code Dark.
 
@@ -16,9 +16,8 @@ INSTALL
    ~/.local/bin/herdr and PATH.
 
 FIRST LAUNCH
-This is an ad-hoc signed local preview, not a Developer ID signed or Apple
-notarized release. macOS may block it after it is downloaded or shared.
-If you trust the copy your friend sent, first try opening it, then use
+This app uses an ad-hoc signature and is not Apple notarized. macOS may block it after it is downloaded or shared.
+If you trust the GitHub download, first try opening it, then use
 System Settings → Privacy & Security → Open Anyway, and confirm Open.
 Apple's instructions: https://support.apple.com/en-us/102445
 

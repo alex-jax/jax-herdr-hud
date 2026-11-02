@@ -1,7 +1,7 @@
 # Herdr Hud for macOS
 
 Native AppKit/SwiftTerm companion for **macOS 27 on Apple silicon**, version **1.2**. The native app incorporates Ubuntu 1.2 terminal interaction
-changes. It is an ad-hoc signed preview; it is not Apple notarized.
+changes. Download the DMG from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
 
 ## Build and install
 
@@ -16,9 +16,12 @@ open "$HOME/Applications/Herdr Hud.app"
 The first build downloads the pinned SwiftTerm source and its Swift package
 dependencies. `Package.resolved` records exact revisions. The installed app embeds
 its palettes and terminal library; it needs no Python, GTK, VTE, or Homebrew runtime.
-The installer retains the previous app bundle in `macos/dist` when replacing it.
+Updates replace the single installed app at `~/Applications/Herdr Hud.app`.
+The installer keeps recoverable ZIP backups in `macos/dist/backups.noindex`,
+cleans up old generated app copies, and refreshes macOS app registration. Build
+bundles stay in `macos/dist/build.noindex` so they do not appear as extra installed apps.
 The build uses a local ad-hoc signature. Developer ID signing, notarization,
-automatic updates, Intel Macs, and older macOS releases are outside this preview.
+automatic updates, Intel Macs, and older macOS releases are outside this release.
 
 ## Share a DMG
 
@@ -27,7 +30,7 @@ macos/scripts/build-dmg.sh
 ```
 
 This builds the release app and creates
-`macos/dist/Herdr-Hud-1.2-macOS-27-arm64-preview.dmg` plus a SHA-256 file.
+`macos/dist/Herdr-Hud-1.2-macOS-27-arm64.dmg` plus a SHA-256 file.
 The image contains the app, an Applications shortcut, installation/first-launch
 instructions, and a source archive with the current Mac source, shared palette
 sources, licenses, and pinned Swift dependency sources. It excludes personal
@@ -118,7 +121,7 @@ and sidebar behavior, and stops only that disposable server during cleanup:
 
 ```sh
 macos/scripts/build-app.sh debug
-"macos/dist/Herdr Hud.app/Contents/MacOS/HerdrHud" --smoke-test
+"macos/dist/build.noindex/Herdr Hud.app/Contents/MacOS/HerdrHud" --smoke-test
 cat /private/tmp/herdr-hud-smoke-result.txt
 ```
 

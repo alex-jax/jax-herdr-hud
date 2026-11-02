@@ -159,3 +159,31 @@ Current run logs are `/private/tmp/herdr-hud-1.2-core.log`,
 `/private/tmp/herdr-hud-1.2-release.log`, and `/private/tmp/herdr-hud-1.2-install.log`.
 These temporary outputs are not shipped. Publication status is separate from
 local build/install validation; no public notarized release is claimed here.
+
+## GitHub release and update cleanup — 2 November 2026
+
+Per the project owner's distribution decision, the Mac app is released as version
+1.2 without a preview designation. The app uses an ad-hoc signature, with factual
+first-launch guidance in the DMG. Developer ID enrollment/notarization is not part
+of this project's publication workflow. Internal bundle build number is now 3.
+
+- Core checks passed again after updating release branding. Terminal behavior is
+  unchanged from the tested Ubuntu 1.2 parity update above; this follow-up changes
+  release branding, packaging, and the local installer.
+- Built the optimized release and installed it locally. Verified every installed
+  file against the build bundle and verified its code signature. Hud launched
+  successfully as version 1.2/build 3, with the Herdr session list unchanged.
+- Replaced launchable backup app bundles with verified ZIP archives. Existing
+  generated backup and old build copies were archived, unregistered from
+  LaunchServices, and removed from their old paths. A second installer run passed
+  without recreating launchable backup apps. Cleanup is idempotent.
+- Spotlight returned exactly one Hud app: `~/Applications/Herdr Hud.app`.
+  Build bundles now live in `macos/dist/build.noindex`; ZIP backups live in
+  `macos/dist/backups.noindex`. The installer stages/verifies the new bundle,
+  waits for only Hud to quit, keeps a checked ZIP backup, and refreshes app
+  registration. No Herdr servers or terminals were stopped.
+- `bash -n` passed for build-app.sh, build-dmg.sh, and install-app.sh; the cleanup
+  helper compiled and ran successfully against the generated duplicate bundles.
+
+The existing Debian 1.2 artifact is retained. This Mac packaging update does not
+claim a new Debian build or a new run of Ubuntu/GNOME integration tests.
