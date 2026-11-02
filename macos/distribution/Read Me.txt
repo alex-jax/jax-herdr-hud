@@ -1,0 +1,51 @@
+HERDR HUD — macOS preview 1.2
+Ubuntu 1.2 terminal interaction update: plain-text drag selection and history,
+clipboard text paste, browser links, paired CLI colors, focus, and VS Code Dark.
+
+REQUIREMENTS
+• Apple silicon Mac (M1 or later), macOS 27 or later.
+• Herdr installed separately. This app was developed with Herdr 0.9.1.
+  Installation instructions: https://herdr.dev/docs/install/
+• Intel Macs and older macOS versions are not supported by this build.
+
+INSTALL
+1. Open the DMG and drag Herdr Hud into Applications.
+2. Eject the DMG, then open Herdr Hud from Applications.
+3. If Herdr is not found, open the gear button → Herdr connection → Browse…,
+   select your Herdr executable, then click Retry. Automatic discovery checks
+   ~/.local/bin/herdr and PATH.
+
+FIRST LAUNCH
+This is an ad-hoc signed local preview, not a Developer ID signed or Apple
+notarized release. macOS may block it after it is downloaded or shared.
+If you trust the copy your friend sent, first try opening it, then use
+System Settings → Privacy & Security → Open Anyway, and confirm Open.
+Apple's instructions: https://support.apple.com/en-us/102445
+
+USE
+• Click the floating H to show or hide Hud; drag H to move it.
+• Use + New space and the + next to a space to add terminals.
+• Drag normally to select/copy; Shift+click/drag controls interactive CLIs.
+• Drag past an edge to extend history selection; release then type normally.
+• Command/Control-click web links to open the browser. Right-click or
+  Command/Control-V pastes text; image-only paste retains the CLI shortcut.
+• Fresh preferences use VS Code Dark. Existing theme choices are preserved.
+• The gear opens Settings. Choose theme… offers theme previews and Light/Dark.
+• Closing/hiding Hud keeps sessions running. Quitting disconnects only Hud's
+  display clients; it does not stop Herdr servers, terminals, or agents.
+• Explicit Close on a terminal or space does stop that terminal or space.
+
+SOURCE AND LICENSES
+This is Alex Jax's independent remix, based on Alex Finn's original HUD.
+The macOS app uses AppKit and SwiftTerm, with the GNOME companion's layout,
+Ubuntu fonts, and Ptyxis palettes. It is licensed GPL-3.0-or-later with retained
+third-party notices. The application bundle contains the licenses.
+
+Source.zip includes this build's Mac source, shared palette sources, build
+scripts, licenses, and the pinned Swift package dependency sources.
+Extract it and see jax-herdr-hud/macos/README.md for build instructions.
+The build requires Apple's Command Line Tools with Swift 6.2 or later and may
+fetch the pinned dependencies over the network. Dependency revisions are in
+macos/Package.resolved. Herdr itself is not included in this DMG.
+
+Project: https://github.com/alex-jax/jax-herdr-hud

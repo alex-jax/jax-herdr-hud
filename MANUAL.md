@@ -1,5 +1,9 @@
 # Herdr Hud manual
 
+For the native macOS 27 preview, see the [Mac guide](macos/README.md). The
+instructions in this manual describe the Ubuntu implementation; the Mac port
+preserves its session, terminal identity, close protection, and attention rules.
+
 Herdr Hud is a local desktop companion for Herdr: a GTK terminal window and a
 GNOME Shell extension providing a floating **H** button. The project targets
 Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
