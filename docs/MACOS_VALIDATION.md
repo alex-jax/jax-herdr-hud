@@ -78,4 +78,6 @@ automated runner results, not hands-on installation or complete visual parity ch
 download/first-open approval, live selection/history and links, visual comparison,
 multiple monitors, actual lock/sleep/wake, login startup, replacement and removal.
 Return the OS version, Mac model and any failed steps for this exact checksum.
-Do not publish `v1.3` until these results are recorded and any fixes are retested.
+Do not publish a Mac installer for `v1.3` until these results are recorded and
+any fixes are retested. The Debian/Ubuntu 1.3 release does not include a Mac
+installer.

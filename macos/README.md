@@ -1,7 +1,7 @@
 # Herdr Hud for macOS
 
 Native AppKit/SwiftTerm companion for **macOS 27 on Apple silicon**, version **1.2**. The native app incorporates Ubuntu 1.2 terminal interaction
-changes. Download the DMG from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
+changes. Download the DMG from the [v1.2 GitHub release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2).
 
 ## Build and install
 

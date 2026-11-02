@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Assemble reviewable local release artifacts. Never uploads or registers names."""
+"""Assemble release assets and review materials. Never uploads or registers names."""
 import argparse
 import gzip
 import hashlib
@@ -57,7 +57,15 @@ def main():
     shutil.copytree(SOURCE / 'docs', out / 'review-materials', dirs_exist_ok=True)
     for name in ('LICENSE', 'NOTICE.md'):
         shutil.copy2(SOURCE / name, out / name)
-    artifacts = [p for p in out.rglob('*') if p.is_file() and p.name != 'SHA256SUMS']
+    # Checksums are for files users download from the release page. Local review
+    # copies of docs, LICENSE and NOTICE are already represented in the source
+    # archive and are not individual release assets.
+    release_assets = [zip_path, out / (prefix + '-source.tar.gz')]
+    release_assets.extend(out.glob('*.deb'))
+    release_assets.extend(out.glob('*.dmg'))
+    if args.snap:
+        release_assets.append(out / args.snap.name)
+    artifacts = sorted({p for p in release_assets if p.is_file()})
     checksums = ''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' +
                         str(p.relative_to(out)) + '\n' for p in sorted(artifacts))
     (out / 'SHA256SUMS').write_text(checksums)

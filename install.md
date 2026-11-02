@@ -2,12 +2,9 @@
 
 ## macOS — Apple silicon
 
-The 1.3 Mac port targets macOS 26 and 27. Test builds use a self-contained `.app`
-inside `jax-herdr-hud-1.3-macos-arm64.dmg`; public release validation is pending.
-Install Herdr separately, open the DMG, drag Hud to Applications, and launch it.
-The first build is not notarized and may require **Privacy & Security → Open Anyway**.
-See the [Mac installation, updates and removal guide](docs/MACOS.md) for complete
-steps and the current validation status. No Homebrew or Python is needed by users.
+The Apple silicon Mac port targets macOS 26 and 27 and remains in development.
+There is no Mac installer in the stable 1.3 release. See the [Mac installation,
+updates and removal guide](docs/MACOS.md) for test builds and validation status.
 
 ## Ubuntu
 
@@ -50,9 +47,9 @@ sudo apt install ./downloaded-file.deb
 
 ## Updating
 
-**Moving to 1.2:** download and install the `.deb` under **Assets** manually.
-Earlier update checkers do not recognize the new two-part version format.
-Version 1.2 supports this format for future update checks.
+**Moving to 1.3:** Hud 1.2 can detect and install this update using the download
+arrow. Older versions that do not recognize two-part version numbers must be
+updated manually by downloading the `.deb` under **Assets**.
 
 Hud checks GitHub silently every six hours. When the download arrow appears,
 click it to download and install the new `.deb`. Approve Ubuntu's password prompt

@@ -1,6 +1,25 @@
 # Validation
 
-## 1.3 development — 28 September 2026
+## 1.3 stable Debian release — 2 November 2026
+
+Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1. The v1.3 release is
+Debian-only; the Mac installer remains pending its separate manual gates.
+
+- 54 unit tests passed, including package layout, update handling, platform
+  portability and release checksum coverage.
+- Built `jax-herdr-hud_1.3-1_all.deb`; extracted launcher reports Herdr Hud 1.3.
+  APT dependency simulation proposed no package changes.
+- The exact extracted Debian payload passed setup, theme, update, sidebar,
+  real Herdr desktop and link smoke tests. The packaged extension passed the
+  isolated GNOME 50 lifecycle and pointer smoke test.
+- Release checksums verified for the `.deb`, extension ZIP and source archive.
+  The local `1.3-1` installation was restarted during this release task, and its
+  app modules match the extracted release payload. Existing Herdr sessions were
+  retained.
+- No Mac installer is included. Hands-on Mac validation remains pending; see
+  [Mac validation](MACOS_VALIDATION.md).
+
+## 1.3 Mac development validation — 28 September 2026
 
 - Apple silicon runtime gate passed on macOS 26.6.2: native Quartz GTK/VTE,
   PTY output, frozen runtime launch and strict bundle signature verification.
@@ -21,7 +40,6 @@
 - Hands-on Mac installation, complete visual/interaction parity, multiple monitors,
   lock/sleep, login startup and replacement/removal remain pending on both versions.
   The checksum and release checklist are in [Mac validation](MACOS_VALIDATION.md).
-  No stable 1.3 release has been published; `v1.2` remains unchanged.
 
 ## 1.2 — 28 September 2026
 

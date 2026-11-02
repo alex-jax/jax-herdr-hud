@@ -35,6 +35,13 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
             Gtk.main_iteration_do(False)
         time.sleep(.01)
     try:
+        app.hide()
+        app.activate()
+        until = time.monotonic() + 3
+        while not app.window.get_visible() and time.monotonic() < until:
+            pump()
+        assert app.window.get_visible(), 'Application activation did not show Hud'
+        print('PASS: activating Hud again brings its window forward', flush=True)
         app.sessions_changed(None, backend.HerdrUnavailable('Herdr was not found'))
         assert app.stack.get_visible_child_name() == 'setup'
         assert 'not found' in app.setup_message.get_text()

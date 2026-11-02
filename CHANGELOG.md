@@ -1,12 +1,10 @@
 # Release notes
 
-## 1.3 — in development
+## 1.3 — 2 November 2026 (Ubuntu/Debian)
 
-- Add an Apple silicon macOS port using the shared GTK/VTE interface and terminal logic.
-- Add an AppKit floating H, desktop messages, window placement and per-user singleton.
-- Bundle the Mac runtime, fonts and icons in an ad-hoc-signed DMG; keep Herdr separate.
-- Add platform-specific downloads, executable discovery and Mac installation documentation.
-- Mac test builds are not notarized. Public release awaits validation on macOS 26 and 27.
+- Stable Ubuntu 26.04 / GNOME 50 release. The Debian package includes the companion and floating H extension.
+- Keep the 1.2 terminal behavior and bring Hud's window forward when the app is activated again.
+- The GTK/VTE Apple silicon Mac port remains in development. This release contains no Mac installer; see [Mac validation](docs/MACOS_VALIDATION.md).
 
 ## 1.2 — 28 September 2026
 

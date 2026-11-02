@@ -1,24 +1,19 @@
 # Build and publish on GitHub
 
-## Pending 1.3 cross-platform release
+## Debian release 1.3
 
-Version metadata is now 1.3; the existing published stable release remains 1.2.
-Use `scripts/build_macos.py` on Apple silicon or the Mac workflow to produce the
-DMG. See [Mac build instructions](MACOS.md) and [release gates](MACOS_VALIDATION.md).
-Do not publish `v1.3` until Mac validation passes on both supported OS versions
-and the exact Debian package has passed its checks and local installation.
-Build both platforms from the same final commit; retain the `v1.2` tag unchanged.
-Upload the DMG beside the Debian, extension and source assets, with checksums for
-all files. Record ad-hoc signing and lack of notarization in the release notes.
+The stable 1.3 release covers Ubuntu 26.04 / GNOME 50 and ships the Debian
+package, GNOME extension ZIP, source archive and checksums. The Apple silicon
+Mac port remains in development and has no installer in this release. Publish a
+Mac installer only after both macOS 26 and 27 validation gates pass; see
+[Mac build instructions](MACOS.md) and [release gates](MACOS_VALIDATION.md).
 
-The following records the existing 1.2 release procedure; substitute 1.3 only when
-its release gates are complete.
-
-Distribution uses the native Debian package and source installer. Release **1.2** uses tag **v1.2** and is a regular stable release.
+Distribution uses the native Debian package and source installer. Release
+**1.3** uses tag **v1.3** and is a regular stable Ubuntu release.
 
 ## Prepare the version
 
-Set `VERSION = '1.2'` and `RELEASE_TAG = 'v1.2'` in `app_info.py` before
+Set `VERSION = '1.3'` and `RELEASE_TAG = 'v1.3'` in `app_info.py` before
 building. The update checker uses the release tag, including prerelease ordering.
 The GNOME extension revision is separate; change it only when the extension changes.
 Review [CHANGELOG.md](../CHANGELOG.md), the manual and installation guide together.
@@ -58,11 +53,12 @@ Source test results do not establish that a new Debian artifact passed its check
 
 ## Publish
 
-Commit the reviewed source and documentation, tag the same commit `v1.2`, and
+Commit the reviewed source and documentation, tag the same commit `v1.3`, and
 push the commit and tag. Create a regular GitHub release with the approved release
 notes; leave **Set as a pre-release** unchecked and mark it as the latest release.
 Upload the tested `.deb`, extension ZIP, source archive and checksums under Assets.
-Update publication status in the README, changelog and validation record when done.
+Do not upload a Mac installer in the Debian 1.3 release. Update publication status
+in the README, changelog and validation record when done.
 
 Use version-independent release-page links in the installation guide. Users download
 `*_all.deb` under **Assets**. Keep the logout/login instruction prominent.

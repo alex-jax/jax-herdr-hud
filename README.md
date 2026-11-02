@@ -1,14 +1,16 @@
 # Herdr Hud
 
-**Native macOS app:** An AppKit/SwiftTerm port for macOS 27 on Apple silicon
-is available in [`macos/`](macos/README.md), with build and installation
-instructions. Download the Apple silicon DMG from [Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest). The Ubuntu installation below remains separate.
+**Native macOS app:** The AppKit/SwiftTerm version 1.2 for macOS 27 on Apple
+silicon remains available from the [v1.2 release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2).
+Its build and installation instructions are in [`macos/`](macos/README.md).
+The stable 1.3 release below is Debian-only; the GTK/VTE Mac port remains in development.
 
 A native GTK/VTE companion for local Herdr terminals and agents on Ubuntu 26.04.
 
-An **Apple silicon macOS 26/27 port is in development for 1.3**, retaining the 1.2
-interface and terminal behavior. [Mac installation and build instructions](docs/MACOS.md)
-describe the test builds; Mac release validation is still pending.
+**Ubuntu release 1.3 is stable.** The Apple silicon macOS 26/27 port remains in
+development and is not included in this release. [Mac installation and build
+instructions](docs/MACOS.md) describe the test builds; Mac release validation is
+still pending.
 
 **A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).**
 Original: [Herdr HUD for Omarchy](https://github.com/finna/omarchy-herdr-hud).
@@ -27,8 +29,9 @@ The native `.deb` installs the app and optional floating H extension, and APT
 resolves its system Python/GTK/VTE dependencies. Herdr and CLI agents are separate
 installations. Source installation and modification instructions are also included.
 
-**1.2 improves scrolling text selection, clipboard input and browser links, and defaults new installations to VS Code Dark.**
-Download the latest stable release, **1.2**, from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
+**1.3 is the latest stable Ubuntu release.** It keeps the 1.2 terminal behavior
+and brings the window forward when Hud is activated again. Download the latest
+stable release from [GitHub Releases](https://github.com/alex-jax/jax-herdr-hud/releases/latest).
 See the [release notes](CHANGELOG.md) and
 [validation record](docs/VALIDATION.md). Distribution is through GitHub;
 there is no Snap Store or App Center release.
