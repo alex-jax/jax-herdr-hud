@@ -1,10 +1,11 @@
 #if DEBUG
 import AppKit
+import ApplicationServices
 import HudCore
 
 extension SmokeRun {
   func liveCLIChecks() async throws {
-    guard let key = app.selected, let (session, _, pane) = app.pane(key),
+    guard let key = app.selected, app.pane(key) != nil,
       let terminal = app.terminals[key] else { throw HudError.message("Missing disposable CLI terminal") }
     let root = URL(fileURLWithPath: "/private/tmp/hud-cli-" + UUID().uuidString)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -51,9 +52,7 @@ finally:
     try await until("controlled CLI starts") { terminal.visibleTextRows().contains("roundtrip line 100") }
     var finished = false
     defer { if !finished { terminal.send(source: terminal, data: [113][...]) } }
-    _ = try await rpc(session, "pane.report_agent", [
-      "pane_id": pane.pane_id, "source": "custom:hud-test", "agent": "hud-test", "state": "working"])
-    try await until("controlled CLI identity") { terminal.agentTerminal }
+    try require(!terminal.agentTerminal, "CLI selection does not depend on agent reporting")
     let ch = terminal.selectionCellSize.height, cw = terminal.selectionCellSize.width
     func mouse(_ type: NSEvent.EventType, _ y: CGFloat) -> NSEvent {
       NSEvent.mouseEvent(with: type,
@@ -64,7 +63,7 @@ finally:
     func offset() -> Int { Int((try? String(contentsOf: output, encoding: .utf8)) ?? "") ?? 100 }
     for direction in [-1, 1] {
       let before = offset()
-      let edge = direction < 0 ? -ch : terminal.bounds.height + ch
+      let edge = direction < 0 ? ch / 2 : terminal.bounds.height - ch / 2
       terminal.mouseDown(with: mouse(.leftMouseDown, terminal.bounds.height / 2))
       terminal.mouseDragged(with: mouse(.leftMouseDragged, edge))
       try await until("real CLI wheel direction \(direction)", timeout: 4) {
@@ -78,6 +77,49 @@ finally:
       let released = offset()
       try await Task.sleep(nanoseconds: 250_000_000)
       try require(offset() == released, "real CLI wheel stops on release")
+    }
+    if ProcessInfo.processInfo.environment["HUD_TEST_REAL_POINTER"] == "1" {
+      try require(AXIsProcessTrusted(), "macOS Accessibility permission required for pointer events")
+      guard let oldPosition = CGEvent(source: nil)?.location else {
+        throw HudError.message("Cannot read pointer position")
+      }
+      defer { CGWarpMouseCursorPosition(oldPosition) }
+      func screenPoint(_ y: CGFloat) -> CGPoint {
+        let inWindow = terminal.convert(NSPoint(x: cw * 6, y: terminal.bounds.height - y), to: nil)
+        let screen = app.window.convertPoint(toScreen: inWindow)
+        return CGPoint(x: screen.x, y: (NSScreen.screens.first?.frame.maxY ?? 0) - screen.y)
+      }
+      func post(_ type: CGEventType, _ point: CGPoint) throws {
+        guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left) else {
+          throw HudError.message("Cannot create pointer event")
+        }
+        event.post(tap: .cghidEventTap)
+      }
+      app.show()
+      try await Task.sleep(nanoseconds: 200_000_000)
+      for direction in [-1, 1] {
+        let before = offset(), start = screenPoint(terminal.bounds.height / 2)
+        let edge = screenPoint(direction < 0 ? ch / 2 : terminal.bounds.height - ch / 2)
+        try post(.mouseMoved, start)
+        try post(.leftMouseDown, start)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        try post(.leftMouseDragged, edge)
+        do {
+          try await until("pointer drag direction \(direction)", timeout: 4) {
+            direction < 0 ? offset() < before : offset() > before
+          }
+        } catch {
+          try? post(.leftMouseUp, edge)
+          throw error
+        }
+        try post(.leftMouseUp, edge)
+        try await Task.sleep(nanoseconds: 250_000_000)
+        let released = offset()
+        try await Task.sleep(nanoseconds: 250_000_000)
+        try require(offset() == released, "pointer release stops scrolling direction \(direction)")
+        try require(NSPasteboard.general.string(forType: .string)?.contains("roundtrip line") == true,
+          "pointer selection copies CLI text direction \(direction)")
+      }
     }
     terminal.send(source: terminal, data: [113][...])
     try await until("controlled CLI exits") { terminal.visibleTextRows().contains { $0.contains("HUD_CLI_ROUNDTRIP_DONE") } }

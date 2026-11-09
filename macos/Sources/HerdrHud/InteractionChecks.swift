@@ -70,15 +70,19 @@ extension SmokeRun {
     try require(sent.isEmpty, "link clicks do not reach CLI")
 
     // Retained shell history, using the same asynchronous callback as pane.read.
-    terminal.readHistory = { completion in completion(.success((0..<100).map { "\u{1b}[32mhistory line \($0)\u{1b}[0m" }.joined(separator: "\n"))) }
+    terminal.readHistory = { completion in
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        completion(.success((0..<100).map { "\u{1b}[32mhistory line \($0)\u{1b}[0m" }.joined(separator: "\n")))
+      }
+    }
     terminal.mouseDown(with: mouse(.leftMouseDown, cw, ch * 3))
     terminal.mouseDragged(with: mouse(.leftMouseDragged, cw * 8, -ch * 2))
-    try await Task.sleep(nanoseconds: 350_000_000)
+    try await Task.sleep(nanoseconds: 1_000_000_000)
     terminal.mouseUp(with: mouse(.leftMouseUp, cw * 8, -ch * 2))
     try require(NSPasteboard.general.string(forType: .string)?.contains("history line") == true, "edge selection copies retained shell history")
     try require(window.firstResponder === terminal, "history release restores live terminal focus")
     terminal.readHistory = nil
-    terminal.agentTerminal = true
+    terminal.agentTerminal = false
     for direction in [-1, 1] {
       var offset = 30
       func redraw() {
@@ -104,7 +108,9 @@ extension SmokeRun {
     terminal.keyDown(with: key("a"))
     try await Task.sleep(nanoseconds: 100_000_000)
     try require(sent.last == 97, "typing after selection needs no Escape")
+    window.orderOut(nil)
     app.show()
+    try await until("main window regains focus") { app.window.isKeyWindow }
     app.window.makeFirstResponder(app.themeButton)
     app.toggleTheme()
     try await Task.sleep(nanoseconds: 100_000_000)

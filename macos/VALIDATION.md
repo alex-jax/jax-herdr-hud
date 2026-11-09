@@ -187,3 +187,12 @@ of this project's publication workflow. Internal bundle build number is now 3.
 
 The existing Debian 1.2 artifact is retained. This Mac packaging update does not
 claim a new Debian build or a new run of Ubuntu/GNOME integration tests.
+
+## Edge selection update — 9 November 2026
+
+On macOS 27.2 arm64 with Herdr 0.9.1, the debug desktop smoke passed with
+simulated drag events at both terminal edges against a disposable real Herdr CLI
+that did not report an agent. It also checked delayed retained-history loading,
+copying, focus and stopping on release. A separate system-level pointer run could
+not complete because the test app lacked macOS Accessibility permission; it does
+not establish physical pointer behavior. The release bundle was built locally.

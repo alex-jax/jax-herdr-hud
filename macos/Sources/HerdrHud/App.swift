@@ -335,6 +335,9 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     }
     prune()
     render()
+    if !showingSetup, let selected, let (activeSession, activeSnapshot, activePane) = pane(selected) {
+      title.stringValue = terminalHeading(session: activeSession, snapshot: activeSnapshot, pane: activePane)
+    }
     if selected == nil, let pane = snapshot.panes.first {
       select(TerminalKey(session.socket_path, pane.terminal_id))
     }
@@ -478,7 +481,8 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   }
   func terminalHeading(session:Session,snapshot:Snapshot,pane:Pane) -> String {
     let space = snapshot.workspaces.first { $0.workspace_id == pane.workspace_id }?.label ?? session.name
-    return (session.name == backend.defaultSession ? "" : session.name + " / ") + space + "  /  " + paneTitle(pane,snapshot:snapshot)
+    let identity = titleIdentity(pane.terminal_title_stripped)
+    return (session.name == backend.defaultSession ? "" : session.name + " / ") + space + "  /  " + paneTitle(pane,snapshot:snapshot) + (identity.map { " - " + $0 } ?? "")
   }
   func render() {
     guard !closing else { return }

@@ -58,6 +58,9 @@ menus/dialogs can still differ from GTK.
   Login startup is opt-in. macOS may require approval in System Settings.
 - Closing the window hides it and keeps monitoring and attachments alive. **Quit**
   disconnects only Hud's attach clients. Herdr servers, shells, and agents remain.
+- When the terminal title begins with `user@host`, the heading shows that identity,
+  including for SSH or containers that report it. The identity disappears when a
+  program replaces the title; Herdr does not otherwise report the logged-in user.
 - Spaces and Agents refer to the same live terminals. Search, collapse, rename,
   and theme changes retain connections and scrollback. Right-click a sidebar row
   for Rename/Close; use its space's **+** for a new terminal.
@@ -66,7 +69,7 @@ menus/dialogs can still differ from GTK.
   workspace, unlike hiding or quitting.
 - Normal left dragging selects and automatically copies plain text. Shift+click/drag
   sends mouse input to interactive CLIs. The route stays fixed until release.
-- Drag beyond either terminal edge to extend selection through retained shell
+- Drag to the top or bottom edge of the terminal to extend selection through retained shell
   history or a live agent transcript. Live selection keeps the original terminal,
   colors, geometry, and keyboard focus. Capture stops at 20,000 lines or pauses if
   a redraw cannot be matched safely. Release finishes copying; typing needs no Escape.

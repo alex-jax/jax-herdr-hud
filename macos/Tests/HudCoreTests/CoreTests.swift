@@ -18,6 +18,14 @@ func expectError<T>(_ body: @autoclosure () throws -> T, _ handler: (Error) -> V
 }
 
 final class CoreTests {
+  func testTerminalTitleIdentity() {
+    expectEqual(titleIdentity("root@server:/app"), "root@server")
+    expectEqual(titleIdentity("jax@mac.local ~"), "jax@mac.local")
+    for title in ["", "Codex", "mail user@example.com", "root@host!bad"] {
+      expectNil(titleIdentity(title))
+    }
+    expectNil(titleIdentity(nil))
+  }
   func testAttentionTransitions() {
     expectNil(attention(previous: nil, current: "idle"))
     expectNil(attention(previous: "unknown", current: "idle"))
@@ -166,6 +174,7 @@ final class CoreTests {
 @main struct CoreCheckRunner {
   static func main() throws {
     let suite = CoreTests()
+    suite.testTerminalTitleIdentity()
     suite.testAttentionTransitions()
     try suite.testEnvironmentAndExplicitExecutable()
     try suite.testPreferencesRecoverInvalidFields()

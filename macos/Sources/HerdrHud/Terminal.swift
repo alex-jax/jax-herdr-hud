@@ -151,7 +151,9 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
       readHistory? { [weak self] result in
         guard let self, generation == self.historyGeneration, self.selecting else { return }
         switch result {
-        case .success(let text): self.retainedHistory = text
+        case .success(let text):
+          self.retainedHistory = text
+
         case .failure(let error): self.onSelectionStatus?("Could not load selection history: " + error.localizedDescription)
         }
       }
@@ -171,21 +173,15 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
     let rowHeight = selectionCellSize.height
     let atEdge = point.y < rowHeight || point.y >= bounds.height - rowHeight
     if selecting && !linkPress && atEdge, let pressEvent {
-      if !agentTerminal, let text = retainedHistory,
-        text.components(separatedBy: "\n").count > terminalDimensions.rows + 1 {
-        beginRetainedSelection(text, press: pressEvent, motion: event)
-        return
-      }
-      if agentTerminal {
-        // Finish SwiftTerm's local drag and keep its live renderer/input surface.
-        super.mouseUp(with: routed(event))
-        selectNone()
-        let selection = LiveSelection(terminal: self, rows: initialRows,
-          anchor: selectionPoint(pressEvent))
-        liveSelection = selection
-        selection.move(to: point)
-        return
-      }
+      // Herdr's attach client uses the same terminal modes for shells and CLIs.
+      // Try the live screen first; fall back to retained history if it cannot scroll.
+      super.mouseUp(with: routed(event))
+      selectNone()
+      let selection = LiveSelection(terminal: self, rows: initialRows,
+        anchor: selectionPoint(pressEvent))
+      liveSelection = selection
+      selection.move(to: point)
+      return
     }
     super.mouseDragged(with: routed(event))
   }
@@ -263,13 +259,14 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
     #if DEBUG
       if let testScrollCLI { testScrollCLI(direction); return }
     #endif
-    guard let window,
+    guard window != nil,
       let cg = CGEvent(scrollWheelEvent2Source: nil, units: .line, wheelCount: 1,
         wheel1: Int32(-direction), wheel2: 0, wheel3: 0) else { return }
-    // SwiftTerm uses event coordinates for wheel reports. Aim inside the transcript.
-    let screen = window.convertPoint(toScreen: convert(NSPoint(x: bounds.midX, y: bounds.midY), to: nil))
+    // NSEvent(cgEvent:) has no window, so its locationInWindow is derived from
+    // the global event coordinates. Encode the desired window-relative point.
+    let point = convert(NSPoint(x: bounds.midX, y: bounds.midY), to: nil)
     let desktopTop = NSScreen.screens.first?.frame.maxY ?? 0
-    cg.location = NSPoint(x: screen.x, y: desktopTop - screen.y)
+    cg.location = NSPoint(x: point.x, y: desktopTop - point.y)
     cg.flags = []
     guard let event = NSEvent(cgEvent: cg) else { return }
     allowMouseReporting = pressReporting
@@ -293,6 +290,15 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
   override func viewDidMoveToWindow() {
     super.viewDidMoveToWindow()
     if window == nil { endHistorySelection() }
+  }
+  func fallbackToRetainedHistory() -> Bool {
+    guard selecting, let text = retainedHistory,
+      text.components(separatedBy: "\n").count > terminalDimensions.rows + 1,
+      let press = pressEvent, let motion = lastDragEvent else { return false }
+    liveSelection?.stop()
+    liveSelection = nil
+    beginRetainedSelection(text, press: press, motion: motion)
+    return true
   }
   private func beginRetainedSelection(_ text: String, press: NSEvent, motion: NSEvent) {
     super.mouseUp(with: routed(motion))

@@ -12,7 +12,7 @@ public struct Session: Codable, Equatable, Sendable {
 }
 public struct Pane: Decodable, Equatable, Sendable {
   public let pane_id, terminal_id, workspace_id, tab_id, agent_status: String
-  public let label, tab_label, agent, cwd, foreground_cwd, title, process_title: String?
+  public let label, tab_label, agent, cwd, foreground_cwd, title, process_title, terminal_title_stripped: String?
   public var displayName: String {
     [label, tab_label, title, process_title].compactMap { $0 }.first { !$0.isEmpty } ?? "Terminal"
   }
@@ -123,4 +123,12 @@ public struct Preferences: Codable {
     try JSONEncoder().encode(self).write(
       to: Self.directory.appendingPathComponent("settings.json"), options: .atomic)
   }
+}
+
+/// Identity explicitly supplied by a shell in its terminal title.
+public func titleIdentity(_ title: String?) -> String? {
+  guard let title, let range = title.range(
+    of: #"^[A-Za-z0-9_][A-Za-z0-9_.-]*@[A-Za-z0-9][A-Za-z0-9_.-]*(?=$|[: /])"#,
+    options: .regularExpression) else { return nil }
+  return String(title[range])
 }

@@ -59,6 +59,14 @@
         try require(
           initial.workspaces.count == 1 && initial.panes.count == 1, "one initial workspace")
         try require(!initial.canClose(pane: pane), "first terminal protected")
+        terminal.send(source: terminal, data: Array("printf '\\033]0;root@remote:/app\\007'; sleep 20\r".utf8)[...])
+        try await until("reported terminal identity", timeout: 20) { app.title.stringValue.hasSuffix(" - root@remote") }
+        terminal.send(source: terminal, data: [3][...])
+        try await Task.sleep(nanoseconds: 300_000_000)
+        terminal.send(source: terminal, data: Array("printf '\\033]0;Codex\\007'; sleep 20\r".utf8)[...])
+        try await until("cleared terminal identity", timeout: 20) { !app.title.stringValue.contains("root@remote") }
+        terminal.send(source: terminal, data: [3][...])
+        try await Task.sleep(nanoseconds: 300_000_000)
         try await interactionChecks()
         try await liveCLIChecks()
         let screen = {

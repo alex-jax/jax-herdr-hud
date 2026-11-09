@@ -39,6 +39,7 @@ final class LiveSelection {
   private var anchorRow: Int, anchorColumn: Int
   private var point: NSPoint
   private var initialFrame = true, waiting = false, paused = false
+  private var unchangedTicks = 0
   private var stopped = false
   private var dimensions: TerminalDimensions
   private var widths: [String: [Int]] = [:]
@@ -83,7 +84,12 @@ final class LiveSelection {
       let snapshot = terminal.terminalStateSnapshot().visibleRows
       let rows = terminal.visibleTextRows()
       for (row, text) in zip(snapshot, rows) { self.widths[text] = row.cellWidths.filter { $0 > 0 } }
-      guard rows != self.frame else { return }
+      guard rows != self.frame else {
+        self.unchangedTicks += 1
+        if self.initialFrame && self.unchangedTicks >= 3 { _ = terminal.fallbackToRetainedHistory() }
+        return
+      }
+      self.unchangedTicks = 0
       guard let overlap = ScrollOverlap.match(self.frame, rows, direction: direction) else {
         self.paused = true
         terminal.onSelectionStatus?("Selection paused: CLI text changed without a matching scroll overlap")
