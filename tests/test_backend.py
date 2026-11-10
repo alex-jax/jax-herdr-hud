@@ -7,7 +7,7 @@ import threading
 import unittest
 from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from backend import Monitor, HerdrUnavailable, attention, request
+from backend import Monitor, HerdrUnavailable, attention, request, start_agent
 
 
 class StartupTests(unittest.TestCase):
@@ -42,6 +42,22 @@ class StartupTests(unittest.TestCase):
         changed.assert_not_called()
 
 class BackendTests(unittest.TestCase):
+    def test_start_agent_uses_the_default_server_and_target_pane(self):
+        result = __import__('subprocess').CompletedProcess([], 0, 'ready\n', '')
+        with patch('backend.resolve_herdr', return_value='/usr/bin/herdr'), \
+             patch('backend.environment', return_value={}), \
+             patch('backend.subprocess.run', return_value=result) as run:
+            self.assertEqual(start_agent('codex-1', 'codex', 'pane-7'), 'ready')
+        self.assertEqual(run.call_args.args[0], [
+            '/usr/bin/herdr', '--session', 'default', 'agent', 'start', 'codex-1',
+            '--kind', 'codex', '--pane', 'pane-7', '--timeout', '30000'])
+
+    def test_start_agent_rejects_invalid_name(self):
+        with patch('backend.subprocess.run') as run:
+            with self.assertRaisesRegex(ValueError, 'Agent name'):
+                start_agent('Codex; unsafe', 'codex', 'pane-7')
+        run.assert_not_called()
+
     def test_completion_and_input_transitions(self):
         self.assertEqual(attention('working', 'idle'), 'Finished')
         self.assertEqual(attention('working', 'done'), 'Finished')

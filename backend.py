@@ -1,6 +1,7 @@
 """Herdr's local JSON-lines API and reconnecting session/event monitor."""
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -268,3 +269,25 @@ def create_shared_workspace(label, cwd=None):
         'label': label, 'cwd': cwd or str(Path.home()), 'focus': False})
     snapshot = request(session['socket_path'], 'session.snapshot')['snapshot']
     return session, snapshot, result['root_pane']['terminal_id']
+
+
+def start_agent(name, kind, pane_id, timeout=30000):
+    """Start a supported agent in a pane of the shared default server."""
+    if not isinstance(name, str) or not re.fullmatch(r'[a-z][a-z0-9_-]{0,31}', name):
+        raise ValueError('Agent name must start with a lowercase letter and contain only lowercase letters, numbers, _ or - (up to 32 characters).')
+    if not isinstance(kind, str) or not re.fullmatch(r'[a-z][a-z0-9_-]*', kind):
+        raise ValueError('Invalid agent kind.')
+    if not isinstance(pane_id, str) or not pane_id:
+        raise ValueError('Invalid pane ID for the new agent.')
+    executable = resolve_herdr()
+    try:
+        result = subprocess.run(
+            [executable, '--session', 'default', 'agent', 'start', name,
+             '--kind', kind, '--pane', pane_id, '--timeout', str(timeout)],
+            env=environment(), capture_output=True, text=True, timeout=timeout / 1000 + 10)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise RuntimeError('Could not start agent: ' + str(exc)) from exc
+    if result.returncode:
+        detail = (result.stderr or result.stdout).strip()
+        raise RuntimeError(detail or f'Herdr agent start exited with status {result.returncode}.')
+    return result.stdout.strip()

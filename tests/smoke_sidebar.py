@@ -84,6 +84,29 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
     app.snapshot_changed(heading_session, renamed_snapshot, None); pump()
     assert app.active_title.get_text().startswith('Studio  /  ')
     assert app.terminals[targets[0]] is heading_terminal
+    shell_identity = {**snapshot, 'panes': [
+        {**panes[0], 'terminal_title_stripped': 'root@remote:/srv'}, panes[1]]}
+    app.snapshot_changed(heading_session, shell_identity, None); pump()
+    assert app.active_title.get_text().endswith(' - root@remote')
+    agent_identity = {**snapshot, 'panes': [
+        {**panes[0], 'terminal_title_stripped': 'Codex', 'agent': 'codex'}, panes[1]]}
+    app.snapshot_changed(heading_session, agent_identity, None); pump()
+    assert app.active_title.get_text().endswith(' - root@remote')
+    for kind in ('terminal', 'agent'):
+        row = app.sidebar_rows[(kind, targets[0])]
+        assert row.get_has_tooltip()
+        assert row.get_tooltip_text() == 'root@remote'
+    app.snapshot_changed(other_session, agent_identity, None)
+    app.select(targets[2]); pump()
+    assert app.active_title.get_text().endswith(' - ' + app.local_identity)
+    assert app.sidebar_rows[('agent', targets[2])].get_tooltip_text() == app.local_identity
+    app.select(targets[0]); pump()
+    assert app.active_title.get_text().endswith(' - root@remote')
+    app.snapshot_changed(heading_session, snapshot, None); pump()
+    assert 'root@remote' not in app.active_title.get_text()
+    assert app.sidebar_rows[('terminal', targets[0])].get_tooltip_text() == 'root@remote'
+    app.snapshot_changed(other_session, {**snapshot, 'panes': panes[:1]}, None)
+    print('PASS: agent heading retains shell identity; existing agents use local identity; server identities stay separate', flush=True)
     app.show_setup()
     app.snapshot_changed(heading_session, snapshot, None); pump()
     assert app.active_title.get_text() == 'Settings'

@@ -1,5 +1,15 @@
 # Release notes
 
+## 1.4 — 10 November 2026 (Ubuntu/Debian)
+
+- Optionally start an installed agent when creating a new space; choose its kind and name. Use the root pane ID for startup, and retain the workspace if startup fails.
+- Paste clipboard text directly on the first right-click, including when focus changes or another application owns the clipboard. No extra menu or Paste button.
+- Keep the last reported `user@host` visible when an agent replaces the shell title; use the documented local Herdr identity fallback when no identity has been observed.
+- Show only `user@host` in terminal and agent hover tooltips, matching the active palette and dark/light theme.
+- Try live edge selection for shells and CLIs, fall back to retained history after three unchanged initial frames, and restore focus after selection overlays close.
+- Add regression checks for first-click paste, pane versus terminal IDs, real Codex startup in a disposable server, agent headings and identity-only tooltips.
+- Ubuntu source/package update only; Mac implementation requests are tracked in [issue #3](https://github.com/alex-jax/jax-herdr-hud/issues/3). GitHub release assets are not published by this commit.
+
 ## 1.3 — 2 November 2026 (Ubuntu/Debian)
 
 - Stable Ubuntu 26.04 / GNOME 50 release. The Debian package includes the companion and floating H extension.

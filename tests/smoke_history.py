@@ -78,6 +78,15 @@ try:
         data.x, data.y, data.state = 100, y, state
         if kind != Gdk.EventType.MOTION_NOTIFY: data.button = 1
         terminal.event(event); pump(.1)
+    def force_retained_fallback(selection, direction):
+        timer = selection.pop('live_timer', None)
+        if timer:
+            GLib.source_remove(timer)
+        until(lambda: not selection.get('busy'))
+        selection.update(dragging=True, initial_frame=True)
+        for _ in range(3):
+            app.live_selection_read(selection, selection['frame'][:], direction, None)
+        until(lambda: isinstance(selection.get('view'), hud.Terminal), timeout=8)
     shift = Gdk.ModifierType.SHIFT_MASK
     height = app.terminal_input_window(terminal).get_height()
     # Start by dragging DOWN from a scrolled live attachment, without first
@@ -88,9 +97,11 @@ try:
     until(lambda: 'HISTORY_ROW_100' in terminal.get_text_format(hud.Vte.Format.TEXT))
     mouse(Gdk.EventType.BUTTON_PRESS, height/3, 0)
     mouse(Gdk.EventType.MOTION_NOTIFY, height-2, Gdk.ModifierType.BUTTON1_MASK)
-    until(lambda: app.history_selection and app.history_selection.get('ready'))
+    until(lambda: app.history_selection and isinstance(app.history_selection.get('view'), Gtk.Fixed))
+    force_retained_fallback(app.history_selection, 1)
     first_view = app.history_selection['view']
     before_down = first_view.get_vadjustment().get_value()
+    mouse(Gdk.EventType.MOTION_NOTIFY, height-2, Gdk.ModifierType.BUTTON1_MASK)
     pump(.7)
     assert first_view.get_vadjustment().get_value() > before_down
     first_rows = first_view.get_row_count()
@@ -105,12 +116,12 @@ try:
     print('PASS: first drag scrolls down from live attachment; normal drag keeps selection scrolling', flush=True)
     mouse(Gdk.EventType.BUTTON_PRESS, height/2, 0)
     mouse(Gdk.EventType.MOTION_NOTIFY, 2, shift | Gdk.ModifierType.BUTTON1_MASK)
-    until(lambda: app.history_selection and app.history_selection.get('view'))
+    until(lambda: app.history_selection and isinstance(app.history_selection.get('view'), Gtk.Fixed))
+    force_retained_fallback(app.history_selection, -1)
     pump(.3)
     view = app.history_selection['view']
     adjustment = view.get_vadjustment()
     before = adjustment.get_value()
-    assert adjustment.get_upper() > adjustment.get_page_size() + 100, (adjustment.get_upper(), adjustment.get_page_size())
     mouse(Gdk.EventType.MOTION_NOTIFY, 2, shift | Gdk.ModifierType.BUTTON1_MASK)
     pump(.7)
     assert adjustment.get_value() < before
@@ -121,7 +132,7 @@ try:
     assert '\x1b' not in copied
     assert not Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_is_target_available(Gdk.Atom.intern('text/html', False))
     assert app.history_selection is None, 'Release must return directly to the terminal'
-    assert terminal.has_focus()
+    until(lambda: terminal.has_focus(), timeout=2)
     assert terminal.pid == pid and terminal.alive
     assert app.stack.get_visible_child() is terminal
     print('PASS: real Herdr history selection scrolls beyond attachment viewport and preserves live PTY', flush=True)

@@ -9,9 +9,9 @@ GNOME Shell extension providing a floating **H** button. The project targets
 Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
-This manual describes the stable Ubuntu 1.3 release. The Apple silicon Mac port
+This manual describes the Ubuntu 1.4 build. The Apple silicon Mac port
 retains these terminal interactions, with native Mac desktop integration still
-under development and no Mac installer included in the 1.3 release. See [the Mac
+under development and no Mac installer included in the Ubuntu 1.4 build. See [the Mac
 guide](docs/MACOS.md) for platform setup, preferences, login startup, installer
 behavior and validation status.
 See [CHANGELOG.md](CHANGELOG.md) for release notes and publication status.
@@ -101,8 +101,12 @@ does not mean they create or rename a server.
 1. Click **+ New space** or **Start a space** and accept the suggested
    `Space 2`, `Space 3`, etc., or enter your own nonblank name. Numbering continues
    above the existing numbered names and space count.
-2. Click **Start**. The Hud creates a workspace in Herdr's `default` server and
-   opens its first terminal. It starts that server if necessary.
+2. Optionally choose **Start an agent in this space**, select its kind and enter
+   a lowercase agent name. Click **Start**. Hud creates the workspace and its
+   first terminal in Herdr's `default` server, then starts the chosen agent in
+   that terminal. Herdr must have the selected agent's CLI installed and
+   authenticated. If the agent cannot start, the new space and shell remain
+   available and Hud reports the error. Hud starts the server if necessary.
 3. Terminals appear as compact, indented rows beneath their space in the sidebar.
 4. Click a terminal to switch to it, or the **+** beside its space to add another.
    Clicking a space returns to the last terminal selected there.
@@ -114,8 +118,7 @@ does not mean they create or rename a server.
 New spaces are visible in the original app opened with `herdr`. Existing named
 servers are also discovered; their groups display `server / workspace` and can
 be accessed in Herdr with `herdr --session NAME`. Processes are not migrated
-between servers. A space name such as “codex” is only a label; launch agents from
-its shell as usual.
+between servers. Space labels are independent of agent names.
 
 The per-space **+** uses the selected terminal's current directory when it
 belongs to that space, otherwise the first member's directory. Foreground
@@ -166,10 +169,17 @@ input, control sequences and terminal size changes go through that client.
 Switching rows retains attached terminals and up to 20,000 VTE scrollback lines.
 The configured font is `Ubuntu Mono 12`, with 16-pixel side margins.
 
+The heading shows `user@host` when the shell reports it in its terminal title.
+While an agent runs, Hud retains the last identity observed for that terminal,
+including SSH identities. If Hud has not observed an identity for an agent's
+terminal, it shows the local Herdr user's name and hostname; this fallback does
+not identify a remote login. Remembered identities last until Hud exits or the
+terminal is removed.
+
 - Click and drag with the left mouse button to select text and automatically copy it.
-- Right-click inside the terminal to paste the clipboard.
+- Right-click inside the terminal to immediately paste the clipboard text.
 - Hold **Shift** while clicking or dragging to interact with CLI controls.
-  Normal dragging selects and automatically copies plain text. Right-click remains paste. GNOME-reserved shortcuts stay with
+  Normal dragging selects and automatically copies plain text. Right-click pastes directly. GNOME-reserved shortcuts stay with
   the desktop.
 - If a client disconnects, select its terminal again to create a new attachment.
 
@@ -400,8 +410,11 @@ and the retained license notices.
 The terminal header shows its space name and terminal title. Renaming a space
 updates the header too; named Herdr servers retain their prefix for clarity.
 
-Space, terminal and agent names do not show hover tooltips. Action buttons retain
-their short help labels.
+Hover over a terminal or agent row to see only `user@host`.
+Tooltips use the active palette's background and text colors, including dark
+mode. The identity uses the same reported or remembered shell identity as the
+header, with the local Herdr user and hostname as fallback. Space names do not
+show hover tooltips. Action buttons retain their short help labels.
 
 Pasting with right-click or the terminal paste shortcut clears the text selection
 automatically. Copied text remains available on the clipboard.
@@ -428,7 +441,7 @@ the terminal display itself retains its colors.
 Ctrl+V pastes text from the clipboard into the active terminal, including
 speech-to-text input. With an image-only clipboard, Ctrl+V is sent to the CLI
 so its image-paste shortcut remains available. Ctrl+Shift+V and right-click
-continue to use the terminal paste action.
+use the terminal paste action.
 
 Ctrl+click an HTTP or HTTPS link in a terminal to open it in your desktop's
 default browser, including links printed by remote CLIs. Shift+clicks go to the CLI. Both labelled terminal hyperlinks and visible web addresses work.

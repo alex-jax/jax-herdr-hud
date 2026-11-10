@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 """Herdr Hud — native terminal companion for the GNOME floating H."""
 import json
+import getpass
 import os
 import re
 from pathlib import Path
 import signal
+import socket
 import threading
 import time
 import sys
@@ -14,7 +16,7 @@ gi.require_version('Gdk', '3.0')
 gi.require_version('Vte', '2.91')
 from gi.repository import Gtk, Gdk, Gio, GLib, Pango, Vte
 from backend import (Monitor, attention, environment, ensure_session, create_terminal,
-                     create_shared_workspace, request, resolve_herdr, configure_herdr,
+                     create_shared_workspace, start_agent, request, resolve_herdr, configure_herdr,
                      check_herdr, HerdrUnavailable)
 from enable import enable_extension
 from desktop import IS_MAC, config_directory, create_desktop, relay_command
@@ -43,8 +45,14 @@ def rgba(value):
     return color
 
 
+def terminal_identity(title):
+    """Return an explicitly reported user@host prefix from a terminal title."""
+    match = re.match(r'^[A-Za-z0-9_][A-Za-z0-9_.-]*@[A-Za-z0-9][A-Za-z0-9_.-]*(?=$|[: /])', title or '')
+    return match.group(0) if match else None
+
+
 class Terminal(Vte.Terminal):
-    """Use native VTE mouse reporting, selection-to-copy and right-click paste."""
+    """Use native VTE mouse reporting, selection-to-copy and direct right-click paste."""
     def __init__(self):
         super().__init__()
         self.pid = None
@@ -130,11 +138,26 @@ class Terminal(Vte.Terminal):
             if not self.cli_drag:
                 self.track_selection_events(event)
         if event.button == 3:
-            self.grab_focus()
-            self.paste_clipboard()
-            self.unselect_all()
+            self.paste_from_right_click()
             return True
         return Vte.Terminal.do_button_press_event(self, event)
+
+    def paste_from_right_click(self):
+        self.grab_focus()
+        # Finish the click/focus or history-overlay transition before requesting
+        # clipboard text. Keep the request bound to this terminal, even if focus
+        # changes while another application supplies the clipboard contents.
+        idle(self.request_right_click_text)
+
+    def request_right_click_text(self):
+        if self.get_realized():
+            Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).request_text(
+                self.right_click_text_received)
+
+    def right_click_text_received(self, _clipboard, text):
+        if text is not None and self.get_realized():
+            self.paste_text(text)
+            self.unselect_all()
 
     def stop_selection_tracking(self):
         window = self.selection_event_window
@@ -269,6 +292,8 @@ class Hud(Gtk.Application):
         self.history_selection = None
         self.terminals = {}
         self.panes = {}
+        self.terminal_identities = {}
+        self.local_identity = getpass.getuser() + '@' + socket.gethostname().split('.')[0]
         self.snapshots = {}
         self.states = {}
         self.unread = {}
@@ -776,6 +801,8 @@ class Hud(Gtk.Application):
         self.css.load_from_data(f'''
             window, dialog, messagedialog, .background, stack, viewport, scrolledwindow {{ background: {bg}; color: {fg}; }}
             headerbar, toolbar, menu, popover {{ background-image: none; background-color: {side}; color: {fg}; border-color: {line}; }}
+            tooltip, tooltip.background {{ background-image: none; background-color: {side}; color: {fg}; border: 1px solid {line}; box-shadow: none; }}
+            tooltip label {{ color: {fg}; }}
             button, entry, searchentry, combobox, spinbutton {{ background-image: none; background-color: {side}; color: {fg}; border-color: {line}; box-shadow: none; text-shadow: none; }}
             button:hover, menuitem:hover {{ background-image: none; background-color: {hover}; color: {fg}; }}
             button:active, button:checked, menuitem:selected {{ background-image: none; background-color: {selected}; color: {fg}; }}
@@ -960,10 +987,15 @@ class Hud(Gtk.Application):
             workspaces = {w['workspace_id']: w['label'] for w in snapshot['workspaces']}
             tabs = {t['tab_id']: t['label'] for t in snapshot['tabs']}
             for pane in snapshot['panes']:
-                panes[(path, pane['terminal_id'])] = {**pane, 'session': session,
+                key = (path, pane['terminal_id'])
+                identity = terminal_identity(pane.get('terminal_title_stripped'))
+                if identity:
+                    self.terminal_identities[key] = identity
+                panes[key] = {**pane, 'session': session,
                     'workspace_label': workspaces.get(pane['workspace_id'], ''),
                     'tab_label': tabs.get(pane['tab_id'], '')}
         self.panes = panes
+        self.terminal_identities = {k: v for k, v in self.terminal_identities.items() if k in panes}
         for key in list(self.terminals):
             if isinstance(key, tuple) and key not in panes:
                 terminal = self.terminals.pop(key)
@@ -995,7 +1027,16 @@ class Hud(Gtk.Application):
         space = pane.get('workspace_label') or session_name
         if session_name != 'default':
             space = session_name + ' / ' + space
-        return space + '  /  ' + self.pane_title(pane)
+        identity = terminal_identity(pane.get('terminal_title_stripped'))
+        if not identity and pane.get('agent'):
+            identity = self.pane_user_host(pane)
+        suffix = ' - ' + identity if identity else ''
+        return space + '  /  ' + self.pane_title(pane) + suffix
+
+    def pane_user_host(self, pane):
+        return (terminal_identity(pane.get('terminal_title_stripped')) or
+                self.terminal_identities.get(
+                    (pane['session']['socket_path'], pane['terminal_id'])) or self.local_identity)
 
     def pane_title(self, pane):
         tab = pane.get('tab_label', '')
@@ -1160,6 +1201,10 @@ class Hud(Gtk.Application):
                 else:
                     context.remove_class(style)
             row.subtitle_label.set_visible(is_agent)
+            if not is_group:
+                tooltip = self.pane_user_host(self.panes[identity[1]])
+                if row.get_tooltip_text() != tooltip:
+                    row.set_tooltip_text(tooltip)
             if is_group:
                 expanded = bool(query) or identity[1] not in self.collapsed_spaces
                 icon = 'pan-down-symbolic' if expanded else 'pan-end-symbolic'
@@ -1479,6 +1524,10 @@ class Hud(Gtk.Application):
     def history_event(self, terminal, event):
         selection = self.history_selection
         if selection and selection['source'] is terminal:
+            if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
+                self.end_history_selection()
+                terminal.paste_from_right_click()
+                return True
             if selection.get('view'):
                 if not selection.get('ready'):
                     if event.type == Gdk.EventType.BUTTON_RELEASE:
@@ -1492,7 +1541,7 @@ class Hud(Gtk.Application):
                     self.replay_selection_event(selection['view'], event)
                     if event.type == Gdk.EventType.BUTTON_RELEASE:
                         self.end_history_selection()
-                        terminal.grab_focus()
+                        idle(terminal.grab_focus)
                 return True
             if event.type == Gdk.EventType.BUTTON_RELEASE:
                 self.end_history_selection()
@@ -1550,7 +1599,9 @@ class Hud(Gtk.Application):
         visible_lines = (source.get_text_format(Vte.Format.TEXT) or '').splitlines()
         plain = re.sub(r'\x1b\].*?(?:\x07|\x1b\\)', '', text, flags=re.S)
         history_lines = [line.rstrip() for line in re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', plain).splitlines()]
-        selection['live'] = bool(self.panes.get(selection['key'], {}).get('agent')) and len(history_lines) <= source.get_row_count() + 1
+        # Herdr presents both shell and CLI panes as terminal screens. Try a
+        # live edge scroll first; if the screen does not move, use retained text.
+        selection['live'] = not selection.get('force_retained', False)
         selection['frame'] = history_lines
         if selection['live']:
             self.start_live_selection(selection, history_lines)
@@ -1662,7 +1713,7 @@ class Hud(Gtk.Application):
                          frame_start=0, body_head=0, document=rows[:],
                          anchor=int(selection['press'].y/source.get_char_height()),
                          anchor_col=int(selection['press'].x/source.get_char_width()),
-                         initial_frame=True)
+                         initial_frame=True, unchanged_ticks=0)
         provider = Gtk.CssProvider()
         provider.load_from_data(b'* { background-color: rgba(90, 140, 220, 0.30); border: none; min-width: 0; min-height: 0; }')
         selection.update(highlights=[], highlight_style=provider)
@@ -1734,7 +1785,7 @@ class Hud(Gtk.Application):
             self.update_live_selection(selection)
             selection['dragging'] = False
             self.end_history_selection()
-            selection['source'].grab_focus()
+            idle(selection['source'].grab_focus)
         elif event.type == Gdk.EventType.MOTION_NOTIFY and selection.get('dragging'):
             selection['motion'] = event.copy()
             self.update_live_selection(selection)
@@ -1806,7 +1857,11 @@ class Hud(Gtk.Application):
             return
         previous = selection['frame']
         if rows == previous:
+            selection['unchanged_ticks'] = selection.get('unchanged_ticks', 0) + 1
+            if selection.get('initial_frame') and selection['unchanged_ticks'] >= 3:
+                self.fallback_to_retained_history(selection)
             return
+        selection['unchanged_ticks'] = 0
         merged = self.scrolled_rows(previous, rows, direction)
         if not merged:
             # Do not concatenate unrelated redraws, animation, or new answers.
@@ -1837,6 +1892,21 @@ class Hud(Gtk.Application):
             return
         self.update_live_selection(selection)
 
+    def fallback_to_retained_history(self, selection):
+        """Switch a non-scrolling live screen to the retained pane transcript."""
+        if self.history_selection is not selection or not selection.get('text'):
+            return
+        timer = selection.pop('live_timer', None)
+        if timer:
+            GLib.source_remove(timer)
+        view = selection.get('view')
+        if view:
+            self.display_overlay.remove(view)
+            view.destroy()
+        selection.update(view=None, ready=False, live=False, force_retained=True,
+                         expand=True, dragging=False)
+        self.history_ready(selection, selection['text'], selection.get('error'))
+
     def history_key(self, view, event, selection):
         if event.keyval in (Gdk.KEY_Shift_L, Gdk.KEY_Shift_R):
             return False
@@ -1856,7 +1926,7 @@ class Hud(Gtk.Application):
     def history_release(self, view, event, selection):
         if event.button == 1 and self.history_selection is selection:
             self.end_history_selection()
-            selection['source'].grab_focus()
+            idle(selection['source'].grab_focus)
         return False
 
     def history_click(self, view, event, selection):
@@ -1870,8 +1940,7 @@ class Hud(Gtk.Application):
         if event.button == 1:
             self.replay_selection_event(source, event)
         if event.button == 3:
-            source.paste_clipboard()
-            source.unselect_all()
+            source.paste_from_right_click()
         return True
 
     def end_history_selection(self):
@@ -1951,21 +2020,64 @@ class Hud(Gtk.Application):
         for response in (Gtk.ResponseType.CANCEL, Gtk.ResponseType.OK):
             dialog.get_widget_for_response(response).set_size_request(88, 36)
         entry = Gtk.Entry(placeholder_text='Name your space')
-        dialog.set_response_sensitive(Gtk.ResponseType.OK, False)
-        entry.connect('changed', lambda field: dialog.set_response_sensitive(
-            Gtk.ResponseType.OK, bool(field.get_text().strip())))
         entry.set_text(self.next_space_name())
         entry.select_region(0, -1)
         entry.set_activates_default(True)
         content.pack_start(entry, False, False, 0)
+
+        start_agent_toggle = Gtk.CheckButton(label='Start an agent in this space')
+        content.pack_start(start_agent_toggle, False, False, 0)
+        agent_kind = Gtk.ComboBoxText()
+        agent_kinds = ('pi', 'claude', 'codex', 'gemini', 'cursor', 'devin', 'agy',
+                       'cline', 'omp', 'mastracode', 'opencode', 'copilot', 'kimi',
+                       'kiro', 'droid', 'amp', 'grok', 'hermes', 'kilo', 'qodercli',
+                       'qwen', 'letta', 'maki', 'muse')
+        for kind in agent_kinds:
+            agent_kind.append(kind, kind.title())
+        agent_kind.set_active_id('codex')
+        name_label = Gtk.Label(label='Agent name', xalign=0)
+        agent_name = Gtk.Entry(text='codex', placeholder_text='Lowercase name, e.g. codex-1')
+        agent_kind.set_sensitive(False)
+        name_label.set_sensitive(False)
+        agent_name.set_sensitive(False)
+        content.pack_start(agent_kind, False, False, 0)
+        content.pack_start(name_label, False, False, 0)
+        content.pack_start(agent_name, False, False, 0)
+
+        def validate_form(*_):
+            valid_name = bool(entry.get_text().strip())
+            valid_agent = (not start_agent_toggle.get_active() or
+                           bool(re.fullmatch(r'[a-z][a-z0-9_-]{0,31}', agent_name.get_text().strip())))
+            dialog.set_response_sensitive(Gtk.ResponseType.OK, valid_name and valid_agent)
+        def toggle_agent(button):
+            active = button.get_active()
+            agent_kind.set_sensitive(active)
+            name_label.set_sensitive(active)
+            agent_name.set_sensitive(active)
+            validate_form()
+        previous_kind = ['codex']
+        def kind_changed(combo):
+            old = previous_kind[0]
+            current = combo.get_active_id() or 'codex'
+            if agent_name.get_text().strip() == old:
+                agent_name.set_text(current)
+            previous_kind[0] = current
+            validate_form()
+        entry.connect('changed', validate_form)
+        agent_name.connect('changed', validate_form)
+        start_agent_toggle.connect('toggled', toggle_agent)
+        agent_kind.connect('changed', kind_changed)
+        validate_form()
         dialog.set_default_response(Gtk.ResponseType.OK)
         dialog.show_all()
         response = dialog.run()
         name = entry.get_text().strip()
+        selected_kind = agent_kind.get_active_id() if start_agent_toggle.get_active() else None
+        selected_agent = agent_name.get_text().strip() if selected_kind else None
         dialog.destroy()
         if response != Gtk.ResponseType.OK or not name:
             return
-        self.create_session(name)
+        self.create_session(name, selected_kind, selected_agent)
 
     def next_space_name(self):
         workspaces = [space for session, snapshot in self.snapshots.values()
@@ -1975,7 +2087,7 @@ class Hud(Gtk.Application):
                    and space['label'][6:].isdigit()]
         return f'Space {max([len(workspaces), *numbers], default=0) + 1}'
 
-    def create_session(self, name):
+    def create_session(self, name, agent_kind=None, agent_name=None):
         if self.creating_session:
             return
         self.creating_session = True
@@ -1984,12 +2096,21 @@ class Hud(Gtk.Application):
         def work():
             try:
                 session, snapshot, terminal_id = create_shared_workspace(name)
-                idle(self.session_created, session, snapshot, None, terminal_id)
+                agent_error = None
+                if agent_kind:
+                    try:
+                        pane = next(p for p in snapshot['panes']
+                                    if p['terminal_id'] == terminal_id)
+                        start_agent(agent_name, agent_kind, pane['pane_id'])
+                        snapshot = request(session['socket_path'], 'session.snapshot')['snapshot']
+                    except Exception as exc:
+                        agent_error = str(exc)
+                idle(self.session_created, session, snapshot, None, terminal_id, agent_error)
             except Exception as exc:
                 idle(self.session_created, None, None, str(exc))
         threading.Thread(target=work, daemon=True).start()
 
-    def session_created(self, session, snapshot, error, terminal_id=None):
+    def session_created(self, session, snapshot, error, terminal_id=None, agent_error=None):
         self.creating_session = False
         if self.closing:
             return
@@ -2000,7 +2121,8 @@ class Hud(Gtk.Application):
         self.snapshot_changed(session, snapshot, None)
         if snapshot['panes']:
             self.select((session['socket_path'], terminal_id or snapshot['panes'][0]['terminal_id']))
-            self.status.set_text('Drag to copy  ·  Shift+click CLI controls  ·  Right-click to paste')
+            self.status.set_text('Could not start agent: ' + agent_error if agent_error else
+                                 'Drag to copy  ·  Shift+click CLI controls  ·  Right-click to paste')
 
     def show(self):
         self.window.show()

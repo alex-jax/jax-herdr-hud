@@ -137,7 +137,7 @@ finally:
     assert app.window.get_size() == window_size, 'Selection changed the terminal layout'
     mouse(Gdk.EventType.BUTTON_RELEASE,edge,0)
     assert app.history_selection is None, 'Release left a selection mode open'
-    assert terminal.has_focus(), 'Release requires Escape before typing'
+    until(lambda: terminal.has_focus(), timeout=2)
     assert app.stack.get_visible_child() is terminal
     copied = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_for_text()
     assert copied and copied.count('MESSAGE_') > terminal.get_row_count(), repr(copied)
@@ -152,7 +152,7 @@ finally:
     assert snapshot == request(path,'pane.read',{'pane_id':pane['pane_id'],'source':'recent','format':'text','lines':20000})['read']['text'], 'CLI kept scrolling after release'
     app.end_history_selection()
     terminal.feed_child(b'q')
-    print('PASS: '+('real pointer outside border: ' if real_pointer else '')+direction+' alternate-screen CLI scrolls during edge selection; copied lines are contiguous, unique, and exceed one screen; release stops scrolling')
+    print('PASS: '+('real pointer: ' if real_pointer else '')+direction+' alternate-screen CLI scrolls during edge selection; copied lines are contiguous, unique, and exceed one screen; release stops scrolling')
 finally:
     if os.environ.get('HUD_TEST_POINTER') == '1':
         subprocess.run(['xdotool', 'mouseup', '1'], check=False)

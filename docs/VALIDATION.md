@@ -1,5 +1,38 @@
 # Validation
 
+## Ubuntu 1.4 source and local Debian build — 10 November 2026
+
+- 57 unit tests passed after updating version metadata to 1.4/v1.4, including
+  release checksums, Debian payload layout and agent startup command arguments.
+- Built and extracted `jax-herdr-hud_1.4-1_all.deb`; the extracted launcher
+  reports Herdr Hud 1.4. APT simulation upgrades only Hud, with no new dependency
+  packages or removals.
+- Exact Debian SHA256:
+  `d4debe562dce10a0fd5c548e9025d1c5f9d0ddeb40a69997cb7f3fc31d98bfb3`.
+- Installed this exact package locally as 1.4-1, compared installed hud.py,
+  backend.py and app_info.py with source, confirmed the launcher reports 1.4,
+  and restarted Hud. Herdr servers and user agents were preserved.
+- The extracted 1.4 payload passed desktop, sidebar, theme and update smoke
+  tests on separate D-Bus sessions. Desktop coverage includes a first right-click
+  paste from an external clipboard owner while focus starts outside the terminal.
+- Ran desktop smoke with `HUD_TEST_REAL_CODEX=1`: the installed Codex launched
+  successfully in a disposable new workspace using the root pane ID. The test
+  submitted no agent task and cleaned up its test server, leaving user servers
+  alone. The default smoke run still mocks agent startup.
+- Sidebar checks cover retaining a shell-reported identity when an agent takes
+  over its title, isolation across servers with the same terminal ID, local
+  identity fallback, and tooltips containing only user@host. Theme smoke covers
+  active palette and light/dark switching.
+- During source development, native selection, controlled retained-history
+  fallback, and simulated CLI edge selection passed. Physical-pointer checks
+  were inconsistent on this desktop: an initial downward run passed, but
+  subsequent runs and upward runs did not reliably pass. No claim of complete
+  physical-pointer coverage or clean-VM upgrade/removal validation is made.
+- This version changes Ubuntu code only. Mac parity is proposed in
+  [issue #3](https://github.com/alex-jax/jax-herdr-hud/issues/3); no Mac artifact
+  was built or tested. Commit/push of 1.4 source does not publish GitHub Release
+  assets; the latest published release remains v1.3.
+
 ## 1.3 stable Debian release — 2 November 2026
 
 Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1. The v1.3 release is

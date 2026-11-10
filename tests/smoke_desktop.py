@@ -1,5 +1,9 @@
 #!/usr/bin/python3
-"""Real GTK/VTE + disposable Herdr server integration test. Requires desktop access."""
+"""Real GTK/VTE + disposable Herdr server integration test. Requires desktop access.
+
+HUD_TEST_REAL_CODEX=1 launches installed Codex in the disposable test server;
+the default run mocks agent startup. Neither mode sends an agent a task.
+"""
 import json
 import os
 from pathlib import Path
@@ -7,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from unittest.mock import patch
 sys.path.insert(0, os.environ.get('HUD_TEST_SOURCE', str(Path(__file__).resolve().parents[1])))
 os.environ.setdefault('GDK_BACKEND', 'x11')
 output_dir = Path(os.environ.get('HUD_TEST_OUTPUT', tempfile.mkdtemp(prefix='herdr-hud-test-output-')))
@@ -150,6 +155,42 @@ try:
     terminal.feed_child(b'\r')
     until(lambda: 'HUD_KEY_PASTE_OK' in screen())
     print('PASS: mouse and keyboard paste clear selection and preserve clipboard text', flush=True)
+    # A different process owns the clipboard; the first click must both focus
+    # the terminal and paste exactly once, without a second click to retry.
+    token = 'HUD_SINGLE_RIGHT_CLICK'
+    owner = subprocess.Popen([sys.executable, '-c', '''
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk, Gdk
+Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text('HUD_SINGLE_RIGHT_CLICK', -1)
+print('ready', flush=True)
+Gtk.main()
+'''], stdout=subprocess.PIPE, text=True)
+    try:
+        assert owner.stdout.readline().strip() == 'ready'
+        for _ in range(3):
+            app.search.grab_focus()
+            pump()
+            assert not terminal.has_focus()
+            press = Gdk.Event.new(Gdk.EventType.BUTTON_PRESS)
+            press.set_device(Gdk.Display.get_default().get_default_seat().get_pointer())
+            press.button.window = app.terminal_input_window(terminal)
+            press.button.button = 3
+            press.button.x, press.button.y = 30, 30
+            terminal.event(press)
+            release = press.copy()
+            release.type = Gdk.EventType.BUTTON_RELEASE
+            terminal.event(release)
+            until(lambda: token in screen())
+            assert screen().count(token) == 1, 'One right-click pasted more than once'
+            assert terminal.has_focus()
+            terminal.feed_child(b'\x15')
+            until(lambda: token not in screen())
+    finally:
+        owner.terminate()
+        owner.wait(timeout=5)
+        owner.stdout.close()
+    print('PASS: one right-click focuses and pastes exactly once from an external clipboard owner', flush=True)
     terminal.grab_focus()
     clip.set_text("printf 'HUD_SPEECH_TEXT_OK\\n'", -1)
     paste_event = Gdk.Event.new(Gdk.EventType.KEY_PRESS)
@@ -281,9 +322,15 @@ finally:
     checked = []
     def check_dialog():
         dialog = next(w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.Dialog))
-        entry = next(w for w in dialog.get_content_area().get_children() if isinstance(w, Gtk.Entry))
+        entries = [w for w in dialog.get_content_area().get_children() if isinstance(w, Gtk.Entry)]
+        entry = next(w for w in entries if w.get_placeholder_text() == 'Name your space')
+        agent_entry = next(w for w in entries if w is not entry)
+        agent_toggle = next(w for w in dialog.get_content_area().get_children()
+                            if isinstance(w, Gtk.CheckButton))
         checked.append(entry.get_text() == 'Space 2' and entry.get_placeholder_text() == 'Name your space'
                        and dialog.get_widget_for_response(Gtk.ResponseType.OK).get_sensitive())
+        assert agent_toggle.get_label() == 'Start an agent in this space'
+        assert not agent_entry.get_sensitive()
         entry.set_text('  ')
         assert not dialog.get_widget_for_response(Gtk.ResponseType.OK).get_sensitive()
         cancel = dialog.get_widget_for_response(Gtk.ResponseType.CANCEL)
@@ -298,12 +345,38 @@ finally:
         assert ex >= 16 and cy >= ey + entry.get_allocated_height() + 8
         entry.set_text('another-session')
         checked.append(dialog.get_widget_for_response(Gtk.ResponseType.OK).get_sensitive())
+        agent_toggle.set_active(True)
+        assert agent_entry.get_sensitive() and agent_entry.get_text() == 'codex'
+        agent_entry.set_text('Uppercase')
+        assert not dialog.get_widget_for_response(Gtk.ResponseType.OK).get_sensitive()
+        agent_entry.set_text('codex-smoke')
+        assert dialog.get_widget_for_response(Gtk.ResponseType.OK).get_sensitive()
         dialog.response(Gtk.ResponseType.CANCEL)
         return GLib.SOURCE_REMOVE
     GLib.idle_add(check_dialog)
     app.new_session()
     assert checked == [True, True], checked
     print('PASS: new space suggests Space 2 and rejects a blank name', flush=True)
+    real_codex = os.environ.get('HUD_TEST_REAL_CODEX') == '1'
+    if real_codex:
+        app.create_session('Agent smoke space', 'codex', 'hud-smoke')
+        until(lambda: not app.creating_session and app.selected not in (key, second_key), timeout=50)
+        assert not app.status.get_text().startswith('Could not'), app.status.get_text()
+    else:
+        with patch('hud.start_agent') as start_agent_mock:
+            app.create_session('Agent smoke space', 'codex', 'hud-smoke')
+            until(lambda: not app.creating_session and app.selected not in (key, second_key))
+    agent_key = app.selected
+    agent_pane = app.panes[agent_key]
+    assert agent_pane['pane_id'] != agent_pane['terminal_id']
+    if real_codex:
+        assert agent_pane.get('agent'), 'Real Codex was not detected in the new pane'
+    else:
+        start_agent_mock.assert_called_once_with('hud-smoke', 'codex', agent_pane['pane_id'])
+    assert agent_pane['workspace_label'] == 'Agent smoke space'
+    app.close_sidebar_item(('group', (path, agent_pane['workspace_id'])))
+    until(lambda: agent_key not in app.panes)
+    print('PASS: ' + ('real Codex' if real_codex else 'agent selection') + ' starts in the new space terminal', flush=True)
     # Rename a real pane through the dialog and verify Herdr persists the label.
     def submit_rename():
         dialog = next(w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.Dialog))

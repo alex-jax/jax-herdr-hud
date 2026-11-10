@@ -80,7 +80,7 @@ Do not modify artifacts incidentally; preserve existing ones when running tests.
 - Defer terminal focus until GTK finishes processing selection. Preserve selection,
   focus and scrollback during snapshots, search and Spaces/Agents reparenting.
 - VTE forwards Shift+left clicks/drags to mouse-aware CLIs without the Shift
-  modifier; normal left dragging selects and copies plain text, and right-click pastes. Sidebar
+  modifier; normal left dragging selects and copies plain text, and right-click pastes directly. Sidebar
   context menus are separate; ListBox owns its input window, so resolve row hits
   from ListBox coordinates.
 
@@ -233,7 +233,7 @@ need logout/login under this project's GNOME 50 workflow.
 ## Release packaging contracts
 
 - Public app versions use major.minor (for example `1.2`), without a third component.
-- Stable Ubuntu/Debian app version is `1.3`, targeting tag `v1.3`; the Mac port
+- Stable Ubuntu/Debian app version is `1.4`, targeting tag `v1.4`; the Mac port
   remains in development until its release gates pass. Extension revision is
   separate. Keep app_info.py and retained packaging metadata synchronized.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID

@@ -7,6 +7,12 @@ The stable 1.3 release below is Debian-only; the GTK/VTE Mac port remains in dev
 
 A native GTK/VTE companion for local Herdr terminals and agents on Ubuntu 26.04.
 
+**Ubuntu 1.4 is available in this source checkout:** start an agent in a new space,
+paste directly on the first right-click, retain agent `user@host` headings and
+show identity-only tooltips matching the active theme. The latest published
+GitHub release remains 1.3 until 1.4 assets are published. Mac feature parity is
+proposed in [issue #3](https://github.com/alex-jax/jax-herdr-hud/issues/3).
+
 **Ubuntu release 1.3 is stable.** The Apple silicon macOS 26/27 port remains in
 development and is not included in this release. [Mac installation and build
 instructions](docs/MACOS.md) describe the test builds; Mac release validation is
