@@ -33,6 +33,23 @@
   was built or tested. Commit/push of 1.4 source does not publish GitHub Release
   assets; the latest published release remains v1.3.
 
+## Ubuntu 1.4 auto-hide follow-up — 10 November 2026
+
+- Added the saved `hide_on_focus_loss` preference and Settings → Floating H
+  switch, enabled by default. Hiding preserves the companion, terminal clients,
+  monitoring and agents. Open menus/transient dialogs suspend automatic hiding.
+- 57 unit tests and the source desktop smoke passed. A new native GTK focus
+  test checks auto-hide on outside focus, showing Hud again, disabling the
+  behavior, preference persistence, transient-dialog protection and timer cleanup.
+  Its first run timed out waiting for window focus; two subsequent source runs
+  and the extracted-payload run passed. This test needs a working window manager.
+- Rebuilt 1.4-1 with this follow-up. The extracted payload passed the focus test
+  and theme smoke. SHA256 of the updated Debian artifact:
+  `3b22ad66d286664be5602825c1fbd2d61dae0174bf20e69cb1d7e8d4c096dede`.
+- Installed the updated package locally, confirmed hud.py matches the tested
+  source and restarted Hud. The GNOME extension is unchanged; no desktop
+  logout/login was performed. Mac parity was added to issue #3.
+
 ## 1.3 stable Debian release — 2 November 2026
 
 Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1. The v1.3 release is

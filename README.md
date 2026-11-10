@@ -9,7 +9,8 @@ A native GTK/VTE companion for local Herdr terminals and agents on Ubuntu 26.04.
 
 **Ubuntu 1.4 is available in this source checkout:** start an agent in a new space,
 paste directly on the first right-click, retain agent `user@host` headings and
-show identity-only tooltips matching the active theme. The latest published
+show identity-only tooltips matching the active theme. Automatic hiding to H
+when focus moves outside has a saved Settings toggle. The latest published
 GitHub release remains 1.3 until 1.4 assets are published. Mac feature parity is
 proposed in [issue #3](https://github.com/alex-jax/jax-herdr-hud/issues/3).
 

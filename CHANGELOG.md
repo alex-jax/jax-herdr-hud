@@ -2,6 +2,7 @@
 
 ## 1.4 — 10 November 2026 (Ubuntu/Debian)
 
+- Hide back to the floating H when focus moves outside Hud; Settings → Floating H provides a saved on/off switch, enabled by default. Open menus and Hud dialogs are protected.
 - Optionally start an installed agent when creating a new space; choose its kind and name. Use the root pane ID for startup, and retain the workspace if startup fails.
 - Paste clipboard text directly on the first right-click, including when focus changes or another application owns the clipboard. No extra menu or Paste button.
 - Keep the last reported `user@host` visible when an agent replaces the shell title; use the documented local Herdr identity fallback when no identity has been observed.

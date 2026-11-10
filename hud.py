@@ -309,6 +309,7 @@ class Hud(Gtk.Application):
         self.workspace_selection = {}
         self.collapsed_spaces = set()
         self.closing = False
+        self.auto_hide_id = 0
         self.theme = 'dark'
         self.session_errors = {}
         self.adding_terminals = set()
@@ -524,6 +525,7 @@ class Hud(Gtk.Application):
         self.window.set_size_request(620, 360)
         self.window.connect('delete-event', lambda *_: self.hide())
         self.window.connect('focus-in-event', lambda *_: self.acknowledge())
+        self.window.connect('notify::is-active', self.window_activity_changed)
         self.window.connect('window-state-event', self.window_state_changed)
         header = Gtk.HeaderBar(title='Herdr Hud', subtitle='Your terminals, within reach')
         header.set_show_close_button(False)
@@ -637,6 +639,16 @@ class Hud(Gtk.Application):
             wrap=True, xalign=0)
         self.extension_message.set_max_width_chars(55)
         floating.pack_start(self.extension_message, False, False, 0)
+        behavior = Gtk.Box(spacing=12)
+        behavior.pack_start(Gtk.Label(label='Hide when clicking outside', xalign=0), True, True, 0)
+        self.auto_hide_switch = Gtk.Switch()
+        self.auto_hide_switch.get_accessible().set_name('Hide when clicking outside')
+        self.auto_hide_switch.set_active(self.settings.get('hide_on_focus_loss', True) is True)
+        self.auto_hide_switch.connect('notify::active', self.auto_hide_changed)
+        behavior.pack_end(self.auto_hide_switch, False, False, 0)
+        floating.pack_start(behavior, False, False, 0)
+        floating.pack_start(Gtk.Label(label='Return to the floating H when switching to another app.\nOpen Hud menus and dialogs stay visible.',
+                                     wrap=True, xalign=0), False, False, 0)
         herdr = section('Herdr connection')
         self.setup_message = Gtk.Label(label='Use your existing Herdr installation.', wrap=True, xalign=0)
         self.setup_message.set_max_width_chars(55)
@@ -2131,7 +2143,45 @@ class Hud(Gtk.Application):
         idle(self.focus_selected_terminal)
         self.acknowledge()
 
+    def cancel_auto_hide(self):
+        if self.auto_hide_id:
+            GLib.source_remove(self.auto_hide_id)
+            self.auto_hide_id = 0
+
+    def auto_hide_changed(self, switch, _property):
+        self.settings['hide_on_focus_loss'] = switch.get_active()
+        self.cancel_auto_hide()
+        self.save()
+        self.window_activity_changed(self.window, None)
+
+    def window_activity_changed(self, window, _property):
+        self.cancel_auto_hide()
+        if (not self.closing and self.settings.get('hide_on_focus_loss', True) is True
+                and window.get_visible() and not window.is_active()):
+            self.auto_hide_id = GLib.timeout_add(150, self.check_auto_hide)
+
+    def check_auto_hide(self):
+        if (self.closing or not self.window.get_visible() or self.window.is_active()
+                or self.settings.get('hide_on_focus_loss', True) is not True):
+            self.auto_hide_id = 0
+            return GLib.SOURCE_REMOVE
+        # GTK moves focus to menus and transient windows without leaving Hud.
+        if Gtk.grab_get_current() is not None:
+            return GLib.SOURCE_CONTINUE
+        for window in Gtk.Window.list_toplevels():
+            if not window.get_visible() or window is self.window:
+                continue
+            parent = window.get_transient_for()
+            while parent is not None:
+                if parent is self.window:
+                    return GLib.SOURCE_CONTINUE
+                parent = parent.get_transient_for()
+        self.auto_hide_id = 0
+        self.hide()
+        return GLib.SOURCE_REMOVE
+
     def hide(self):
+        self.cancel_auto_hide()
         self.end_history_selection()
         self.save()
         self.window.hide()
@@ -2149,6 +2199,7 @@ class Hud(Gtk.Application):
             return
         self.save()
         self.closing = True
+        self.cancel_auto_hide()
         if self.sidebar_refresh_id:
             GLib.Source.remove(self.sidebar_refresh_id)
             self.sidebar_refresh_id = 0
@@ -2160,6 +2211,7 @@ class Hud(Gtk.Application):
         self.quit()
 
     def do_shutdown(self):
+        self.cancel_auto_hide()
         self.update_monitor.stop()
         if not self.closing:
             self.monitor.stop()
