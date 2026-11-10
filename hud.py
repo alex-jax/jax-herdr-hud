@@ -336,7 +336,7 @@ class Hud(Gtk.Application):
     def do_startup(self):
         Gtk.Application.do_startup(self)
         self.hold()
-        for name, callback in [('toggle', self.toggle), ('exit', self.exit_hud), ('show', self.show)]:
+        for name, callback in [('toggle', self.toggle), ('exit', self.exit_hud), ('show', self.show), ('hide', self.hide)]:
             action = Gio.SimpleAction.new(name, None)
             action.connect('activate', lambda action, value, cb=callback: cb())
             self.add_action(action)
@@ -640,14 +640,14 @@ class Hud(Gtk.Application):
         self.extension_message.set_max_width_chars(55)
         floating.pack_start(self.extension_message, False, False, 0)
         behavior = Gtk.Box(spacing=12)
-        behavior.pack_start(Gtk.Label(label='Hide when clicking outside', xalign=0), True, True, 0)
+        behavior.pack_start(Gtk.Label(label='Automatically hide Hud when clicking outside', xalign=0, wrap=True), True, True, 0)
         self.auto_hide_switch = Gtk.Switch()
-        self.auto_hide_switch.get_accessible().set_name('Hide when clicking outside')
+        self.auto_hide_switch.get_accessible().set_name('Automatically hide Hud when clicking outside')
         self.auto_hide_switch.set_active(self.settings.get('hide_on_focus_loss', True) is True)
         self.auto_hide_switch.connect('notify::active', self.auto_hide_changed)
         behavior.pack_end(self.auto_hide_switch, False, False, 0)
         floating.pack_start(behavior, False, False, 0)
-        floating.pack_start(Gtk.Label(label='Return to the floating H when switching to another app.\nOpen Hud menus and dialogs stay visible.',
+        floating.pack_start(Gtk.Label(label='Turn off to keep Hud open when using other apps.\nClicking H always opens or hides Hud.',
                                      wrap=True, xalign=0), False, False, 0)
         herdr = section('Herdr connection')
         self.setup_message = Gtk.Label(label='Use your existing Herdr installation.', wrap=True, xalign=0)

@@ -35,7 +35,7 @@ script = script.replace('<method name="ShowBubble"/>', '<method name="ShowBubble
 launch_command = json.loads(os.environ.get('HUD_TEST_LAUNCHER', json.dumps([sys.executable, str(source / 'hud.py')])))
 assert isinstance(launch_command, list) and launch_command and all(isinstance(v, str) for v in launch_command)
 start = script.index('    _launch(background = false) {')
-end_launch = script.index('    _toggle() {', start)
+end_launch = script.index('    _toggle(', start)
 script = script[:start] + "    _launch(background = false) {\n        const argv = " + json.dumps(launch_command) + ";\n        if (background) argv.push('--background');\n        Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE);\n    }\n\n" + script[end_launch:]
 end = script.rfind('}')
 script = script[:end] + (source / 'tests/pointer_test_hooks.js').read_text() + script[end:]
@@ -122,6 +122,21 @@ try:
         time.sleep(0.1)
     actions.activate_action('show', None)
     time.sleep(5.5)
+    bubble = state()
+    assert bubble['window'], bubble
+    pointer('motion', bubble['x'] + 28, bubble['y'] + 28)
+    pointer('press')
+    # Reproduce auto-hide between pointer press and release. Release must still
+    # hide, not toggle the now-hidden window back open.
+    actions.activate_action('hide', None)
+    time.sleep(.3)
+    pointer('release')
+    time.sleep(.3)
+    assert state()['window'] is None, state()
+    pointer('press'); pointer('release')
+    time.sleep(.5)
+    assert state()['window'], state()
+    print('PASS: bubble hides an open Hud even if auto-hide wins the press/release race; next click reopens', flush=True)
     pointer('accent-red')
     time.sleep(.3)
     red = state()['accent']

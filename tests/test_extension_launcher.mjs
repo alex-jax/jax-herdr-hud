@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 const script = readFileSync(new URL('../extension/extension.js', import.meta.url), 'utf8');
-const method = script.slice(script.indexOf('    _launch(background = false) {'), script.indexOf('    _toggle() {'));
+const method = script.slice(script.indexOf('    _launch(background = false) {'), script.indexOf('    _toggle('));
 function fixture(existing) {
     const spawned = [], messages = [];
     const GLib = {get_home_dir: () => '/home/test', build_filenamev: parts => parts.join('/'),

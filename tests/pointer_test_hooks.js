@@ -5,7 +5,7 @@
             this._testPointer = seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
             this._testKeyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
             const toggle = this._toggle.bind(this);
-            this._toggle = () => { this._testToggleCount = (this._testToggleCount ?? 0) + 1; toggle(); };
+            this._toggle = (...args) => { this._testToggleCount = (this._testToggleCount ?? 0) + 1; toggle(...args); };
         }
         if (kind.startsWith('accent-')) {
             const settings = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});

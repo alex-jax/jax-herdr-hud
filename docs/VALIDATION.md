@@ -50,6 +50,24 @@
   source and restarted Hud. The GNOME extension is unchanged; no desktop
   logout/login was performed. Mac parity was added to issue #3.
 
+## Ubuntu 1.4 widget toggle follow-up — 10 November 2026
+
+- Clarified the switch label and help text: it controls automatic hiding only;
+  clicking H always opens or hides Hud.
+- Extension revision 5 captures visibility before taking the pointer grab and
+  sends an explicit hide/show action on release. This prevents an auto-hide
+  between press and release from reopening Hud.
+- 57 unit tests, four JavaScript launcher tests and the isolated GNOME 50
+  extension smoke passed. A new real-pointer regression forces hiding between
+  press/release and verifies that Hud stays hidden, then opens on the next click.
+- The exact extracted Debian companion and extension passed the full isolated
+  extension smoke, including geometry, dragging and lifecycle checks. Package
+  SHA256: `de794ca6fc1c6b8f89523b9eb17a784844ed68f928b175c301db0ab21b5cf713`.
+- Installed this package locally, verified companion/extension files against
+  source and restarted Hud. The current desktop had extension revision 4
+  loaded; logout/login is required to load revision 5 under the GNOME 50
+  workflow. The user's desktop session was not restarted during verification.
+
 ## 1.3 stable Debian release — 2 November 2026
 
 Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1. The v1.3 release is

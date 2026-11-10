@@ -53,11 +53,12 @@ upgrades Herdr. Newer versions may work but only 0.9.1 is tested. Protocol failu
 are reported rather than restarting servers. The Credits (information) button contains the app version and all in-app
 attribution, including Alex Finn, Alex Jax, and Christian Hergert / Ptyxis.
 Settings groups compact controls into Appearance, Floating H, and Herdr connection.
-Under **Floating H**, **Hide when clicking outside** is on by default. Hud hides
+Under **Floating H**, **Automatically hide Hud when clicking outside** is on by default. Hud hides
 back to its floating H when another app or the desktop gets focus, including
 Alt+Tab. Open Hud menus and dialogs prevent automatic hiding until they close.
 Turn the switch off to keep Hud visible when working in another window; the
-choice is saved across restarts. H shows the same terminals again, with agents
+choice is saved across restarts. This switch only controls automatic hiding;
+clicking H always opens or hides Hud. H shows the same terminals again, with agents
 and monitoring still running.
 The application icon is a plain H in a blue circle, without an activity dot.
 

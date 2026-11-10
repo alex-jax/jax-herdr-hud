@@ -111,9 +111,9 @@ export default class HerdrHud extends Extension {
         }
     }
 
-    _toggle() {
+    _toggle(wasVisible = null) {
         if (this._running)
-            this._actions.activate_action('toggle', null);
+            this._actions.activate_action(wasVisible === null ? 'toggle' : wasVisible ? 'hide' : 'show', null);
         else
             this._launch();
     }
@@ -151,7 +151,7 @@ export default class HerdrHud extends Extension {
                 this._savePosition();
                 this._positionWindow();
             } else {
-                this._toggle();
+                this._toggle(drag.hudVisible);
             }
             return Clutter.EVENT_STOP;
         }
@@ -165,7 +165,10 @@ export default class HerdrHud extends Extension {
         if (this._drag)
             return Clutter.EVENT_STOP;
         const [x, y] = event.get_coords();
-        this._drag = {x, y, bx: this._bubble.x, by: this._bubble.y, moved: false};
+        // Snapshot visibility before the Shell grab can trigger companion auto-hide.
+        const hudVisible = global.get_window_actors().some(actor =>
+            this._isHud(actor.meta_window) && actor.visible && !actor.meta_window.minimized);
+        this._drag = {x, y, bx: this._bubble.x, by: this._bubble.y, moved: false, hudVisible};
         try {
             this._grab = global.stage.grab(this._bubble);
             // Recover even if another Shell interaction consumes the release.

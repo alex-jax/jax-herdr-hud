@@ -2,6 +2,7 @@
 
 ## 1.4 — 10 November 2026 (Ubuntu/Debian)
 
+- Keep widget clicks deterministic if automatic hiding happens during the click: H hides an open Hud and opens a hidden Hud. Clarify the automatic-hiding switch; GNOME extension revision is now 5. Logout/login loads the updated extension.
 - Hide back to the floating H when focus moves outside Hud; Settings → Floating H provides a saved on/off switch, enabled by default. Open menus and Hud dialogs are protected.
 - Optionally start an installed agent when creating a new space; choose its kind and name. Use the root pane ID for startup, and retain the workspace if startup fails.
 - Paste clipboard text directly on the first right-click, including when focus changes or another application owns the clipboard. No extra menu or Paste button.
