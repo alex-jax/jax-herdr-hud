@@ -2,14 +2,14 @@
 
 ## Debian release 1.4
 
-The stable 1.4 release covers Ubuntu 26.04 / GNOME 50 and ships the Debian
+The planned 1.4 release targets Ubuntu 26.04 / GNOME 50 and is intended to ship the Debian
 package, GNOME extension ZIP, source archive and checksums. The Apple silicon
 Mac port remains in development and has no installer in this release. Publish a
 Mac installer only after both macOS 26 and 27 validation gates pass; see
 [Mac build instructions](MACOS.md) and [release gates](MACOS_VALIDATION.md).
 
 Distribution uses the native Debian package and source installer. Release
-**1.4** uses tag **v1.4** and is a regular stable Ubuntu release.
+**1.4** targets tag **v1.4**. It has not been published; v1.3 remains the latest published Ubuntu release.
 
 ## Prepare the version
 

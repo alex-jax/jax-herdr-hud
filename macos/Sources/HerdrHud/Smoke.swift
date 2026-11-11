@@ -59,6 +59,17 @@
         try require(
           initial.workspaces.count == 1 && initial.panes.count == 1, "one initial workspace")
         try require(!initial.canClose(pane: pane), "first terminal protected")
+        try require(!app.emptyAgents.isHidden, "empty Agents message is visible")
+        app.sidebar.layoutSubtreeIfNeeded()
+        try require(app.sections.frame.minX == 0 && app.sections.frame.width == app.sidebar.bounds.width,
+          "sidebar lists reach both panel edges")
+        try require(app.search.font?.fontName == "DejaVuSans", "Ubuntu reference interface font is bundled")
+        let cell = terminal.selectionCellSize
+        try require(abs(cell.width - 9) < 0.3 && cell.height == 19,
+          "Ubuntu Mono terminal cell geometry is 9 × 19")
+        let icon = Bundle.module.url(forResource: "preferences-system-symbolic", withExtension: "svg",
+          subdirectory: "Resources/Icons/categories")
+        try require(icon.flatMap { NSImage(contentsOf: $0) } != nil, "Ubuntu settings icon is bundled")
         terminal.send(source: terminal, data: Array("printf '\\033]0;root@remote:/app\\007'; sleep 20\r".utf8)[...])
         try await until("reported terminal identity", timeout: 20) { app.title.stringValue.hasSuffix(" - root@remote") }
         terminal.send(source: terminal, data: [3][...])
@@ -131,6 +142,7 @@
             "state": "working",
           ])
         try await until("agent shortcut") { !app.agentRows.isEmpty }
+        try require(app.emptyAgents.isHidden, "empty Agents message hides when an agent appears")
         _ = try await rpc(
           session, "pane.report_agent",
           [
@@ -203,6 +215,21 @@
           NSRect(x: 100000, y: 100000, width: 500, height: 300), fallback: app.window.frame)
         try require(NSScreen.screens.contains { recovered.intersects($0.visibleFrame) },
           "offscreen geometry recovery on a connected screen")
+        if ProcessInfo.processInfo.environment["HUD_TEST_VISUAL_REFERENCE"] == "1" {
+          app.prefs.appearance = "dark"
+          app.prefs.palette = "nord"
+          app.applyTheme()
+          let row = app.spaceRows.firstIndex {
+            $0.terminal == key.id && $0.session.value.socket_path == key.socket
+          }
+          try require(row != nil && app.spaces.selectedRow == row,
+            "theme retains sidebar selection (expected \(String(describing: row)), got \(app.spaces.selectedRow), active \(String(describing: app.selected)))")
+          terminal.feed(text: "\u{1b}[2J\u{1b}[H" +
+            "drwxr-xr-x  15 jax  jax   4096 Nov 11 12:19 ./\r\n" +
+            "-rw-r--r--   1 jax  jax    220 Nov 11 12:17 .bash_logout\r\n")
+          app.show()
+          try await Task.sleep(nanoseconds: 300_000_000)
+        }
         app.window.contentView?.layoutSubtreeIfNeeded()
         if let view = app.window.contentView,
           let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)
@@ -234,7 +261,8 @@
       try? String(describing: layout).write(
         toFile: "/private/tmp/herdr-hud-layout.txt", atomically: true, encoding: .utf8)
       if successful && CommandLine.arguments.contains("--smoke-hold") {
-        try? await Task.sleep(nanoseconds: 120_000_000_000)
+        let seconds = min(120, max(1, UInt64(ProcessInfo.processInfo.environment["HUD_TEST_HOLD_SECONDS"] ?? "") ?? 120))
+        try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
       }
       app.monitor?.stop()
       app.terminals.values.forEach { $0.detach() }

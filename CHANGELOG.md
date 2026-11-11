@@ -1,6 +1,6 @@
 # Release notes
 
-## 1.4 — 10 November 2026 (Ubuntu/Debian)
+## 1.4 — in development (Ubuntu and macOS source)
 
 - Keep widget clicks deterministic if automatic hiding happens during the click: H hides an open Hud and opens a hidden Hud. Clarify the automatic-hiding switch; GNOME extension revision is now 5. Logout/login loads the updated extension.
 - Hide back to the floating H when focus moves outside Hud; Settings → Floating H provides a saved on/off switch, enabled by default. Open menus and Hud dialogs are protected.
@@ -10,7 +10,10 @@
 - Show only `user@host` in terminal and agent hover tooltips, matching the active palette and dark/light theme.
 - Try live edge selection for shells and CLIs, fall back to retained history after three unchanged initial frames, and restore focus after selection overlays close.
 - Add regression checks for first-click paste, pane versus terminal IDs, real Codex startup in a disposable server, agent headings and identity-only tooltips.
-- Ubuntu source/package update only; Mac implementation requests are tracked in [issue #3](https://github.com/alex-jax/jax-herdr-hud/issues/3). GitHub release assets are not published by this commit.
+- Exercise core integration with Herdr 0.9.5 on Ubuntu ARM64 and macOS; keep synchronized terminal output controls intact. Test fixtures keep a real foreground process alive for Herdr agent reports.
+- Align the macOS sidebar and header with the Ubuntu reference: edge-to-edge list backgrounds, fine dividers with full drag targets, matching symbolic icons and interface font, and the empty Agents message. Preserve sidebar selection across theme changes.
+- Use Ubuntu 26.04's Ubuntu Mono font and matching default terminal cell dimensions on macOS, including for history selection.
+- Align the native macOS source version to 1.4; Ubuntu feature parity is not yet complete and is tracked in [issue #3](https://github.com/alex-jax/jax-herdr-hud/issues/3). GitHub release assets are not published by this commit.
 
 ## 1.3 — 2 November 2026 (Ubuntu/Debian)
 

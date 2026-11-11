@@ -1,5 +1,25 @@
 # Validation
 
+## Ubuntu 1.4 and Herdr 0.9.5 on ARM64 — 11 November 2026
+
+On Ubuntu 26.04.1 / GNOME Shell 50.1 in the Apple silicon VM, the integrated
+1.4 source passed 58 unit tests and four JavaScript launcher tests. Setup,
+sidebar, auto-hide and real Herdr desktop smoke tests passed against an
+extracted 1.4 Debian payload. After a documentation-only package rebuild, the
+final extracted package again passed setup and desktop smoke; its app modules
+and extension files matched the previously tested payload. Final package SHA-256:
+`33daab85bda40995891461933ec12946d9caa3d5c539eeeb0c22067239c45809`.
+
+The package was installed inside the VM, its installed app modules and extension
+files matched the extracted payload, and Hud restarted while the existing
+Herdr 0.9.5 server and session were preserved. GNOME extension revision 5 was
+installed on disk; the desktop still had revision 4 loaded and needs a fresh
+login to load it. The isolated headless GNOME test for revision 5 did not pass
+in the VM: an initial run encountered a stale test compositor and a retry timed
+out. Earlier revision 4 runs also failed synthetic pointer checks. These
+results do not establish physical pointer behavior, amd64 compatibility, or a
+clean-machine installation. No GitHub release was published by this work.
+
 ## Ubuntu 1.4 source and local Debian build — 10 November 2026
 
 - 57 unit tests passed after updating version metadata to 1.4/v1.4, including

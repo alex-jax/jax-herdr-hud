@@ -20,6 +20,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   let split = HudSplitView(), sections = HudSplitView()
   let spaces = SidebarTable(), agents = SidebarTable()
   let spaceToggle = HudButton(), agentToggle = HudButton()
+  let emptyAgents = NSTextField(labelWithString: "No agents running")
   let terminalHost = NSView()
   var sidebar: HudSidebar!
   var rightPane: HudTerminalPane!
@@ -167,21 +168,22 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     let left = NSStackView(views:[credits,settings]), trailing = NSStackView(views:[hide,expand,themeButton,exit])
     for stack in [left,trailing] { stack.spacing = 6; stack.orientation = .horizontal }
     for button in chromeButtons { button.widthAnchor.constraint(equalToConstant:34).isActive = true; button.heightAnchor.constraint(equalToConstant:34).isActive = true }
-    appTitle.font = HudStyle.font(16,bold:true); appTitle.alignment = .center
+    appTitle.font = HudStyle.font(14,bold:true); appTitle.alignment = .center
     appSubtitle.font = HudStyle.font(12); appSubtitle.alignment = .center
     for v in [left,trailing,appTitle,appSubtitle] { header.addSubview(v); v.translatesAutoresizingMaskIntoConstraints = false }
     NSLayoutConstraint.activate([
       left.leadingAnchor.constraint(equalTo:header.leadingAnchor,constant:6),left.centerYAnchor.constraint(equalTo:header.centerYAnchor),
       trailing.trailingAnchor.constraint(equalTo:header.trailingAnchor,constant:-6),trailing.centerYAnchor.constraint(equalTo:header.centerYAnchor),
-      appTitle.centerXAnchor.constraint(equalTo:header.centerXAnchor),appTitle.topAnchor.constraint(equalTo:header.topAnchor,constant:5),
-      appSubtitle.centerXAnchor.constraint(equalTo:header.centerXAnchor),appSubtitle.topAnchor.constraint(equalTo:appTitle.bottomAnchor,constant:0)
+      appTitle.centerXAnchor.constraint(equalTo:header.centerXAnchor),appTitle.topAnchor.constraint(equalTo:header.topAnchor,constant:8),
+      appSubtitle.centerXAnchor.constraint(equalTo:header.centerXAnchor),appSubtitle.topAnchor.constraint(equalTo:appTitle.bottomAnchor,constant:1)
     ])
     search.placeholderString = "Find a terminal or agent…"; search.font = HudStyle.font(14); search.delegate = self; search.sendsSearchStringImmediately = true
     search.focusRingType = .none
     split.isVertical = true; split.dividerStyle = .thick; split.delegate = self
     sections.isVertical = false; sections.dividerStyle = .thick; sections.delegate = self
+    emptyAgents.font = HudStyle.font(11); emptyAgents.alignment = .center
     sections.addArrangedSubview(section("SPACES",table:spaces,toggle:spaceToggle,action:#selector(toggleSpaces)))
-    sections.addArrangedSubview(section("AGENTS",table:agents,toggle:agentToggle,action:#selector(toggleAgents)))
+    sections.addArrangedSubview(section("AGENTS",table:agents,toggle:agentToggle,action:#selector(toggleAgents),placeholder:emptyAgents))
     let create = HudButton("+  New space",target:self,action:#selector(newSpace)); create.setAccessibilityLabel("New space")
     sidebar = HudSidebar(search:search,sections:sections,create:create)
     sidebar.autoresizingMask = [.height]
@@ -209,7 +211,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     sidebarToggle.toolTip = sidebar.frame.width < 1 ? "Expand sidebar" : "Collapse sidebar"
     root.addSubview(sidebarToggle,positioned:.above,relativeTo:split)
   }
-  func section(_ name:String,table:SidebarTable,toggle:HudButton,action:Selector) -> NSView {
+  func section(_ name:String,table:SidebarTable,toggle:HudButton,action:Selector,placeholder:NSTextField? = nil) -> NSView {
     toggle.title = "⌄  " + name; toggle.target = self; toggle.action = action; toggle.showsBorder = false
     toggle.alignment = .left; toggle.font = HudStyle.font(10,bold:true)
     let col = NSTableColumn(identifier:NSUserInterfaceItemIdentifier("name")); col.width = 240; col.minWidth = 0; col.resizingMask = .autoresizingMask
@@ -217,7 +219,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     table.addTableColumn(col); table.headerView = nil; table.rowHeight = 30; table.intercellSpacing = .zero; table.style = .plain; table.dataSource = self; table.delegate = self; table.allowsEmptySelection = true
     table.setAccessibilityLabel(name.capitalized); table.context = { [weak self,weak table] index in guard let self,let table else { return nil }; return self.contextMenu(table,index) }
     let scroll = NSScrollView(); scroll.documentView = table; scroll.hasVerticalScroller = true; scroll.autohidesScrollers = true; scroll.scrollerStyle = .overlay; scroll.drawsBackground = false
-    return HudSection(heading:toggle,scroll:scroll)
+    return HudSection(heading:toggle,scroll:scroll,placeholder:placeholder)
   }
   func buildDesktop() {
     bubble = BubblePanel(
@@ -534,6 +536,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     }
     if !prefs.spacesExpanded { nextSpaces = [] }
     if !prefs.agentsExpanded { nextAgents = [] }
+    emptyAgents.isHidden = !prefs.agentsExpanded || !nextAgents.isEmpty
     spaceToggle.title = (prefs.spacesExpanded ? "⌄  " : "›  ") + "SPACES"
     agentToggle.title = (prefs.agentsExpanded ? "⌄  " : "›  ") + "AGENTS"
     let signature: ([Row]) -> [String] = {
@@ -815,6 +818,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     (window.contentView as? HudSurface)?.fill = HudStyle.background
     header.fill = HudStyle.side; header.border = HudStyle.line
     sidebar.fill = HudStyle.side; rightPane.fill = HudStyle.background
+    emptyAgents.textColor = HudStyle.foreground.withAlphaComponent(0.7)
     for case let section as HudSection in sections.subviews { section.fill = HudStyle.side }
     terminalHost.wantsLayer = true; terminalHost.layer?.backgroundColor = HudStyle.background.cgColor
     for table in [spaces,agents] { table.backgroundColor = HudStyle.background }
@@ -828,7 +832,12 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     spaceToggle.needsDisplay = true; agentToggle.needsDisplay = true
     split.needsDisplay = true; sections.needsDisplay = true
     terminals.values.forEach { $0.apply(colors) }
-    spaces.reloadData(); agents.reloadData(); bubbleView.needsDisplay = true
+    let wasRebuilding = rebuilding
+    rebuilding = true
+    spaces.reloadData(); agents.reloadData()
+    rebuilding = wasRebuilding
+    if !wasRebuilding { render() }
+    bubbleView.needsDisplay = true
     setupPanel?.refresh(); settingsController?.syncAppearance()
     save()
   }
@@ -914,10 +923,10 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   }
   @objc func about() {
     NSApp.orderFrontStandardAboutPanel(options: [
-      .applicationName: "Herdr Hud", .applicationVersion: "1.2 · macOS",
+      .applicationName: "Herdr Hud", .applicationVersion: "1.4 · macOS",
       .credits: NSAttributedString(
         string:
-          "Native macOS port of Alex Jax’s independent Ubuntu remix.\nOriginal Herdr HUD: Alex Finn.\nPalettes: Christian Hergert / Ptyxis. Terminal: SwiftTerm contributors.\nGPL-3.0-or-later; retained MIT and Ptyxis notices are bundled."
+          "Native macOS port of Alex Jax’s independent Ubuntu remix.\nOriginal Herdr HUD: Alex Finn.\nPalettes: Christian Hergert / Ptyxis. Terminal: SwiftTerm contributors.\nIcons: GNOME Project. Interface font: DejaVu.\nGPL-3.0-or-later; third-party notices are bundled."
       ),
     ])
   }

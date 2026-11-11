@@ -1,7 +1,6 @@
 # Herdr Hud for macOS
 
-Native AppKit/SwiftTerm companion for **macOS 27 on Apple silicon**, version **1.2**. The native app incorporates Ubuntu 1.2 terminal interaction
-changes. Download the DMG from the [v1.2 GitHub release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2).
+Native AppKit/SwiftTerm companion for **macOS 27 on Apple silicon**, source version **1.4**. The native app incorporates Ubuntu 1.2 terminal interactions; later Ubuntu feature parity remains in development. The previously published DMG is available from the [v1.2 GitHub release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2); version 1.4 has not been published.
 
 This source has been exercised on macOS 27.2 arm64 with Herdr 0.9.1 and
 0.9.5. The 0.9.5 checks include a real Codex session; see the
@@ -35,7 +34,7 @@ macos/scripts/build-dmg.sh
 ```
 
 This builds the release app and creates
-`macos/dist/Herdr-Hud-1.2-macOS-27-arm64.dmg` plus a SHA-256 file.
+`macos/dist/Herdr-Hud-1.4-macOS-27-arm64.dmg` plus a SHA-256 file.
 The image contains the app, an Applications shortcut, installation/first-launch
 instructions, and a source archive with the current Mac source, shared palette
 sources, licenses, and pinned Swift dependency sources. It excludes personal
@@ -51,8 +50,11 @@ The Mac window follows the GNOME companion's layout: a unified header, sidebar
 search, Spaces/Agents sections, indented terminal rows, activity dots, bottom New
 space control, terminal heading, and footer. Palette backgrounds, borders, hover,
 and selection colors use the same blends as `hud.py`. CLI foreground and background colors stay paired, including selection and
-pasted-text highlights. New preferences use VS Code Dark; saved choices are retained. Ubuntu and Ubuntu Mono are
-bundled and registered only in this app. macOS text rasterization and system
+pasted-text highlights. New preferences use VS Code Dark; saved choices are retained. Ubuntu Mono and DejaVu Sans are
+bundled and registered only in this app. The Mac controls use the DejaVu Sans
+fallback used by the Ubuntu reference environment; the terminal retains Ubuntu
+Mono, using Ubuntu 26.04's font and 9 × 19 logical-pixel cells at the default
+size. macOS text rasterization and system
 menus/dialogs can still differ from GTK.
 
 ## Use
@@ -147,5 +149,7 @@ owns AppKit windows and keeps one SwiftTerm/PTY attachment for each
 UI updates are delivered to the main queue.
 
 GPL-3.0-or-later applies to the port. The app retains Alex Finn's MIT notice,
-Ptyxis palette notices, SwiftTerm's license, and the Ubuntu Font Licence in
-`Sources/HerdrHud/Resources/Fonts/UFL.txt`. Credits are in the About panel.
+Ptyxis palette notices, SwiftTerm's license, the Ubuntu Font Licence and the
+DejaVu font notice in `Sources/HerdrHud/Resources/Fonts`. The bundled Adwaita
+symbolic icons are by the [GNOME Project](https://www.gnome.org); their notice is in
+`Sources/HerdrHud/Resources/Icons/Adwaita-LICENSE.txt`. Credits are in the About panel.

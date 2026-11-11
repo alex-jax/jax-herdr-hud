@@ -12,6 +12,7 @@ extension SmokeRun {
     defer { try? FileManager.default.removeItem(at: root) }
     let script = root.appendingPathComponent("cli.py")
     let output = root.appendingPathComponent("offset")
+    let events = root.appendingPathComponent("events")
     try #"""
 import os, re, sys, termios, tty
 old = termios.tcgetattr(0)
@@ -39,6 +40,8 @@ try:
                 break
             button, col, row = map(int, match.groups())
             pending = pending[match.end():]
+            with open(sys.argv[2], 'a') as f:
+                f.write('%d %d %d\n' % (button, col, row))
             if 2 <= row <= rows - 2 and button in (64, 65):
                 position += -2 if button == 64 else 2
                 draw()
@@ -48,7 +51,12 @@ finally:
     print('HUD_CLI_ROUNDTRIP_DONE', flush=True)
 """#.write(to: script, atomically: true, encoding: .utf8)
     terminal.send(source: terminal,
-      data: Array(("/usr/bin/python3 " + script.path + " " + output.path + "\r").utf8)[...])
+      data: Array("printf '\\110\\125\\104_CLI_READY\\n'\r".utf8)[...])
+    try await until("shell ready for controlled CLI") {
+      terminal.visibleTextRows().contains("HUD_CLI_READY")
+    }
+    terminal.send(source: terminal,
+      data: Array(("/usr/bin/python3 " + script.path + " " + output.path + " " + events.path + "\r").utf8)[...])
     try await until("controlled CLI starts") { terminal.visibleTextRows().contains("roundtrip line 100") }
     var finished = false
     defer { if !finished { terminal.send(source: terminal, data: [113][...]) } }
@@ -66,8 +74,13 @@ finally:
       let edge = direction < 0 ? ch / 2 : terminal.bounds.height - ch / 2
       terminal.mouseDown(with: mouse(.leftMouseDown, terminal.bounds.height / 2))
       terminal.mouseDragged(with: mouse(.leftMouseDragged, edge))
-      try await until("real CLI wheel direction \(direction)", timeout: 4) {
-        direction < 0 ? offset() < before : offset() > before
+      do {
+        try await until("real CLI wheel direction \(direction)", timeout: 4) {
+          direction < 0 ? offset() < before : offset() > before
+        }
+      } catch {
+        let reports = (try? String(contentsOf: events, encoding: .utf8)) ?? "none"
+        throw HudError.message("\(error.localizedDescription); mouse reports: \(reports)")
       }
       try await Task.sleep(nanoseconds: 350_000_000)
       terminal.mouseUp(with: mouse(.leftMouseUp, edge))

@@ -1,4 +1,4 @@
-HERDR HUD — macOS 1.2
+HERDR HUD — macOS 1.4
 Ubuntu 1.2 terminal interaction update: plain-text drag selection and history,
 clipboard text paste, browser links, paired CLI colors, focus, and VS Code Dark.
 

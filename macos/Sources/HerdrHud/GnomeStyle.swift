@@ -4,18 +4,20 @@ import CoreText
 /// Metrics and color blends taken from hud.py, rather than platform control defaults.
 enum HudStyle {
   static func registerFonts() {
-    for name in ["Ubuntu-Regular", "Ubuntu-Bold", "UbuntuMono-Regular"] {
+    for name in ["DejaVuSans", "DejaVuSans-Bold", "UbuntuMono-Regular"] {
       if let url = Bundle.module.url(forResource: name, withExtension: "ttf", subdirectory: "Resources/Fonts") {
         CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
       }
     }
   }
   static func font(_ size: CGFloat, bold: Bool = false) -> NSFont {
-    NSFont(name: bold ? "Ubuntu-Bold" : "Ubuntu-Regular", size: size) ?? .systemFont(ofSize: size, weight: bold ? .bold : .regular)
+    NSFont(name: bold ? "DejaVuSans-Bold" : "DejaVuSans", size: size) ?? .systemFont(ofSize: size, weight: bold ? .bold : .regular)
   }
   static func mono(_ size: CGFloat = 16) -> NSFont {
     NSFont(name: "UbuntuMono-Regular", size: size) ?? .monospacedSystemFont(ofSize: size, weight: .regular)
   }
+  // Ubuntu VTE's 12 pt Ubuntu Mono uses 9 × 19 logical-pixel cells at 96 DPI.
+  static let terminalLineSpacing: CGFloat = 1.04
   static var foreground = NSColor(hex: "#d8dee9")
   static var background = NSColor(hex: "#2e3440")
   static var side = NSColor(hex: "#373e4b")
@@ -53,6 +55,27 @@ final class HudHeader: HudSurface {
 }
 
 final class HudButton: NSButton {
+  private static let referenceIcons: [String: NSImage] = {
+    let names: [String: (String, String)] = [
+      "info": ("actions", "help-about-symbolic"),
+      "settings": ("categories", "preferences-system-symbolic"),
+      "minus": ("ui", "window-minimize-symbolic"),
+      "expand": ("actions", "view-fullscreen-symbolic"),
+      "sun": ("status", "weather-clear-symbolic"),
+      "moon": ("status", "weather-clear-night-symbolic"),
+      "power": ("actions", "system-shutdown-symbolic"),
+      "left": ("ui", "pan-start-symbolic"),
+      "right": ("ui", "pan-end-symbolic"),
+      "down": ("ui", "pan-down-symbolic"),
+      "plus": ("actions", "list-add-symbolic"),
+    ]
+    var icons: [String: NSImage] = [:]
+    for (glyph, (group, name)) in names {
+      if let url = Bundle.module.url(forResource:name,withExtension:"svg",subdirectory:"Resources/Icons/\(group)"),
+        let image = NSImage(contentsOf:url) { icons[glyph] = image }
+    }
+    return icons
+  }()
   override var isFlipped:Bool { false }
   var glyph: String?
   var showsBorder = true
@@ -82,6 +105,7 @@ final class HudButton: NSButton {
     }
   }
   private func drawGlyph(_ glyph:String, in rect:NSRect, color:NSColor) {
+    if drawReferenceIcon(glyph, in:rect, color:color) { return }
     if ["left","right","down","plus","minus","power","expand","info","sun","moon"].contains(glyph) {
       let c = NSPoint(x:rect.midX,y:rect.midY), p = NSBezierPath(); p.lineWidth = 1.25; p.lineCapStyle = .round; p.lineJoinStyle = .round
       color.setStroke()
@@ -108,19 +132,37 @@ final class HudButton: NSButton {
         p.appendArc(withCenter:.init(x:c.x+4,y:c.y),radius:6,startAngle:245,endAngle:115,clockwise:true); p.close()
       default: break
       }; p.stroke()
-    } else if let image = NSImage(systemSymbolName:glyph == "settings" ? "gearshape" : "pencil", accessibilityDescription:nil) {
+    } else if let image = NSImage(systemSymbolName:glyph == "settings" ? "wrench.and.screwdriver" : "pencil", accessibilityDescription:nil) {
       let configuration = NSImage.SymbolConfiguration(pointSize:15,weight:.regular).applying(.init(paletteColors:[color]))
       let tinted = image.withSymbolConfiguration(configuration) ?? image
       let r = NSRect(x:rect.midX-8,y:rect.midY-8,width:16,height:16)
       tinted.draw(in:r)
     }
   }
+  private func drawReferenceIcon(_ glyph:String, in rect:NSRect, color:NSColor) -> Bool {
+    guard let source = Self.referenceIcons[glyph] else { return false }
+    let tinted = NSImage(size:NSSize(width:16,height:16),flipped:false) { bounds in
+      source.draw(in:bounds)
+      color.setFill(); bounds.fill(using:.sourceIn)
+      return true
+    }
+    tinted.draw(in:NSRect(x:rect.midX-8,y:rect.midY-8,width:16,height:16))
+    return true
+  }
 }
 
 final class HudSplitView: NSSplitView {
   var width: CGFloat = 6
   override var dividerThickness: CGFloat { width }
-  override func drawDivider(in rect:NSRect) { HudStyle.line.setFill(); rect.fill() }
+  override func drawDivider(in rect:NSRect) {
+    // Keep a generous drag target while drawing the divider as a fine line.
+    HudStyle.background.setFill(); rect.fill()
+    HudStyle.line.setFill()
+    let line = isVertical
+      ? NSRect(x:rect.midX-0.5,y:rect.minY,width:1,height:rect.height)
+      : NSRect(x:rect.minX,y:rect.midY-0.5,width:rect.width,height:1)
+    line.fill()
+  }
 }
 final class HudRowView: NSTableRowView {
   var inset: CGFloat = 0
@@ -141,9 +183,9 @@ final class HudSidebar: HudSurface {
   required init?(coder:NSCoder) { fatalError() }
   override func layout() {
     super.layout()
-    search.frame = NSRect(x:16,y:max(0,bounds.height-46),width:max(0,bounds.width-32),height:34)
-    create.frame = NSRect(x:16,y:16,width:max(0,bounds.width-32),height:40)
-    sections.frame = NSRect(x:4,y:68,width:max(0,bounds.width-8),height:max(0,bounds.height-126))
+    search.frame = NSRect(x:13,y:max(0,bounds.height-50),width:max(0,bounds.width-32),height:34)
+    create.frame = NSRect(x:13,y:16,width:max(0,bounds.width-32),height:40)
+    sections.frame = NSRect(x:0,y:68,width:bounds.width,height:max(0,bounds.height-130))
   }
 }
 final class HudTerminalPane: HudSurface {
@@ -157,22 +199,32 @@ final class HudTerminalPane: HudSurface {
   required init?(coder:NSCoder) { fatalError() }
   override func layout() {
     super.layout()
-    title.frame = NSRect(x:16,y:bounds.height-36,width:max(0,bounds.width-32),height:23)
-    terminalHost.frame = NSRect(x:16,y:12,width:max(0,bounds.width-32),height:max(0,bounds.height-61))
+    title.frame = NSRect(x:16,y:bounds.height-39,width:max(0,bounds.width-32),height:23)
+    terminalHost.frame = NSRect(x:16,y:12,width:max(0,bounds.width-32),height:max(0,bounds.height-64))
     setup?.frame = NSRect(x:0,y:0,width:bounds.width,height:max(0,bounds.height-45))
   }
 }
 final class HudSection: HudSurface {
   let heading: NSButton
   let scroll: NSScrollView
-  init(heading:NSButton,scroll:NSScrollView) {
-    self.heading = heading; self.scroll = scroll
+  let placeholder: NSTextField?
+  init(heading:NSButton,scroll:NSScrollView,placeholder:NSTextField? = nil) {
+    self.heading = heading; self.scroll = scroll; self.placeholder = placeholder
     super.init(frame:NSRect(x:0,y:0,width:245,height:260)); addSubview(heading); addSubview(scroll)
+    if let placeholder { addSubview(placeholder) }
   }
   required init?(coder:NSCoder) { fatalError() }
+  override func draw(_ rect:NSRect) {
+    super.draw(rect)
+    // The list background extends to the section edges, while the rows retain
+    // their inset. This avoids a thick frame around each sidebar list.
+    HudStyle.background.setFill()
+    NSRect(x:0,y:0,width:bounds.width,height:max(0,bounds.height-25)).fill()
+  }
   override func layout() {
     super.layout(); heading.frame = NSRect(x:0,y:bounds.height-25,width:bounds.width,height:25)
     scroll.frame = NSRect(x:12,y:0,width:max(0,bounds.width-24),height:max(0,bounds.height-25))
+    placeholder?.frame = NSRect(x:12,y:max(0,(bounds.height-25)/2-9),width:max(0,bounds.width-24),height:18)
     if let table = scroll.documentView as? NSTableView {
       table.frame.size.width = scroll.contentSize.width
       table.tableColumns.first?.width = scroll.contentSize.width

@@ -1,5 +1,30 @@
 # macOS validation — 24 September 2026
 
+## Ubuntu reference appearance and 1.4 source — 11 November 2026
+
+On macOS 27.2 arm64, the native app was compared with the Ubuntu 26.04 VM
+reference. Sidebar list backgrounds now extend to the panel edges; dividers
+draw as one-pixel lines while retaining their six-pixel drag area. The header
+uses bundled Adwaita symbolic icons, and the UI uses the reference environment's
+DejaVu Sans fallback. The same Ubuntu Mono font used in the VM and a 9 × 19
+logical-pixel terminal grid are used for live and retained-history views.
+These measurements do not establish identical rasterization on all displays.
+
+The debug build passed core checks and five consecutive 0.9.5 desktop smoke
+runs with simulated selection and controlled live CLI scrolling after adding a
+shell-readiness handshake. A further run without diagnostic logging passed.
+Earlier runs without that handshake intermittently timed out in the controlled
+CLI and once lost the sidebar selection during a theme change. The theme path
+now restores selection, and the visual smoke checks it. The physical-pointer
+run could not proceed because macOS Accessibility permission was unavailable;
+physical dragging in either direction remains unverified for this change.
+
+The 1.4 release bundle was built, signature-checked, installed locally and
+restarted. The installed files matched the build, the app attached to the
+existing terminal, and the running Herdr session list remained unchanged. The
+client was 0.9.5 and the preserved existing server reported 0.9.1.
+
+
 Environment: macOS 27.0 (26A428), arm64, Apple Swift 6.4 Command Line Tools,
 Herdr 0.9.1. Ubuntu source baseline: `2689465`.
 

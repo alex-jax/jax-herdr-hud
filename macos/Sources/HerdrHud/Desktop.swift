@@ -180,7 +180,7 @@ final class SidebarCell: NSTableCellView {
     let cy = group ? (bounds.height-8)/2 : agentShortcut ? bounds.height-15 : bounds.height/2
     disclosure.frame = NSRect(x:6,y:cy-10,width:18,height:21)
     dot.frame = NSRect(x:group ? 56 : agentShortcut ? 34 : 56,y:cy-9,width:14,height:20)
-    let left:CGFloat = group ? 74 : agentShortcut ? 52 : 74
+    let left:CGFloat = group ? 76 : agentShortcut ? 52 : 76
     label.frame = NSRect(x:left,y:cy-10,width:max(0,bounds.width-left-(group ? 35:8)),height:22)
     plus.frame = NSRect(x:bounds.width-34,y:cy-11,width:28,height:23)
     pencil.frame = NSRect(x:group ? 30 : agentShortcut ? 7 : 29,y:cy-9,width:19,height:19)

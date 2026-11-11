@@ -18,6 +18,7 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
     super.init(
       frame: .zero, font: HudStyle.mono(),
       options: TerminalOptions(scrollback: 20000))
+    lineSpacing = HudStyle.terminalLineSpacing
     keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
       guard let self, self.window?.firstResponder === self else { return event }
       return self.handleKeyDown(event) ? nil : event
@@ -246,7 +247,7 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
     let scale = window?.backingScaleFactor ?? 2
     let width = font.advancement(forGlyph: font.glyph(withName: "W")).width
     return NSSize(width: max(1, (width * scale).rounded() / scale),
-      height: max(1, ceil(font.ascender - font.descender + font.leading)))
+      height: max(1, ceil((font.ascender - font.descender + font.leading) * lineSpacing)))
   }
   private func selectionPoint(_ event: NSEvent) -> NSPoint {
     let p = convert(event.locationInWindow, from: nil)
@@ -304,6 +305,7 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
     super.mouseUp(with: routed(motion))
     selectNone()
     let view = HistoryTerminal(frame: bounds, font: HudStyle.mono(), options: TerminalOptions(scrollback: 20000))
+    view.lineSpacing = HudStyle.terminalLineSpacing
     view.allowMouseReporting = false
     if let currentPalette { view.apply(currentPalette) }
     view.autoresizingMask = [.width, .height]

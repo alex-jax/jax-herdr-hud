@@ -1,7 +1,7 @@
 # Herdr Hud
 
-**Native macOS app:** The AppKit/SwiftTerm version 1.2 for macOS 27 on Apple
-silicon remains available from the [v1.2 release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2).
+**Native macOS app:** The AppKit/SwiftTerm source is version 1.4 for macOS 27 on
+Apple silicon; the previously published version 1.2 remains available from the [v1.2 release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2).
 Its build and installation instructions are in [`macos/`](macos/README.md). The current
 macOS source has also been exercised with Herdr 0.9.5 on macOS 27.2; see the
 [Mac validation record](macos/VALIDATION.md) for the scope and limitations.

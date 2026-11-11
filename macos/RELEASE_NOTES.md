@@ -1,8 +1,15 @@
-# Herdr Hud 1.2 — native macOS app
+# Herdr Hud 1.4 — native macOS source (unreleased)
 
 Native AppKit/SwiftTerm build for Apple silicon and macOS 27 or later.
-Herdr must be installed separately. This release uses an ad-hoc signature and
-is not Developer ID signed or Apple notarized.
+Herdr 0.9.1 and 0.9.5 have been exercised separately. This source build uses an ad-hoc signature and
+is not Developer ID signed or Apple notarized. A 1.4 installer has not been published.
+Ubuntu 1.4 feature parity is not yet complete.
+
+- Match the Ubuntu reference sidebar with edge-to-edge list backgrounds, fine
+  dividers, matching symbolic icons and interface font, and the empty Agents
+  message. Theme changes retain sidebar selection.
+- Use Ubuntu 26.04's Ubuntu Mono font and matching default terminal cell
+  dimensions, including for history selection.
 
 - Port Ubuntu 1.2's normal drag-to-select and plain-text automatic copy. Hold
   Shift to send mouse input to interactive CLIs; the route stays fixed for the gesture.
