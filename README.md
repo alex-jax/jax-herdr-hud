@@ -2,7 +2,9 @@
 
 **Native macOS app:** The AppKit/SwiftTerm version 1.2 for macOS 27 on Apple
 silicon remains available from the [v1.2 release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2).
-Its build and installation instructions are in [`macos/`](macos/README.md).
+Its build and installation instructions are in [`macos/`](macos/README.md). The current
+macOS source has also been exercised with Herdr 0.9.5 on macOS 27.2; see the
+[Mac validation record](macos/VALIDATION.md) for the scope and limitations.
 The stable 1.3 release below is Debian-only; the GTK/VTE Mac port remains in development.
 
 A native GTK/VTE companion for local Herdr terminals and agents on Ubuntu 26.04.
@@ -31,7 +33,9 @@ This is an independently maintained Ubuntu implementation.
 **Quick setup:** Download the `.deb` → install Herdr → install Hud → start
 `herdr` once → **open Hud once (H enables automatically)** → **log out and back in**.
 
-Targets Ubuntu 26.04 / GNOME 50; tested on amd64 with Herdr 0.9.1.
+Targets Ubuntu 26.04 / GNOME 50. The published release was tested on amd64
+with Herdr 0.9.1; current source core integration was also tested on ARM64 with
+Herdr 0.9.5 in a VM. See the [validation record](docs/VALIDATION.md) for limits.
 The native `.deb` installs the app and optional floating H extension, and APT
 resolves its system Python/GTK/VTE dependencies. Herdr and CLI agents are separate
 installations. Source installation and modification instructions are also included.

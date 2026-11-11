@@ -276,6 +276,12 @@ finally:
     assert f'<font color="{expected_red}">HUD_RED_FILE</font>' in html, html
     print('PASS: real shell ANSI filename color survives the PTY relay into VTE', flush=True)
     print('PASS: imported palette and variant changes recolor live VTE without reconnecting', flush=True)
+    # Herdr 0.9.2+ clears a reported agent once its pane is an idle shell.
+    # Keep a disposable foreground process alive while simulating an agent.
+    terminal.feed_child(b'sleep 60\r')
+    until(lambda: any(process.get('name') == 'sleep' for process in
+                      request(path, 'pane.process_info', {'pane_id': pane['pane_id']})
+                      .get('process_info', {}).get('foreground_processes', [])))
     app.hide()
     observed = []
     watcher = SessionWatcher(session, lambda *a: None, lambda s, m: observed.append(m))
@@ -294,6 +300,7 @@ finally:
     assert app.terminals[key] is terminal
     print('PASS: real Herdr agent reports populate Agents without reconnecting the terminal', flush=True)
     watcher.stop()
+    terminal.feed_child(b'\x03')
     print('PASS: live Herdr event subscription delivers working/blocked states', flush=True)
     assert request(path, 'session.snapshot')['snapshot']['panes']
     app.transition(key, pane, 'working')

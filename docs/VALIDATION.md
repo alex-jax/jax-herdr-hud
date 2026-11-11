@@ -68,6 +68,38 @@
   loaded; logout/login is required to load revision 5 under the GNOME 50
   workflow. The user's desktop session was not restarted during verification.
 
+## Herdr 0.9.5 on Ubuntu ARM64 — 11 November 2026
+
+Ubuntu 26.04.1 / GNOME Shell 50.1 ran in an Apple Virtualization Framework VM
+on Apple silicon (ARM64). Herdr 0.9.5 and the public v1.3 Debian package were
+verified using their release SHA-256 digests before installation. Source unit
+checks passed: 55 tests. Against the installed release payload, the GTK sidebar
+smoke and the real Herdr desktop integration smoke passed. The original desktop
+agent fixture failed because Herdr clears self-reported agents in idle shells;
+keeping a disposable foreground process alive corrected the fixture.
+
+The installed extension loaded and could be enabled in a separate headless
+GNOME session, but its synthetic pointer grab assertion failed twice in this VM.
+The headless overview remained visible and the virtual pointer was not at the
+requested position. A further instrumented run stalled during shell startup. This
+is not a passing extension lifecycle or pointer test; the cause has not been
+established. The VM checks do not validate amd64, a clean physical Ubuntu
+installation, or every Herdr agent/CLI.
+
+The current source adds 0.9.5 to its tested core-integration messages; the public
+v1.3 release itself is unchanged. A locally rebuilt `1.3-1` Debian package has
+SHA-256 `71d75337774291cdd74f6fb5a174a59f683ac9135aa7daa02f859fa8a427ada7`.
+The source unit suite passed 55 tests, and the extracted package passed setup,
+sidebar and desktop integration smoke tests with Herdr 0.9.5. Its extension
+smoke timed out in the separate headless GNOME session. The rebuilt package was
+installed inside the VM, and its installed launcher, app modules and extension
+files matched the extracted payload. Hud started and attached to Herdr 0.9.5.
+After a graphical session restart, the extension was ACTIVE, its D-Bus bridge
+responded, and both the Hud window and H were visible. The existing test server
+remained running across that session restart. Physical pointer/drag behavior was
+not verified by those checks, and this VM installation was not a release or an
+amd64 validation.
+
 ## 1.3 stable Debian release — 2 November 2026
 
 Target: Ubuntu 26.04 / GNOME Shell 50, amd64, Herdr 0.9.1. The v1.3 release is

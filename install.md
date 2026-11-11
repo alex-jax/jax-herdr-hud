@@ -72,4 +72,6 @@ Exit Hud, then run `sudo apt remove jax-herdr-hud`. Herdr is a separate applicat
 - [Source installation, building and troubleshooting](docs/INSTALL_ADVANCED.md)
 - [User manual](MANUAL.md) · [Validation record](docs/VALIDATION.md)
 
-Tested on amd64 with Herdr 0.9.1. See the release page for the available version.
+The published release was tested on amd64 with Herdr 0.9.1. Current source core
+integration was also tested on ARM64 with Herdr 0.9.5 in a VM; see
+[validation details](docs/VALIDATION.md). See the release page for available builds.

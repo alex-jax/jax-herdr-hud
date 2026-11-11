@@ -3,6 +3,11 @@
 Native AppKit/SwiftTerm companion for **macOS 27 on Apple silicon**, version **1.2**. The native app incorporates Ubuntu 1.2 terminal interaction
 changes. Download the DMG from the [v1.2 GitHub release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2).
 
+This source has been exercised on macOS 27.2 arm64 with Herdr 0.9.1 and
+0.9.5. The 0.9.5 checks include a real Codex session; see the
+[validation record](VALIDATION.md) for scope and test details.
+These results do not update the previously published DMG.
+
 ## Build and install
 
 Install Apple's Command Line Tools and Herdr separately. From the repository root:

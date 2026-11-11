@@ -37,7 +37,7 @@ def resolve_herdr(path=None):
     found = shutil.which('herdr', path=env.get('PATH', os.defpath))
     if found:
         return str(Path(found).absolute())
-    raise HerdrUnavailable('Herdr was not found. Install Herdr 0.9.1 or select its executable below.')
+    raise HerdrUnavailable('Herdr was not found. Install Herdr separately or select its executable below.')
 
 
 def check_herdr(path=None):
@@ -65,12 +65,12 @@ def request(path, method, params=None):
         with sock.makefile('rb') as stream:
             result = json.loads(stream.readline(8 * 1024 * 1024))
     if not isinstance(result, dict):
-        raise RuntimeError('Unsupported Herdr protocol: expected an object reply (tested with 0.9.1).')
+        raise RuntimeError('Unsupported Herdr protocol: expected an object reply (core integration tested with 0.9.1 and 0.9.5).')
     if 'error' in result:
         error = result['error']
         raise RuntimeError(error.get('message', str(error)) if isinstance(error, dict) else str(error))
     if not isinstance(result.get('result'), dict):
-        raise RuntimeError('Unsupported Herdr protocol: missing result object (tested with 0.9.1).')
+        raise RuntimeError('Unsupported Herdr protocol: missing result object (core integration tested with 0.9.1 and 0.9.5).')
     if method == 'session.snapshot':
         validate_snapshot(result['result'].get('snapshot'))
     return result['result']
@@ -80,12 +80,12 @@ def validate_snapshot(snapshot):
     fields = {'panes': ('pane_id', 'terminal_id', 'workspace_id', 'tab_id', 'agent_status'),
               'workspaces': ('workspace_id', 'label'), 'tabs': ('tab_id', 'label')}
     if not isinstance(snapshot, dict):
-        raise RuntimeError('Unsupported Herdr snapshot (tested with 0.9.1).')
+        raise RuntimeError('Unsupported Herdr snapshot (core integration tested with 0.9.1 and 0.9.5).')
     for collection, keys in fields.items():
         rows = snapshot.get(collection)
         if not isinstance(rows, list) or any(not isinstance(row, dict) or
                 any(not isinstance(row.get(key), str) for key in keys) for row in rows):
-            raise RuntimeError('Unsupported Herdr snapshot: invalid ' + collection + ' (tested with 0.9.1).')
+            raise RuntimeError('Unsupported Herdr snapshot: invalid ' + collection + ' (core integration tested with 0.9.1 and 0.9.5).')
 
 
 def list_sessions():
@@ -102,7 +102,7 @@ def list_sessions():
     except FileNotFoundError as exc:
         raise HerdrUnavailable('Herdr is no longer available. Select its executable again.') from exc
     except (ValueError, subprocess.SubprocessError) as exc:
-        raise RuntimeError('Could not read Herdr sessions (tested with 0.9.1): ' + str(exc)) from exc
+        raise RuntimeError('Could not read Herdr sessions (core integration tested with 0.9.1 and 0.9.5): ' + str(exc)) from exc
 
 
 def attention(previous, current):

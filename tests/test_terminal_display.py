@@ -25,6 +25,11 @@ class DisplayTests(unittest.TestCase):
         filtering = DisplayFilter()
         self.assertEqual(b''.join(filtering.feed(bytes([b])) for b in data), data)
 
+    def test_synchronized_output_survives_fragmented_input(self):
+        frame = b'\x1b[?2026h\x1b[2Jnew frame\x1b[?2026l'
+        filtering = DisplayFilter()
+        self.assertEqual(b''.join(filtering.feed(bytes([b])) for b in frame), frame)
+
     def test_color_assignments_blocked_queries_preserved(self):
         filtering = DisplayFilter()
         data = b'\x1b]11;#000000\x07\x1b]10;?\x07\x1b]104\x1b\\\x1b]2;Title\x07'

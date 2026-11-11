@@ -196,3 +196,36 @@ that did not report an agent. It also checked delayed retained-history loading,
 copying, focus and stopping on release. A separate system-level pointer run could
 not complete because the test app lacked macOS Accessibility permission; it does
 not establish physical pointer behavior. The release bundle was built locally.
+
+
+## Herdr 0.9.5 compatibility — 11 November 2026
+
+On macOS 27.2 arm64, the current native source passed `HudCoreChecks` and
+three consecutive debug desktop smoke runs against a disposable Herdr 0.9.5
+server. The same smoke also passed against Herdr 0.9.1. These exercised native
+attachment, input, output, resize, clipboard, search, workspace operations,
+agent state/unread handling, and detach/reattach. The smoke simulates agent
+reports; a separate isolated 0.9.5 session ran a real Codex request, during
+which the user observed a stable background. This is one visual observation,
+not proof that flicker cannot recur.
+
+The previous agent fixture reported an agent while its pane was an idle shell.
+Herdr 0.9.5 promptly cleared that report, causing intermittent smoke timeouts.
+The fixture now waits for a disposable foreground process before reporting the
+agent, matching the 0.9.2+ behavior. The display filters preserve synchronized
+output controls even when fragmented. A disposable 0.9.1 server also accepted
+a 0.9.5 client for discovery, direct terminal attachment and input/output.
+
+These checks do not validate Ubuntu with Herdr 0.9.5, macOS 26, a published
+DMG, or physical pointer, lock, sleep and multi-monitor behavior. The previously
+published release was not changed.
+
+The release bundle was built and installed locally. Its signature and contents
+matched the build, it launched and attached to the existing terminal, and the
+running session list was unchanged. The installed client is 0.9.5; the preserved
+existing server still reports 0.9.1. The older client executable was backed up.
+
+The Python display-filter tests passed (8 tests). Full Python unittest discovery
+on macOS ran 45 tests with 7 failures and 4 errors: Linux packaging/GTK tools
+(`dpkg-deb`, `gi`) are unavailable here, while Linux-specific update and PATH
+expectations differ on macOS. This does not constitute Ubuntu validation.

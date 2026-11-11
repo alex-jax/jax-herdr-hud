@@ -9,7 +9,8 @@ Herdr Hud — A remix of Alex Finn’s version by Alex Jax.
   preserved in licenses/Alex-Finn-MIT.txt. Upstream portions retain that notice;
   the Ubuntu distribution and modifications use GPL-3.0-or-later.
 - [Herdr](https://github.com/herdrdev/herdr) is a separate application, not bundled,
-  installed or updated by this project. Herdr 0.9.1 is the tested version.
+  installed or updated by this project. Core integration was tested with Herdr
+  0.9.1 and 0.9.5.
 
 This is an independently maintained Ubuntu remix, not an official release from
 Alex Finn or the Herdr project. No endorsement is claimed.

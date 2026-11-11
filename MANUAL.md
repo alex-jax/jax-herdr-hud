@@ -6,7 +6,7 @@ preserves its session, terminal identity, close protection, and attention rules.
 
 Herdr Hud is a local desktop companion for Herdr: a GTK terminal window and a
 GNOME Shell extension providing a floating **H** button. The project targets
-Herdr 0.9.1 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
+Herdr 0.9.1 or 0.9.5 and GNOME 50 on Ubuntu/Wayland. The companion can run without the
 extension, but the floating button and Shell-managed window placement require it.
 
 This manual describes the Ubuntu 1.4 build. The Apple silicon Mac port
@@ -26,7 +26,7 @@ See [NOTICE.md](NOTICE.md) for GPL and retained MIT notices. See
 - Python 3 with PyGObject, GTK 3 and VTE 2.91 available to `/usr/bin/python3`.
   The Ubuntu packages named in the project are `python3-gi`,
   `gir1.2-gtk-3.0` and `gir1.2-vte-2.91`.
-- An existing Herdr installation, tested with 0.9.1. Discovery uses a configured
+- An existing Herdr installation; core integration has been tested with 0.9.1 and 0.9.5. Discovery uses a configured
   absolute executable path, then `~/.local/bin/herdr`, then the host `PATH`.
 - A graphical session with a session D-Bus and the GNOME desktop settings schemas.
 - GNOME Shell 50 for the extension. Its metadata declares only version `50`.
@@ -49,7 +49,7 @@ Open the setup button in the header to choose a Herdr executable. Leave the path
 blank for automatic discovery. Browse selects a file; **Retry** validates it and
 saves the selection. If Herdr is missing, this setup view opens automatically.
 The app links to Herdr's own installation instructions; it never installs or
-upgrades Herdr. Newer versions may work but only 0.9.1 is tested. Protocol failures
+upgrades Herdr. Other versions may work; core integration has been tested with 0.9.1 and 0.9.5. Protocol failures
 are reported rather than restarting servers. The Credits (information) button contains the app version and all in-app
 attribution, including Alex Finn, Alex Jax, and Christian Hergert / Ptyxis.
 Settings groups compact controls into Appearance, Floating H, and Herdr connection.

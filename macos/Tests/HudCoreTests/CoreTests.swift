@@ -77,7 +77,8 @@ final class CoreTests {
       "\u{1b}[38;5;16;48;5;231m", "\u{1b}[38:2::0:0:0;48:2::255:255:255m",
       "\u{1b}[7mreverse\u{1b}[27m", "\u{1b}[?2004h\u{1b}[200~paste\u{1b}[201~",
       "\u{1b}]8;;https://example.com\u{7}link\u{1b}]8;;\u{7}",
-      "\u{1b}Pprivate;payload\u{1b}\\", "\u{1b}]104\u{7}"
+      "\u{1b}Pprivate;payload\u{1b}\\", "\u{1b}[?2026h\u{1b}[2Jnew frame\u{1b}[?2026l",
+      "\u{1b}]104\u{7}"
     ]
     for text in controls {
       let bytes = Array(text.utf8)

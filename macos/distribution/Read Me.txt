@@ -4,7 +4,7 @@ clipboard text paste, browser links, paired CLI colors, focus, and VS Code Dark.
 
 REQUIREMENTS
 • Apple silicon Mac (M1 or later), macOS 27 or later.
-• Herdr installed separately. This app was developed with Herdr 0.9.1.
+• Herdr installed separately. This source was tested with Herdr 0.9.1 and 0.9.5.
   Installation instructions: https://herdr.dev/docs/install/
 • Intel Macs and older macOS versions are not supported by this build.
 

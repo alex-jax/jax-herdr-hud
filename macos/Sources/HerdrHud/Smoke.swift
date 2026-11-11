@@ -106,6 +106,22 @@
         app.render()
         try require(
           app.terminals[key] === terminal && terminal.connected, "search retains terminal")
+        // Herdr 0.9.2+ clears reported agents after a pane returns to an idle
+        // shell. Keep a disposable foreground process alive while simulating one.
+        terminal.send(source: terminal, data: Array("sleep 60\r".utf8)[...])
+        var foregroundReady = false
+        for _ in 0..<50 {
+          let info = try await rpc(session, "pane.process_info", ["pane_id": pane.pane_id])
+          if let processInfo = info["process_info"] as? [String: Any],
+            let processes = processInfo["foreground_processes"] as? [[String: Any]],
+            processes.contains(where: { $0["name"] as? String == "sleep" })
+          {
+            foregroundReady = true
+            break
+          }
+          try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        try require(foregroundReady, "disposable agent process started")
         app.hideHud()
         try require(terminal.connected, "hide keeps attachment")
         _ = try await rpc(
@@ -125,6 +141,7 @@
         app.show()
         try await until("acknowledgment") { !app.unread.contains(key) }
         try require(app.terminals[key] === terminal, "agent status retains terminal")
+        terminal.send(source: terminal, data: [3][...])
         let created = try await rpc(
           session, "workspace.create",
           ["label": "Mac smoke space", "cwd": NSHomeDirectory(), "focus": false])
@@ -195,8 +212,9 @@
             try data.write(to: URL(fileURLWithPath: "/private/tmp/herdr-hud-smoke.png"))
           }
         }
+        let herdrVersion = try app.backend.check()
         result =
-          "PASS: selection/CLI gesture routes, clipboard text/image fallback, implicit/OSC8 links, retained/live history in both directions, header focus; real Herdr 0.9.1 create/attach/input, clipboard, resize, 245 palettes, search preservation, agent events/unread, rename/close, detach/reattach, desktop controls, preferences, geometry."
+          "PASS: selection/CLI gesture routes, clipboard text/image fallback, implicit/OSC8 links, retained/live history in both directions, header focus; real \(herdrVersion) create/attach/input, clipboard, resize, 245 palettes, search preservation, agent events/unread, rename/close, detach/reattach, desktop controls, preferences, geometry."
         successful = true
       } catch {
         result = "FAIL: " + error.localizedDescription

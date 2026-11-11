@@ -427,7 +427,7 @@ class Hud(Gtk.Application):
 
     def show_setup(self, message=None):
         self.end_history_selection()
-        self.setup_message.set_text(message or 'Use your existing Herdr installation. Tested with Herdr 0.9.1.')
+        self.setup_message.set_text(message or 'Use your existing Herdr installation. Core integration tested with Herdr 0.9.1 and 0.9.5.')
         self.herdr_entry.set_text(self.settings.get('herdr_path') or '')
         self.stack.set_visible_child_name('setup')
         self.active_title.set_text('Settings')
@@ -495,8 +495,8 @@ class Hud(Gtk.Application):
         configure_herdr(candidate)
         self.settings['herdr_path'] = candidate
         self.save()
-        self.status.set_text(version + (' — tested version' if version == 'herdr 0.9.1'
-                                       else ' — compatibility tested with 0.9.1'))
+        self.status.set_text(version + (' — tested version' if version in ('herdr 0.9.1', 'herdr 0.9.5')
+                                       else ' — core integration tested with 0.9.1 and 0.9.5'))
         self.setup_message.set_text('Connected to ' + version)
         self.leave_setup()
 

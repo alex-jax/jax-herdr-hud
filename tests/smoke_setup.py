@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
         assert app.stack.get_visible_child_name() == 'setup'
         assert 'absolute path' in app.setup_message.get_text()
         program = Path(directory) / 'herdr with spaces'
-        program.write_text('#!/bin/sh\nprintf "herdr 0.9.1\\n"\n')
+        program.write_text('#!/bin/sh\nprintf "herdr 0.9.5\\n"\n')
         program.chmod(0o755)
         app.herdr_entry.set_text(str(program))
         app.retry_button.clicked()
@@ -65,6 +65,7 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-setup-') as directory:
         assert app.stack.get_visible_child_name() == 'empty'
         assert app.settings['herdr_path'] == str(program)
         assert backend.resolve_herdr() == str(program)
+        assert 'herdr 0.9.5 — tested version' == app.status.get_text()
         app.show_setup()
         def enable_h():
             assert threading.current_thread() is not threading.main_thread()

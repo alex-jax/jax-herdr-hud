@@ -64,7 +64,7 @@ public enum Host {
       }
     }
     throw HudError.message(
-      "Herdr was not found. Install Herdr 0.9.1 or select its executable in Settings.")
+      "Herdr was not found. Install Herdr separately or select its executable in Settings.")
   }
   public static func run(_ executable: String, _ arguments: [String], timeout: TimeInterval = 5)
     throws -> Data

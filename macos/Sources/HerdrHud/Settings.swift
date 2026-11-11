@@ -26,7 +26,7 @@ final class HudSetupPanel: HudSurface {
     }
     button("Choose theme…",NSRect(x:12,y:12,width:148,height:34),groups[0],app,#selector(HudApp.chooseTheme))
     label("Click H to show or hide Hud. Drag it anywhere on your desktop; its position is saved.",NSRect(x:12,y:12,width:350,height:40),groups[1])
-    label("Use your existing Herdr installation. Tested with Herdr 0.9.1.",NSRect(x:12,y:95,width:350,height:40),groups[2])
+    label("Use your existing Herdr installation. Tested with Herdr 0.9.1 and 0.9.5.",NSRect(x:12,y:95,width:350,height:40),groups[2])
     path.placeholderString = "Automatic, or choose the Herdr executable"
     path.stringValue = app.prefs.herdrPath; path.font = HudStyle.font(14)
     path.target = self; path.action = #selector(retry); groups[2].addSubview(path)
