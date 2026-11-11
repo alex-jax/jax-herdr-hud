@@ -17,7 +17,7 @@ gi.require_version('Vte', '2.91')
 from gi.repository import Gtk, Gdk, Gio, GLib, Pango, Vte
 from backend import (Monitor, attention, environment, ensure_session, create_terminal,
                      create_shared_workspace, start_agent, request, resolve_herdr, configure_herdr,
-                     check_herdr, HerdrUnavailable)
+                     check_herdr, HerdrUnavailable, attach_command)
 from enable import enable_extension
 from desktop import IS_MAC, config_directory, create_desktop, relay_command
 from updates import UpdateMonitor, install_update
@@ -958,9 +958,14 @@ class Hud(Gtk.Application):
         if self.closing:
             return
         path = session['socket_path']
+        if session.get('remote'):
+            for key, terminal in self.terminals.items():
+                if key[0] == path:
+                    terminal.set_sensitive(not bool(error))
         if error:
             self.session_errors[path] = error
-            self.status.set_text(f"Reconnecting to {session['name']}…")
+            self.status.set_text(f"Reconnecting to {session['name']}: {error}")
+            self.rebuild_sidebar()
             return
         self.session_errors.pop(path, None)
         self.snapshots[path] = (session, snapshot)
@@ -1062,7 +1067,9 @@ class Hud(Gtk.Application):
     def pane_user_host(self, pane):
         return (terminal_identity(pane.get('terminal_title_stripped')) or
                 self.terminal_identities.get(
-                    (pane['session']['socket_path'], pane['terminal_id'])) or self.local_identity)
+                    (pane['session']['socket_path'], pane['terminal_id'])) or
+                (pane['session'].get('target', pane['session']['name']) if pane['session'].get('remote')
+                 else self.local_identity))
 
     def pane_title(self, pane):
         tab = pane.get('tab_label', '')
@@ -1217,6 +1224,11 @@ class Hud(Gtk.Application):
                 previous_list.unselect_row(row)
                 previous_list.remove(row)
                 target_list.add(row)
+            row_path = identity[1][0]
+            disconnected = row_path in self.session_errors and any(
+                entry[0].get('remote') for path, entry in self.snapshots.items() if path == row_path)
+            row.set_sensitive(not disconnected)
+            row.set_opacity(.5 if disconnected else 1.0)
             is_agent = identity[0] == 'agent'
             row.set_margin_start(18 if not is_group and not is_agent else 0)
             for style, enabled in (('shell-row', not is_group and not is_agent),
@@ -1989,6 +2001,9 @@ class Hud(Gtk.Application):
         pane = self.panes.get(key)
         if self.closing or not pane:
             return
+        if pane['session'].get('remote') and key[0] in self.session_errors:
+            self.status.set_text('Remote machine disconnected: ' + self.session_errors[key[0]])
+            return
         self.selected = key
         self.selected_workspace = (key[0], pane['workspace_id'])
         self.workspace_selection[self.selected_workspace] = key
@@ -2009,7 +2024,7 @@ class Hud(Gtk.Application):
             self.color_terminal(terminal)
             self.stack.add_named(terminal, f'terminal-{len(self.terminals)}-{GLib.get_monotonic_time()}')
             terminal.show()
-            terminal.launch([executable, '--session', pane['session']['name'], 'terminal', 'attach', pane['terminal_id']])
+            terminal.launch(attach_command(pane['session'], pane['terminal_id']))
         self.stack.set_visible_child(terminal)
         self.active_title.set_text(self.terminal_heading(pane))
         self.acknowledge()

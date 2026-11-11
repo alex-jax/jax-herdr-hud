@@ -17,12 +17,15 @@ class StartupTests(unittest.TestCase):
         changed, listed = Mock(), Mock()
         monitor = Monitor(changed, Mock(), listed)
         # Three discovery cycles: missing executable, recovery, ordinary refresh.
-        monitor.stopping = Mock()
-        monitor.stopping.is_set.side_effect = [False, False, False, False, False,
-                                               False, False, False, True]
+        cycles = []
+        def wait(_):
+            cycles.append(True)
+            if len(cycles) == 3:
+                monitor.stopping.set()
+        monitor.stopping.wait = wait
         with patch('backend.ensure_session', side_effect=[HerdrUnavailable('missing'),
                 (session, snapshot)]) as ensure, patch('backend.list_sessions',
-                return_value=[session]), patch('backend.SessionWatcher') as watcher:
+                return_value=[session]), patch('backend.SessionWatcher') as watcher, patch('backend.list_machines', return_value=[]):
             monitor.run()
         self.assertEqual(ensure.call_count, 2)
         ensure.assert_called_with('default')

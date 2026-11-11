@@ -1,19 +1,19 @@
 # Build and publish on GitHub
 
-## Debian release 1.4
+## Debian release 1.5
 
-The planned 1.4 release targets Ubuntu 26.04 / GNOME 50 and is intended to ship the Debian
+The 1.5 release targets Ubuntu 26.04 / GNOME 50 and is intended to ship the Debian
 package, GNOME extension ZIP, source archive and checksums. The Apple silicon
 Mac port remains in development and has no installer in this release. Publish a
 Mac installer only after both macOS 26 and 27 validation gates pass; see
 [Mac build instructions](MACOS.md) and [release gates](MACOS_VALIDATION.md).
 
 Distribution uses the native Debian package and source installer. Release
-**1.4** targets tag **v1.4**. It has not been published; v1.3 remains the latest published Ubuntu release.
+**1.5** targets tag **v1.5**. The release assets must be uploaded before publication is considered complete.
 
 ## Prepare the version
 
-Set `VERSION = '1.4'` and `RELEASE_TAG = 'v1.4'` in `app_info.py` before
+Set `VERSION = '1.5'` and `RELEASE_TAG = 'v1.5'` in `app_info.py` before
 building. The update checker uses the release tag, including prerelease ordering.
 The GNOME extension revision is separate; change it only when the extension changes.
 Review [CHANGELOG.md](../CHANGELOG.md), the manual and installation guide together.
@@ -53,11 +53,11 @@ Source test results do not establish that a new Debian artifact passed its check
 
 ## Publish
 
-Commit the reviewed source and documentation, tag the same commit `v1.4`, and
+Commit the reviewed source and documentation, tag the same commit `v1.5`, and
 push the commit and tag. Create a regular GitHub release with the approved release
 notes; leave **Set as a pre-release** unchecked and mark it as the latest release.
 Upload the tested `.deb`, extension ZIP, source archive and checksums under Assets.
-Do not upload a Mac installer in the Debian 1.4 release. Update publication status
+Do not upload a Mac installer in the Debian 1.5 release. Update publication status
 in the README, changelog and validation record when done.
 
 Use version-independent release-page links in the installation guide. Users download

@@ -114,7 +114,7 @@ def run(argv):
     finally:
         # Only our attach client belongs to us; Herdr's server owns the real pane.
         try:
-            os.kill(pid, signal.SIGHUP)
+            os.kill(pid, signal.SIGTERM if os.path.basename(argv[0]) == 'ssh' else signal.SIGHUP)
         except ProcessLookupError:
             pass
         os.close(master)
@@ -122,7 +122,17 @@ def run(argv):
             termios.tcsetattr(0, termios.TCSANOW, saved)
         except termios.error:
             pass
-        os.waitpid(pid, 0)
+        if os.path.basename(argv[0]) == 'ssh':
+            import time
+            deadline = time.monotonic() + 3
+            while os.waitpid(pid, os.WNOHANG) == (0, 0):
+                if time.monotonic() >= deadline:
+                    os.kill(pid, signal.SIGKILL)
+                    os.waitpid(pid, 0)
+                    break
+                time.sleep(.05)
+        else:
+            os.waitpid(pid, 0)
 
 
 if __name__ == '__main__':

@@ -47,7 +47,7 @@ sudo apt install ./downloaded-file.deb
 
 ## Updating
 
-**Moving to 1.3:** Hud 1.2 can detect and install this update using the download
+**Moving to 1.5:** Hud 1.2 can detect and install this update using the download
 arrow. Older versions that do not recognize two-part version numbers must be
 updated manually by downloading the `.deb` under **Assets**.
 

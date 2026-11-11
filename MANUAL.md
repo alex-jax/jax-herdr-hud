@@ -460,3 +460,27 @@ Hud palettes set the terminal's default colors. CLI foreground and background
 colors remain paired, so pasted-text highlights and hovered controls keep their
 contrast. Copied selections are still plain text; their appearance after pasting
 is controlled by the destination application.
+
+## Remote machines
+
+Hud discovers enabled saved SSH machines from `herdr machine list --json`, in
+addition to local sessions. Set up a machine with Herdr's interactive
+`herdr machine add <ssh-host>` command first; review any installation or server
+replacement prompts there. Hud itself never installs or restarts remote Herdr.
+The selected remote session must already be running on Linux or macOS, with
+Herdr available at `~/.local/bin/herdr` or in the SSH login PATH.
+
+Remote spaces are labelled with the machine and session. Agents running in those
+remote Herdr panes appear alongside local agents. An ordinary `ssh host` shell
+running Codex outside remote Herdr is not automatically adopted or detected.
+
+Connections use your OpenSSH configuration and require noninteractive key/agent
+authentication, trusted host keys, and Unix-socket forwarding. Hud polls remote
+state every three seconds; this is not a lossless event history. Disconnected
+rows retain their last snapshot, appear dimmed, and cannot be selected until the
+connection recovers. Hide keeps attachments alive; Exit closes Hud's SSH clients
+and tunnels without stopping remote servers or agents. New space still creates
+a local space; a remote space's + button creates a terminal on that machine.
+
+Remote transport is shared by the Ubuntu and macOS apps. Windows remote servers
+and installations outside the remote discovery locations above are not supported.

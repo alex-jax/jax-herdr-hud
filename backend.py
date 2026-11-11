@@ -3,6 +3,9 @@ import json
 import os
 import re
 import shutil
+import shlex
+import tempfile
+import uuid
 import socket
 import subprocess
 import threading
@@ -105,6 +108,117 @@ def list_sessions():
         raise RuntimeError('Could not read Herdr sessions (core integration tested with 0.9.1 and 0.9.5): ' + str(exc)) from exc
 
 
+def list_machines():
+    result = subprocess.run([resolve_herdr(), 'machine', 'list', '--json'],
+                            env=environment(), capture_output=True, text=True, timeout=5)
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or 'Could not list saved SSH machines')
+    rows = json.loads(result.stdout)
+    if not isinstance(rows, list) or any(not isinstance(row, dict) or
+            any(not isinstance(row.get(k), str) or not row[k] for k in
+                ('id', 'label', 'target', 'session')) or
+            not isinstance(row.get('enabled'), bool) for row in rows):
+        raise RuntimeError('Unsupported Herdr machine catalog')
+    return [row for row in rows if row['enabled']]
+
+
+def ssh_command(target):
+    if target.startswith('-') or '\x00' in target:
+        raise ValueError('Invalid SSH target')
+    return ['ssh', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
+            '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2', target]
+
+
+def attach_command(session, terminal_id):
+    if session.get('remote'):
+        argv = [session['remote_executable'], '--session', session['remote_session'],
+                'terminal', 'attach', terminal_id]
+        ssh = ssh_command(session['target'])
+        return ssh[:-1] + ['-tt', ssh[-1], shlex.join(argv)]
+    return [resolve_herdr(), '--session', session['name'], 'terminal', 'attach', terminal_id]
+
+
+class RemoteWatcher(threading.Thread):
+    """Own only an SSH tunnel; the remote server and its panes outlive Hud."""
+    def __init__(self, profile, directory, changed):
+        super().__init__(daemon=True)
+        self.profile = profile
+        self.process_lock = threading.Lock()
+        self.process = None
+        self.changed = changed
+        self.stopping = threading.Event()
+        self.session = dict(name=profile['label'] + '/' + profile['session'],
+            socket_path=str(Path(directory) / (uuid.uuid4().hex + '.sock')),
+            running=True, remote=True, target=profile['target'], remote_session=profile['session'])
+
+    def stop(self):
+        self.stopping.set()
+        with self.process_lock:
+            if self.process is not None and self.process.poll() is None:
+                self.process.terminate()
+
+    def run(self):
+        path = self.session['socket_path']
+        while not self.stopping.is_set():
+            process = None
+            try:
+                # Fixed script, no profile values interpolated into shell code.
+                script = ('if [ -x "$HOME/.local/bin/herdr" ]; then h="$HOME/.local/bin/herdr"; '
+                          'else h=$(command -v herdr) || exit 127; fi; '
+                          'printf "%s\\n" "$h"; "$h" session list --json')
+                probe = subprocess.run(ssh_command(self.profile['target']) + [script],
+                    env=environment(), capture_output=True, text=True, timeout=10, check=True)
+                executable, data = probe.stdout.split('\n', 1)
+                if not executable.startswith('/'):
+                    raise RuntimeError('Remote Herdr must have an absolute executable path')
+                sessions = json.loads(data)['sessions']
+                remote = next((item for item in sessions if item['name'] == self.profile['session']
+                               and item['running']), None)
+                if remote is None:
+                    raise RuntimeError('Start the selected Herdr session on the remote machine first')
+                socket_path = remote['socket_path']
+                if not isinstance(socket_path, str) or not socket_path.startswith('/') or any(
+                        c in socket_path for c in (':', '\n', '\x00')):
+                    raise RuntimeError('Unsupported remote socket path')
+                self.session['remote_executable'] = executable
+                Path(path).unlink(missing_ok=True)
+                ssh = ssh_command(self.profile['target'])
+                with tempfile.TemporaryFile() as errors:
+                    with self.process_lock:
+                        if self.stopping.is_set():
+                            break
+                        process = subprocess.Popen(ssh[:-1] + ['-N', '-o', 'ExitOnForwardFailure=yes',
+                            '-L', path + ':' + socket_path, ssh[-1]], env=environment(),
+                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=errors)
+                        self.process = process
+                    deadline = time.monotonic() + 8
+                    while not Path(path).exists() and process.poll() is None and time.monotonic() < deadline:
+                        if self.stopping.wait(.1):
+                            break
+                    while not self.stopping.is_set():
+                        if process.poll() is not None:
+                            errors.seek(0)
+                            raise RuntimeError(errors.read(4096).decode(errors='replace') or 'SSH disconnected')
+                        snapshot = request(path, 'session.snapshot')['snapshot']
+                        if not self.stopping.is_set():
+                            self.changed(dict(self.session), snapshot, None)
+                        if self.stopping.wait(3):
+                            break
+            except (OSError, ValueError, KeyError, TypeError, RuntimeError, subprocess.SubprocessError) as exc:
+                if not self.stopping.is_set():
+                    self.changed(dict(self.session), None, str(exc))
+            finally:
+                if process is not None and process.poll() is None:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+                Path(path).unlink(missing_ok=True)
+            self.stopping.wait(5)
+
+
 def attention(previous, current):
     if current == 'blocked' and previous != 'blocked':
         return 'Needs your input'
@@ -180,11 +294,13 @@ class Monitor(threading.Thread):
         self.stopping = threading.Event()
         self.watchers = {}
         self.lock = threading.Lock()
+        self.remote_directory = tempfile.TemporaryDirectory(prefix="hud-ssh-", dir="/tmp")
+        self.remote_watchers = {}
 
     def stop(self):
         self.stopping.set()
         with self.lock:
-            for watcher in list(self.watchers.values()):
+            for watcher in list(self.watchers.values()) + list(self.remote_watchers.values()):
                 watcher.stop()
 
     def run(self):
@@ -198,10 +314,32 @@ class Monitor(threading.Thread):
                     self.changed(session, snapshot, None)
                     initialized = True
                 sessions = list_sessions()
+                try:
+                    profiles = {p['id']: p for p in list_machines()}
+                    with self.lock:
+                        if self.stopping.is_set():
+                            break
+                        for identity, watcher in list(self.remote_watchers.items()):
+                            incoming = profiles.get(identity)
+                            if incoming is None or any(incoming[k] != watcher.profile[k]
+                                    for k in ('target', 'session', 'enabled')):
+                                watcher.stop()
+                                del self.remote_watchers[identity]
+                            elif incoming != watcher.profile:
+                                watcher.profile = incoming
+                                watcher.session['name'] = incoming['label'] + '/' + incoming['session']
+                        for identity, profile in profiles.items():
+                            if identity not in self.remote_watchers:
+                                watcher = RemoteWatcher(profile, self.remote_directory.name, self.changed)
+                                self.remote_watchers[identity] = watcher
+                                watcher.start()
+                except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+                    self.sessions_changed(None, 'Remote machines: ' + str(exc))
+                sessions += [dict(w.session) for w in self.remote_watchers.values()]
                 if self.stopping.is_set():
                     break
                 self.sessions_changed(sessions, None)
-                live = {s['socket_path']: s for s in sessions if s['running']}
+                live = {s['socket_path']: s for s in sessions if s['running'] and not s.get('remote')}
                 with self.lock:
                     if self.stopping.is_set():
                         break
@@ -256,7 +394,7 @@ def create_terminal(session, workspace_id, label, cwd=None):
     """Add a terminal tab to an explicitly selected session/workspace."""
     result = request(session['socket_path'], 'tab.create', {
         'workspace_id': workspace_id, 'label': label,
-        'cwd': cwd or str(Path.home()), 'focus': False})
+        **({'cwd': cwd} if cwd else ({} if session.get('remote') else {'cwd': str(Path.home())})), 'focus': False})
     pane = result['root_pane']
     snapshot = request(session['socket_path'], 'session.snapshot')['snapshot']
     return snapshot, pane['terminal_id']

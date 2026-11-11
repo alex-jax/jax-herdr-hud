@@ -207,6 +207,24 @@ with tempfile.TemporaryDirectory(prefix='herdr-hud-click-') as tmp:
         assert app.rows.get_selected_row() is stable_row
         assert app.agent_rows.get_selected_row() is None
         assert app.terminals[agent_key] is stable_terminal
+    # Remote rows retain identity while unavailable and become selectable on recovery.
+    remote_session = {**other_session, 'name': 'Remote/default', 'remote': True}
+    app.snapshot_changed(remote_session, {**snapshot, 'panes': [
+        {**panes[0], 'agent': 'codex'}]}, None)
+    pump()
+    remote_row = app.sidebar_rows[('agent', targets[2])]
+    app.snapshot_changed(remote_session, None, 'test connection lost')
+    pump()
+    assert not remote_row.get_sensitive()
+    assert remote_row.get_opacity() < 1
+    app.snapshot_changed(remote_session, {**snapshot, 'panes': [
+        {**panes[0], 'agent': 'codex'}]}, None)
+    pump()
+    assert app.sidebar_rows[('agent', targets[2])] is remote_row
+    assert remote_row.get_sensitive()
+    app.snapshot_changed(other_session, {**snapshot, 'panes': panes[:1]}, None)
+    pump()
+    print('PASS: remote outage retains rows, disables selection, and recovers without replacing identity', flush=True)
     # Spaces consisting entirely of agents must remain usable.
     app.snapshot_changed(session, {**snapshot, 'panes':[
         {**p, 'agent':'codex', 'agent_status':'working'} for p in panes]}, None)

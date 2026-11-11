@@ -227,3 +227,53 @@ Existing user sessions were retained.
 Limitations: no automated end-to-end test of every vendor CLI or the Voquill app;
 no clean-VM installation/upgrade/removal test. The older update checker cannot
 recognize two-part release tags, so existing users must download 1.2 manually.
+
+### Saved SSH machines — 11 November 2026 (unpublished working tree)
+
+Implemented saved-machine discovery, per-machine SSH Unix-socket tunnels,
+three-second remote snapshot polling, native remote terminal attach, disconnected
+row/input handling, and bounded SSH display-relay shutdown. No remote server is
+installed, started, restarted or stopped by this feature. Plain SSH shells are
+not adopted as remote Herdr panes.
+
+Actual checks:
+
+- Ubuntu `ubuntu-hud` VM: 62 unit tests passed.
+- Ubuntu sidebar smoke passed, including two Codex entries and a remote outage /
+  recovery case retaining row identity. These agent snapshots are mocked.
+- macOS: 7 backend and 4 remote unit tests passed.
+- macOS -> Morpheus: real read-only SSH snapshot returned three panes and one
+  Codex agent; stopping the tunnel preserved the server.
+- `tests/smoke_remote.py`, macOS -> disposable Ubuntu VM session: real remote
+  API, native terminal attach through the display relay, keyboard input, safe
+  detach, and forced tunnel failure/reconnection preserving terminal identity
+  all passed. The test uses a shell, not a live Codex task.
+- Final Debian package built and installed in the Ubuntu VM; installed
+  backend/hud/relay files compared with source. Desktop smoke against installed
+  Python payload passed, including attachment and safe detachment.
+- Final package SHA-256:
+  `3cef11b451ceb1fcf9ae8fb9f833ad546c725780d3613bb30d256fcc0cd89674`.
+- `git diff --check` passed.
+
+The final package is staged in Morpheus's Downloads folder. SSH installation
+could not authenticate (`No authentication agent found`); user installation is
+pending. No GitHub release was published. Full macOS GUI validation and a new
+Mac application bundle were not performed; host Python lacks GI. Real two-Codex
+remote lifecycle testing remains outstanding. Existing v8 Codex session-hook
+errors on Morpheus have not been diagnosed or changed by this feature.
+
+### Ubuntu 1.5 release candidate — 11 November 2026
+
+The versioned 1.5 Debian artifact passed 62 unit tests and sequential GTK sidebar
+and desktop smoke tests against its extracted payload. Ten JavaScript extension
+launcher/pointer/window-grab tests passed. It was installed in the local Ubuntu
+VM; installed backend, Hud and display-relay files matched source. The restarted
+Hud user service remained active, the Herdr server retained PID 2652, and the
+session inventory was identical before and after the companion restart.
+
+Exact Debian SHA-256:
+`3564dd66b4ea1abc065f72f7ae83c5db4ffda1db76cfd4ebcc5b81f284c806a7`.
+
+This release includes the previously validated SSH transport and recovery tests
+above. No new Mac installer is included. Morpheus installation is deliberately
+left to the user's local Codex, as requested; it is not a release prerequisite.

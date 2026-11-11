@@ -71,7 +71,7 @@ Section: utils
 Priority: optional
 Architecture: all
 Maintainer: Alex Jax <alex-jax@users.noreply.github.com>
-Depends: pkexec, ca-certificates, python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, gsettings-desktop-schemas, adwaita-icon-theme
+Depends: pkexec, ca-certificates, openssh-client, python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-vte-2.91, gsettings-desktop-schemas, adwaita-icon-theme
 Recommends: fonts-ubuntu
 Installed-Size: {size}
 Homepage: https://github.com/alex-jax/jax-herdr-hud

@@ -1,6 +1,16 @@
 # Release notes
 
-## 1.4 — in development (Ubuntu and macOS source)
+## 1.5 — 11 November 2026 (Ubuntu/Debian)
+
+- Discover enabled saved SSH machines and display their remote spaces and agents with machine/session labels.
+- Attach to remote terminals through native Herdr direct attachment over SSH; preserve remote servers and agents on detach or exit.
+- Reconnect remote state after connection loss, dim unavailable rows and disable their input until recovery.
+- Keep machine identities separate and preserve terminal rows when a saved machine is renamed.
+- Include the previously unpublished Ubuntu 1.4 improvements listed below. Extension revision remains 7.
+- Ship the Debian package, extension ZIP, source archive and checksums. No new Mac installer is included.
+- Remote support requires Linux/macOS remote Herdr sessions, existing noninteractive SSH authentication and Unix-socket forwarding. Plain SSH shells are not adopted.
+
+## 1.4 — source milestone (included in Ubuntu 1.5)
 
 - Keep single clicks on H deterministic and let dragging move only the widget. Protect titlebar moves and corner resizing from unintended automatic hiding, including on Wayland. GNOME extension revision is now 7; logout/login loads the updated extension.
 - Hide back to the floating H when focus moves outside Hud; Settings → Floating H provides a saved on/off switch, enabled by default. Open menus and Hud dialogs are protected.
