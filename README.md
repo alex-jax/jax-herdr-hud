@@ -12,7 +12,10 @@ A native GTK/VTE companion for local Herdr terminals and agents on Ubuntu 26.04.
 **Ubuntu 1.4 is available in this source checkout:** start an agent in a new space,
 paste directly on the first right-click, retain agent `user@host` headings and
 show identity-only tooltips matching the active theme. Automatic hiding to H
-when focus moves outside has a saved Settings toggle. The latest published
+when focus moves outside has a saved Settings toggle. Widget dragging, window
+movement and resizing do not hide Hud; clicking the desktop background hides it
+when automatic hiding is enabled. The native Mac app also hides on outside clicks.
+The latest published
 GitHub release remains 1.3 until 1.4 assets are published. Mac feature parity is
 proposed in [issue #3](https://github.com/alex-jax/jax-herdr-hud/issues/3).
 
@@ -35,7 +38,7 @@ This is an independently maintained Ubuntu implementation.
 
 Targets Ubuntu 26.04 / GNOME 50. The published release was tested on amd64
 with Herdr 0.9.1; current source core integration was also tested on ARM64 with
-Herdr 0.9.5 in a VM. See the [validation record](docs/VALIDATION.md) for limits.
+Herdr 0.9.5. See the [validation record](docs/VALIDATION.md) for limits.
 The native `.deb` installs the app and optional floating H extension, and APT
 resolves its system Python/GTK/VTE dependencies. Herdr and CLI agents are separate
 installations. Source installation and modification instructions are also included.

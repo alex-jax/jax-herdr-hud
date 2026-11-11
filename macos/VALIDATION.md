@@ -1,5 +1,17 @@
 # macOS validation — 24 September 2026
 
+## Outside-click hiding — 11 November 2026
+
+On macOS 27.2 arm64, HudCoreChecks and the debug desktop smoke passed with a
+disposable Herdr 0.9.5 server. The smoke exercises the outside-click handler,
+including the widget exclusion and hiding without quitting; it does not inject
+an actual system-wide mouse event. The signed release app was built, installed,
+compared to the build and restarted. The existing Herdr session remained active.
+
+Before the 1.4 source update, HudCoreChecks and the debug desktop smoke passed
+again. The release bundle was rebuilt, signature-checked, installed, compared
+to the build and restarted; the existing Herdr session remained active.
+
 ## Ubuntu reference appearance and 1.4 source — 11 November 2026
 
 On macOS 27.2 arm64, the native app was compared with the Ubuntu 26.04 VM

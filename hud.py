@@ -310,6 +310,11 @@ class Hud(Gtk.Application):
         self.collapsed_spaces = set()
         self.closing = False
         self.auto_hide_id = 0
+        self.widget_interacting = False
+        self.widget_interaction_timeout = 0
+        self.header_interaction_id = 0
+        self.header_released_at = None
+        self.header_press_time = Gdk.CURRENT_TIME
         self.theme = 'dark'
         self.session_errors = {}
         self.adding_terminals = set()
@@ -340,6 +345,12 @@ class Hud(Gtk.Application):
             action = Gio.SimpleAction.new(name, None)
             action.connect('activate', lambda action, value, cb=callback: cb())
             self.add_action(action)
+        widget_action = Gio.SimpleAction.new('widget-interaction', GLib.VariantType.new('b'))
+        widget_action.connect('activate', lambda _action, value: self.widget_interaction(value.get_boolean()))
+        self.add_action(widget_action)
+        outside_action = Gio.SimpleAction.new('outside-click', None)
+        outside_action.connect('activate', lambda *_: self.outside_click())
+        self.add_action(outside_action)
         self.desktop.start()
         self.build_window()
         self.monitor = Monitor(lambda *a: idle(self.snapshot_changed, *a),
@@ -527,8 +538,11 @@ class Hud(Gtk.Application):
         self.window.connect('focus-in-event', lambda *_: self.acknowledge())
         self.window.connect('notify::is-active', self.window_activity_changed)
         self.window.connect('window-state-event', self.window_state_changed)
+        self.window.connect('button-press-event', self.window_button_press)
         header = Gtk.HeaderBar(title='Herdr Hud', subtitle='Your terminals, within reach')
         header.set_show_close_button(False)
+        header.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        header.connect('button-press-event', self.header_button_press)
         self.window.set_titlebar(header)
         credits = self.icon_button('help-about-symbolic', 'About Herdr Hud', self.show_about)
         credits.set_valign(Gtk.Align.CENTER)
@@ -2148,6 +2162,86 @@ class Hud(Gtk.Application):
             GLib.source_remove(self.auto_hide_id)
             self.auto_hide_id = 0
 
+    def widget_interaction(self, active):
+        if self.widget_interaction_timeout:
+            GLib.source_remove(self.widget_interaction_timeout)
+            self.widget_interaction_timeout = 0
+        self.widget_interacting = active
+        self.cancel_auto_hide()
+        if active:
+            # Recover if the extension disappears while holding the pointer.
+            self.widget_interaction_timeout = GLib.timeout_add_seconds(30, self.end_widget_interaction)
+
+    def header_button_press(self, _header, event):
+        if event.button != 1:
+            return False
+        return self.begin_window_interaction(event.time)
+
+    def begin_window_interaction(self, timestamp):
+        if self.closing or self.header_interaction_id:
+            return False
+        # Mutter can temporarily deactivate a window during a move or resize.
+        # Keep the window visible until the gesture ends, without consuming it.
+        self.cancel_auto_hide()
+        self.header_released_at = None
+        self.header_press_time = timestamp
+        self.header_interaction_id = GLib.timeout_add(100, self.check_header_interaction)
+        return False
+
+    def window_button_press(self, window, event):
+        header = window.get_titlebar()
+        if not header or event.button != 1:
+            return False
+        translated = header.translate_coordinates(window, 0, 0)
+        if translated is None:
+            return False
+        _ok, origin_x, origin_y = window.get_window().get_origin()
+        x, y = event.x_root - origin_x, event.y_root - origin_y
+        left, top = translated
+        if left <= x < left + header.get_allocated_width() and top <= y < top + header.get_allocated_height():
+            return self.header_button_press(header, event)
+        return False
+
+    def header_button_is_down(self):
+        pointer = Gdk.Display.get_default().get_default_seat().get_pointer()
+        _child, _x, _y, state = self.window.get_window().get_device_position(pointer)
+        return bool(state & Gdk.ModifierType.BUTTON1_MASK)
+
+    def pointer_in_resize_area(self):
+        pointer = Gdk.Display.get_default().get_default_seat().get_pointer()
+        _child, x, y, state = self.window.get_window().get_device_position(pointer)
+        if not state & Gdk.ModifierType.BUTTON1_MASK:
+            return False
+        width = self.window.get_window().get_width()
+        height = self.window.get_window().get_height()
+        margin = 16
+        inside = -margin <= x < width + margin and -margin <= y < height + margin
+        return inside and (x < margin or y < margin or x >= width - margin or y >= height - margin)
+
+    def check_header_interaction(self):
+        if self.closing or not self.window.get_visible():
+            self.header_interaction_id = 0
+            return GLib.SOURCE_REMOVE
+        if self.header_button_is_down():
+            self.header_released_at = None
+            return GLib.SOURCE_CONTINUE
+        now = GLib.get_monotonic_time()
+        if self.header_released_at is None:
+            self.header_released_at = now
+        if now - self.header_released_at < 300_000:
+            return GLib.SOURCE_CONTINUE
+        self.header_interaction_id = 0
+        self.header_released_at = None
+        self.cancel_auto_hide()
+        if not self.window.is_active():
+            self.window.present_with_time(self.header_press_time)
+        return GLib.SOURCE_REMOVE
+
+    def end_widget_interaction(self):
+        self.widget_interaction_timeout = 0
+        self.widget_interacting = False
+        return GLib.SOURCE_REMOVE
+
     def auto_hide_changed(self, switch, _property):
         self.settings['hide_on_focus_loss'] = switch.get_active()
         self.cancel_auto_hide()
@@ -2156,32 +2250,52 @@ class Hud(Gtk.Application):
 
     def window_activity_changed(self, window, _property):
         self.cancel_auto_hide()
-        if (not self.closing and self.settings.get('hide_on_focus_loss', True) is True
+        if (not self.closing and window.get_visible() and not window.is_active()
+                and not self.widget_interacting and not self.header_interaction_id
+                and self.pointer_in_resize_area()):
+            self.begin_window_interaction(Gdk.CURRENT_TIME)
+        if (not self.closing and not self.widget_interacting and not self.header_interaction_id
+                and self.settings.get('hide_on_focus_loss', True) is True
                 and window.get_visible() and not window.is_active()):
             self.auto_hide_id = GLib.timeout_add(150, self.check_auto_hide)
 
     def check_auto_hide(self):
-        if (self.closing or not self.window.get_visible() or self.window.is_active()
+        if (self.closing or self.widget_interacting or self.header_interaction_id
+                or not self.window.get_visible() or self.window.is_active()
                 or self.settings.get('hide_on_focus_loss', True) is not True):
             self.auto_hide_id = 0
             return GLib.SOURCE_REMOVE
+        if self.has_open_popup():
+            return GLib.SOURCE_CONTINUE
+        self.auto_hide_id = 0
+        self.hide()
+        return GLib.SOURCE_REMOVE
+
+    def has_open_popup(self):
         # GTK moves focus to menus and transient windows without leaving Hud.
         if Gtk.grab_get_current() is not None:
-            return GLib.SOURCE_CONTINUE
+            return True
         for window in Gtk.Window.list_toplevels():
             if not window.get_visible() or window is self.window:
                 continue
             parent = window.get_transient_for()
             while parent is not None:
                 if parent is self.window:
-                    return GLib.SOURCE_CONTINUE
+                    return True
                 parent = parent.get_transient_for()
-        self.auto_hide_id = 0
-        self.hide()
-        return GLib.SOURCE_REMOVE
+        return False
+
+    def outside_click(self):
+        if (not self.closing and self.window.get_visible() and not self.widget_interacting
+                and not self.header_interaction_id and self.settings.get('hide_on_focus_loss', True) is True
+                and not self.has_open_popup()):
+            self.hide()
 
     def hide(self):
         self.cancel_auto_hide()
+        if self.header_interaction_id:
+            GLib.source_remove(self.header_interaction_id)
+            self.header_interaction_id = 0
         self.end_history_selection()
         self.save()
         self.window.hide()
@@ -2212,6 +2326,10 @@ class Hud(Gtk.Application):
 
     def do_shutdown(self):
         self.cancel_auto_hide()
+        self.widget_interaction(False)
+        if self.header_interaction_id:
+            GLib.source_remove(self.header_interaction_id)
+            self.header_interaction_id = 0
         self.update_monitor.stop()
         if not self.closing:
             self.monitor.stop()

@@ -1,5 +1,33 @@
 # Validation
 
+## Widget gestures and outside-click hiding — 11 November 2026
+
+On Ubuntu 26.04 ARM64 with GNOME Shell 50, a disposable headless Wayland
+session exercised widget click and drag, corner resizing, and subsequent
+desktop-background hiding with a virtual pointer. The checks passed against
+both source and the extracted Debian companion and extension. The auto-hide
+smoke checked the disabled preference and protected dialogs. The Python suite
+passed 58 tests; GTK sidebar, desktop, titlebar and resize smokes passed, as did
+six JavaScript gesture and window-grab checks. The separate full extension smoke
+timed out during headless Shell startup; physical hardware and pointer behavior
+remain separate acceptance checks.
+
+The locally installed Debian artifact had SHA-256
+`667acdba343257a851cf18e603e6757b3753d439050c998d7e4636bf846ce671`.
+Installed companion and extension files matched the extracted payload, Hud
+restarted successfully, and the running Herdr server and session were preserved.
+GNOME Shell loaded extension revision 7 after reconnecting the session.
+
+For the final source and documentation, the Debian artifact with SHA-256
+`39e17e055099304ea05e7669901c666e774556b952d845aace07b933a42cee24`
+passed extracted GTK auto-hide, titlebar, resize, sidebar and real-Herdr desktop
+smokes, and was installed and restarted locally. Its companion and extension
+matched the previously Wayland-tested artifact. Two attempts to repeat the
+Wayland smoke against this final artifact timed out during headless Shell startup;
+they do not constitute a passing Wayland run for this exact artifact. Installed
+files matched the extracted payload and the existing Herdr server remained up.
+
+
 ## Ubuntu 1.4 and Herdr 0.9.5 on ARM64 — 11 November 2026
 
 On Ubuntu 26.04.1 / GNOME Shell 50.1 in the Apple silicon VM, the integrated

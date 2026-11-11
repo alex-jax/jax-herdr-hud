@@ -59,7 +59,10 @@ Alt+Tab. Open Hud menus and dialogs prevent automatic hiding until they close.
 Turn the switch off to keep Hud visible when working in another window; the
 choice is saved across restarts. This switch only controls automatic hiding;
 clicking H always opens or hides Hud. H shows the same terminals again, with agents
-and monitoring still running.
+and monitoring still running. Dragging H only moves the widget, even when Hud
+is open; it does not hide or open the window. Moving or resizing the Hud window
+does not trigger automatic hiding. Clicking the desktop background also hides
+Hud when the floating H extension is active and automatic hiding is enabled.
 The application icon is a plain H in a blue circle, without an activity dot.
 
 The following section is an alternative installation from source.

@@ -11,6 +11,8 @@
             const settings = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
             settings.set_string('accent-color', kind.slice(7));
         }
+        if (kind === 'hide-overview')
+            Main.overview.hide();
         if (kind === 'move-window') {
             const window = global.get_window_actors().map(a => a.meta_window).find(w => this._isHud(w));
             window?.move_resize_frame(false, x, y, 800, 520);
@@ -33,7 +35,14 @@
     TestState() {
         const window = global.get_window_actors().map(a => a.meta_window).find(w => this._isHud(w));
         const rect = window?.get_frame_rect();
+        const buffer = window?.get_buffer_rect();
+        const [px, py] = global.get_pointer();
+        const actor = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, px, py);
         return JSON.stringify({drag: !!this._drag, grab: !!this._grab,
+            windowGrab: !!this._windowGrab, overview: Main.overview.visible,
+            hudFocused: this._isHud(global.display.focus_window),
+            pointer: {x: px, y: py, actor: actor?.toString()},
+            buffer: buffer ? {x: buffer.x, y: buffer.y, width: buffer.width, height: buffer.height} : null,
             stageGrab: global.stage.get_grab_actor() === this._bubble,
             x: this._bubble.x, y: this._bubble.y,
             toggles: this._testToggleCount ?? 0, tooltip: this._tooltip.visible,

@@ -60,6 +60,11 @@
           initial.workspaces.count == 1 && initial.panes.count == 1, "one initial workspace")
         try require(!initial.canClose(pane: pane), "first terminal protected")
         try require(!app.emptyAgents.isHidden, "empty Agents message is visible")
+        app.outsideClick(at: NSPoint(x: app.bubble.frame.midX, y: app.bubble.frame.midY))
+        try require(app.window.isVisible, "widget interaction does not hide Hud")
+        app.outsideClick(at: NSPoint(x: app.bubble.frame.maxX + 100, y: app.bubble.frame.maxY + 100))
+        try require(!app.window.isVisible && !app.closing, "outside click hides without quitting")
+        app.show()
         app.sidebar.layoutSubtreeIfNeeded()
         try require(app.sections.frame.minX == 0 && app.sections.frame.width == app.sidebar.bounds.width,
           "sidebar lists reach both panel edges")

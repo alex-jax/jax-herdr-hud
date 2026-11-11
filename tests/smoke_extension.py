@@ -79,6 +79,10 @@ try:
     # Let Shell finish the startup overview, which otherwise intercepts clicks.
     time.sleep(2)
     pointer('init')
+    # A newly created virtual pointer starts at the top-left hot corner.
+    pointer('motion', 100, 100)
+    time.sleep(.5)
+    pointer('hide-overview')
     time.sleep(0.5)
     for _ in range(6):
         before = state()
@@ -124,6 +128,15 @@ try:
     time.sleep(5.5)
     bubble = state()
     assert bubble['window'], bubble
+    pointer('motion', bubble['x'] + 28, bubble['y'] + 28)
+    pointer('press')
+    pointer('motion', bubble['x'] - 50, bubble['y'] + 60)
+    time.sleep(.5)
+    assert state()['window'], 'Dragging the widget hid Hud while held'
+    pointer('release')
+    time.sleep(.5)
+    assert state()['window'], 'Dragging the widget hid Hud on release'
+    bubble = state()
     pointer('motion', bubble['x'] + 28, bubble['y'] + 28)
     pointer('press')
     # Reproduce auto-hide between pointer press and release. Release must still

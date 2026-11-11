@@ -65,6 +65,8 @@ menus/dialogs can still differ from GTK.
   Login startup is opt-in. macOS may require approval in System Settings.
 - Closing the window hides it and keeps monitoring and attachments alive. **Quit**
   disconnects only Hud's attach clients. Herdr servers, shells, and agents remain.
+- Clicking outside the app hides Hud to the floating H. Clicking or dragging H
+  itself does not count as an outside click.
 - When the terminal title begins with `user@host`, the heading shows that identity,
   including for SSH or containers that report it. The identity disappears when a
   program replaces the title; Herdr does not otherwise report the logged-in user.

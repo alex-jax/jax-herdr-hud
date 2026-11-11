@@ -10,6 +10,8 @@ Ubuntu 1.4 feature parity is not yet complete.
   message. Theme changes retain sidebar selection.
 - Use Ubuntu 26.04's Ubuntu Mono font and matching default terminal cell
   dimensions, including for history selection.
+- Hide Hud when clicking outside the app, while keeping the floating H and
+  existing terminal sessions available.
 
 - Port Ubuntu 1.2's normal drag-to-select and plain-text automatic copy. Hold
   Shift to send mouse input to interactive CLIs; the route stays fixed for the gesture.

@@ -52,6 +52,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   var tooltipDismiss: DispatchWorkItem?
   var desktopActive = true
   var normalFrame: NSRect = .zero
+  var outsideClickMonitor: Any?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     if CommandLine.arguments.contains("--quit") {
@@ -68,6 +69,9 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     installMenu()
     buildWindow()
     buildDesktop()
+    outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
+      self?.outsideClick(at: NSEvent.mouseLocation)
+    }
     applyTheme()
     let loginLaunch =
       NSAppleEventManager.shared().currentAppleEvent?.paramDescriptor(forKeyword: keyAEPropData)?
@@ -856,6 +860,10 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     save()
     window.orderOut(nil)
   }
+  func outsideClick(at point: NSPoint) {
+    guard window.isVisible, !bubble.frame.contains(point) else { return }
+    hideHud()
+  }
   @objc func toggle() { if window.isVisible { hideHud() } else { show() } }
   @objc func quit() { NSApp.terminate(nil) }
   @objc func zoom() {
@@ -1007,6 +1015,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   }
   func applicationWillTerminate(_ notification: Notification) {
     closing = true
+    if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
     save()
     monitor?.stop()
     terminals.values.forEach { $0.detach() }

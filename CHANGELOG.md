@@ -2,8 +2,9 @@
 
 ## 1.4 — in development (Ubuntu and macOS source)
 
-- Keep widget clicks deterministic if automatic hiding happens during the click: H hides an open Hud and opens a hidden Hud. Clarify the automatic-hiding switch; GNOME extension revision is now 5. Logout/login loads the updated extension.
+- Keep single clicks on H deterministic and let dragging move only the widget. Protect titlebar moves and corner resizing from unintended automatic hiding, including on Wayland. GNOME extension revision is now 7; logout/login loads the updated extension.
 - Hide back to the floating H when focus moves outside Hud; Settings → Floating H provides a saved on/off switch, enabled by default. Open menus and Hud dialogs are protected.
+- On Ubuntu, clicking the desktop background also hides Hud when automatic hiding is enabled. On macOS, clicking outside the app hides Hud while leaving H and terminal sessions available.
 - Optionally start an installed agent when creating a new space; choose its kind and name. Use the root pane ID for startup, and retain the workspace if startup fails.
 - Paste clipboard text directly on the first right-click, including when focus changes or another application owns the clipboard. No extra menu or Paste button.
 - Keep the last reported `user@host` visible when an agent replaces the shell title; use the documented local Herdr identity fallback when no identity has been observed.

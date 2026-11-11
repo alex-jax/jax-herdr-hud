@@ -73,6 +73,23 @@ export default class HerdrHud extends Extension {
             if (this._isHud(actor.meta_window))
                 this._later(() => this._positionWindow(actor.meta_window), 100);
         });
+        // On Wayland, Mutter owns window moves/resizes and may take focus
+        // before GTK receives a pointer event. Protect the entire grab.
+        this._windowGrabBeginId = global.display.connect('grab-op-begin',
+            (_display, window) => this._beginWindowGrab(window));
+        this._windowGrabEndId = global.display.connect('grab-op-end',
+            (_display, window) => this._endWindowGrab(window));
+        // Desktop clicks can leave the Wayland window focused. A stage event
+        // may have no source, so pick the actor at the event's coordinates.
+        this._outsideClickId = global.stage.connect('captured-event', (_stage, event) => {
+            if (event.type() === Clutter.EventType.BUTTON_PRESS && this._running && !this._windowGrab && !this._drag) {
+                const [x, y] = event.get_coords();
+                const actor = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, x, y);
+                if (actor instanceof Meta.BackgroundActor)
+                    this._actions.activate_action('outside-click', null);
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
         this._dbus = Gio.DBusExportedObject.wrapJSObject(IFACE, this);
         this._dbus.export(Gio.DBus.session, '/org/gnome/Shell/Extensions/HerdrHud');
         this._actions = Gio.DBusActionGroup.get(Gio.DBus.session, APP, PATH);
@@ -150,6 +167,10 @@ export default class HerdrHud extends Extension {
             if (drag.moved) {
                 this._savePosition();
                 this._positionWindow();
+                // Restore focus after the Shell grab, so a later outside click
+                // can still trigger the companion's focus-loss auto-hide.
+                if (drag.hudVisible && this._running)
+                    this._actions.activate_action('show', null);
             } else {
                 this._toggle(drag.hudVisible);
             }
@@ -169,6 +190,8 @@ export default class HerdrHud extends Extension {
         const hudVisible = global.get_window_actors().some(actor =>
             this._isHud(actor.meta_window) && actor.visible && !actor.meta_window.minimized);
         this._drag = {x, y, bx: this._bubble.x, by: this._bubble.y, moved: false, hudVisible};
+        if (this._running)
+            this._actions.activate_action('widget-interaction', new GLib.Variant('b', true));
         try {
             this._grab = global.stage.grab(this._bubble);
             // Recover even if another Shell interaction consumes the release.
@@ -194,10 +217,37 @@ export default class HerdrHud extends Extension {
             GLib.Source.remove(this._dragWatchId);
             this._dragWatchId = 0;
         }
+        const hadDrag = !!this._drag;
         const grab = this._grab;
         this._grab = null;
         this._drag = null;
         grab?.dismiss();
+        if (hadDrag && this._running)
+            this._actions.activate_action('widget-interaction', new GLib.Variant('b', false));
+    }
+
+    _beginWindowGrab(window) {
+        if (!this._isHud(window) || this._windowGrab)
+            return;
+        this._windowGrab = window;
+        if (this._running)
+            this._actions.activate_action('widget-interaction', new GLib.Variant('b', true));
+    }
+
+    _endWindowGrab(window) {
+        if (window === this._windowGrab)
+            this._finishWindowGrab();
+    }
+
+    _finishWindowGrab(restoreFocus = true) {
+        const window = this._windowGrab;
+        this._windowGrab = null;
+        if (!window)
+            return;
+        if (this._running)
+            this._actions.activate_action('widget-interaction', new GLib.Variant('b', false));
+        if (restoreFocus && global.get_window_actors().some(actor => actor.meta_window === window && actor.visible))
+            Main.activateWindow(window);
     }
 
     _area() {
@@ -372,6 +422,7 @@ export default class HerdrHud extends Extension {
 
     disable() {
         this._endDrag();
+        this._finishWindowGrab(false);
         this._writeWindowGeometry();
         for (const [window, ids] of this._windowSignals) {
             for (const id of ids)
@@ -387,6 +438,9 @@ export default class HerdrHud extends Extension {
         Main.layoutManager.disconnect(this._monitorsId);
         Main.sessionMode.disconnect(this._modeId);
         global.window_manager.disconnect(this._mapId);
+        global.display.disconnect(this._windowGrabBeginId);
+        global.display.disconnect(this._windowGrabEndId);
+        global.stage.disconnect(this._outsideClickId);
         this._dbus.unexport();
         this._bubble.destroy();
         this._tooltip.destroy();
