@@ -13,6 +13,7 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
   private var child: LocalProcess?
   private var filter = DisplayFilter()
   var connected = false
+  var inputAvailable = true
   var onExit: (() -> Void)?
   init() {
     super.init(
@@ -35,10 +36,13 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
     filter.reset()
     let process = LocalProcess(delegate: self, dispatchQueue: .main)
     child = process
+    guard let command = try? RemoteSSH.attach(session, terminal: pane.terminal_id, executable: executable) else {
+      feed(text: "\r\nRemote machine unavailable\r\n"); return
+    }
     let env = Host.environment().map { "\($0.key)=\($0.value)" }
     switch process.startProcessChecked(
-      executable: executable,
-      args: ["--session", session.name, "terminal", "attach", pane.terminal_id], environment: env,
+      executable: command.0,
+      args: command.1, environment: env,
       currentDirectory: NSHomeDirectory())
     {
     case .success: connected = true
@@ -88,6 +92,7 @@ final class HudTerminal: TerminalView, TerminalViewDelegate, LocalProcessDelegat
   func setTerminalTitle(source: TerminalView, title: String) {}
   func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
   func send(source: TerminalView, data: ArraySlice<UInt8>) {
+    guard inputAvailable else { return }
     #if DEBUG
       testSentData?(Array(data))
     #endif

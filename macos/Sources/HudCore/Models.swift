@@ -4,10 +4,16 @@ public struct Session: Codable, Equatable, Sendable {
   public let name: String
   public let socket_path: String
   public let running: Bool
-  public init(name: String, socket_path: String, running: Bool) {
+  public let remoteTarget, remoteSession, remoteExecutable: String?
+  public func terminalDirectory(foreground: String?, cwd: String?, localHome: String) -> String? {
+    [foreground, cwd].compactMap { $0 }.first { !$0.isEmpty }
+      ?? (remoteTarget == nil ? localHome : nil)
+  }
+  public init(name: String, socket_path: String, running: Bool, remoteTarget: String? = nil, remoteSession: String? = nil, remoteExecutable: String? = nil) {
     self.name = name
     self.socket_path = socket_path
     self.running = running
+    self.remoteTarget = remoteTarget; self.remoteSession = remoteSession; self.remoteExecutable = remoteExecutable
   }
 }
 public struct Pane: Decodable, Equatable, Sendable {
@@ -83,10 +89,11 @@ public struct Preferences: Codable {
   public var sectionPosition: Double = 260
   public var spacesExpanded = true
   public var agentsExpanded = true
+  public var autoHide = true
   public init() {}
   enum CodingKeys: CodingKey {
     case herdrPath, appearance, palette, windowFrame, bubbleFrame, sidebarWidth, sectionPosition,
-      spacesExpanded, agentsExpanded
+      spacesExpanded, agentsExpanded, autoHide
   }
   public init(from decoder: Decoder) throws {
     self.init()
@@ -103,6 +110,7 @@ public struct Preferences: Codable {
     sectionPosition = sectionPosition.isFinite ? max(60, sectionPosition) : 260
     spacesExpanded = (try? c.decode(Bool.self, forKey: .spacesExpanded)) ?? true
     agentsExpanded = (try? c.decode(Bool.self, forKey: .agentsExpanded)) ?? true
+    autoHide = (try? c.decode(Bool.self, forKey: .autoHide)) ?? true
   }
   public static var directory: URL {
     #if DEBUG

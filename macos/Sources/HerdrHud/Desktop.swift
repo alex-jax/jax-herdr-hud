@@ -35,6 +35,7 @@ final class BubbleView: NSView {
   var moved: (() -> Void)?
   var unread = 0 { didSet { setAccessibilityLabel("Herdr Hud, \(unread) unread terminals. Click to open, drag to move."); needsDisplay = true } }
   private var downEvent: NSEvent?
+  var isInteracting: Bool { downEvent != nil }
   private var original: NSPoint?
   private var nativeDrag = false
   private var cancelled = false
@@ -142,6 +143,10 @@ final class SidebarTable: NSTableView {
   }
 }
 final class SidebarCell: NSTableCellView {
+  var identityText: String?
+  private var identityPopover: NSPopover?
+  private var identityDelay: DispatchWorkItem?
+
   let label = NSTextField(labelWithString: "")
   let subtitle = NSTextField(labelWithString: "")
   let dot = NSTextField(labelWithString: "●")
@@ -170,8 +175,25 @@ final class SidebarCell: NSTableCellView {
     super.updateTrackingAreas(); if let tracking { removeTrackingArea(tracking) }
     tracking = NSTrackingArea(rect:bounds,options:[.activeAlways,.mouseEnteredAndExited,.inVisibleRect],owner:self); addTrackingArea(tracking!)
   }
-  override func mouseEntered(with event:NSEvent) { pencil.isHidden = false }
-  override func mouseExited(with event:NSEvent) { pencil.isHidden = true }
+  override func mouseEntered(with event:NSEvent) {
+    pencil.isHidden = false
+    identityDelay?.cancel()
+    let work = DispatchWorkItem { [weak self] in
+      guard let self, let text = self.identityText, self.window != nil else { return }
+      let content = HudSurface(frame:NSRect(x:0,y:0,width:260,height:40))
+      content.fill = HudStyle.background; content.border = HudStyle.line
+      let label = NSTextField(labelWithString:text); label.textColor = HudStyle.foreground
+      label.font = HudStyle.font(12); label.frame = NSRect(x:10,y:10,width:240,height:20)
+      content.addSubview(label)
+      let controller = NSViewController(); controller.view = content
+      let popover = NSPopover(); popover.contentViewController = controller
+      popover.behavior = .transient; popover.animates = false
+      self.identityPopover = popover
+      popover.show(relativeTo:self.bounds,of:self,preferredEdge:.maxX)
+    }
+    identityDelay = work; DispatchQueue.main.asyncAfter(deadline:.now()+0.5,execute:work)
+  }
+  override func mouseExited(with event:NSEvent) { identityDelay?.cancel(); identityPopover?.close(); pencil.isHidden = true }
   override func draw(_ rect:NSRect) {
     if !group && !agentShortcut { HudStyle.line.setFill(); NSRect(x:18,y:0,width:1,height:bounds.height).fill() }
   }

@@ -1,13 +1,16 @@
 # Release notes
 
-## 1.5 — 11 November 2026 (Ubuntu/Debian)
+## 1.5 — joint release candidate, 11 November 2026
 
 - Discover enabled saved SSH machines and display their remote spaces and agents with machine/session labels.
 - Attach to remote terminals through native Herdr direct attachment over SSH; preserve remote servers and agents on detach or exit.
 - Reconnect remote state after connection loss, dim unavailable rows and disable their input until recovery.
 - Keep machine identities separate and preserve terminal rows when a saved machine is renamed.
 - Include the previously unpublished Ubuntu 1.4 improvements listed below. Extension revision remains 7.
-- Ship the Debian package, extension ZIP, source archive and checksums. No new Mac installer is included.
+- Prepare the Debian package, native Apple silicon DMG, extension ZIP, complete source archive and checksums for a single joint release. Publication remains pending the Mac release gate.
+- Bring saved SSH machines, remote attachments, optional agent startup in new spaces, remembered identity headings/tooltips and saved auto-hide preferences to the native Mac app.
+- Add silent six-hour native Mac update checks and explicit checksum-verified DMG downloads. Installation replaces the single app in `~/Applications` manually; sessions remain running.
+- Avoid sending a Mac home directory when creating a remote terminal without a reported working directory.
 - Remote support requires Linux/macOS remote Herdr sessions, existing noninteractive SSH authentication and Unix-socket forwarding. Plain SSH shells are not adopted.
 
 ## 1.4 — source milestone (included in Ubuntu 1.5)

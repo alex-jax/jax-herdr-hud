@@ -65,6 +65,10 @@
         app.outsideClick(at: NSPoint(x: app.bubble.frame.maxX + 100, y: app.bubble.frame.maxY + 100))
         try require(!app.window.isVisible && !app.closing, "outside click hides without quitting")
         app.show()
+        app.prefs.autoHide = false
+        app.outsideClick(at: NSPoint(x: app.bubble.frame.maxX + 100, y: app.bubble.frame.maxY + 100))
+        try require(app.window.isVisible, "disabled automatic hiding preserves window")
+        app.prefs.autoHide = true
         app.sidebar.layoutSubtreeIfNeeded()
         try require(app.sections.frame.minX == 0 && app.sections.frame.width == app.sidebar.bounds.width,
           "sidebar lists reach both panel edges")
@@ -245,6 +249,7 @@
           }
         }
         let herdrVersion = try app.backend.check()
+        try await parityChecks(session)
         result =
           "PASS: selection/CLI gesture routes, clipboard text/image fallback, implicit/OSC8 links, retained/live history in both directions, header focus; real \(herdrVersion) create/attach/input, clipboard, resize, 245 palettes, search preservation, agent events/unread, rename/close, detach/reattach, desktop controls, preferences, geometry."
         successful = true

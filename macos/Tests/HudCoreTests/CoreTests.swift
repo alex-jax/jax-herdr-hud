@@ -170,11 +170,36 @@ final class CoreTests {
     expectEqual(snap.label(for: snap.panes[0]), "First")
     expectNotEqual(TerminalKey("a", "1"), TerminalKey("b", "1"))
   }
+  func testRemoteRoutingAndUpdates() throws {
+    let local = Session(name: "default", socket_path: "/tmp/local", running: true)
+    let remote = Session(name: "Work/default", socket_path: "/tmp/remote", running: true,
+      remoteTarget: "work", remoteSession: "agent; echo bad", remoteExecutable: "/some path/herdr")
+    expectEqual(try RemoteSSH.attach(local, terminal: "t1", executable: "/herdr").0, "/herdr")
+    let attach = try RemoteSSH.attach(remote, terminal: "t1", executable: "/herdr")
+    expectEqual(attach.0, "/usr/bin/ssh")
+    expectTrue(attach.1.last!.contains("'agent; echo bad'"))
+    expectFalse(attach.1.contains("--takeover"))
+    expectError(try RemoteSSH.arguments("-oProxyCommand=bad"))
+    expectNil(remote.terminalDirectory(foreground: nil, cwd: "", localHome: "/Users/jax"))
+    expectEqual(remote.terminalDirectory(foreground: "/home/jax", cwd: "/tmp", localHome: "/Users/jax"), "/home/jax")
+    expectEqual(local.terminalDirectory(foreground: nil, cwd: nil, localHome: "/Users/jax"), "/Users/jax")
+    expectTrue(HudUpdates.newer("v1.5", than: "1.4"))
+    expectFalse(HudUpdates.newer("v1.5", than: "1.5"))
+    expectFalse(HudUpdates.newer("v1.5-preview", than: "1.4"))
+    let data = Data(#"[{"tag_name":"v1.5","draft":false,"assets":[{"name":"jax-herdr-hud-1.5-macos-arm64.dmg","browser_download_url":"https://example.invalid","size":10}]},{"tag_name":"v1.6","draft":true,"assets":[]}]"#.utf8)
+    let releases = try JSONDecoder().decode([HudRelease].self, from: data)
+    expectEqual(HudUpdates.choose(releases, current: "1.4")?.tag_name, "v1.5")
+    expectError(try HudUpdates.installer(releases[0]))
+    let prefs = try JSONDecoder().decode(Preferences.self, from: Data(#"{"autoHide":false}"#.utf8))
+    expectFalse(prefs.autoHide)
+  }
+
 }
 
 @main struct CoreCheckRunner {
   static func main() throws {
     let suite = CoreTests()
+    try suite.testRemoteRoutingAndUpdates()
     suite.testTerminalTitleIdentity()
     suite.testAttentionTransitions()
     try suite.testEnvironmentAndExplicitExecutable()

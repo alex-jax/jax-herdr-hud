@@ -29,6 +29,10 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   let appSubtitle = NSTextField(labelWithString:"Your terminals, within reach")
   var sidebarToggle: HudButton!
   var themeButton: HudButton!
+  var updateButton: HudButton!
+  var updateTimer: Timer?
+  var availableUpdate: HudRelease?
+  var updateBusy = false
   var chromeButtons:[HudButton] = []
   var setupPanel: HudSetupPanel?
   var showingSetup = false
@@ -37,6 +41,8 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   var selected: TerminalKey?
   var previousStates: [TerminalKey: String] = [:]
   var unread = Set<TerminalKey>()
+  var disconnected = Set<String>()
+  var terminalIdentities: [TerminalKey: String] = [:]
   var collapsed = Set<SpaceKey>()
   var workspaceSelection: [SpaceKey: TerminalKey] = [:]
   var spaceRows: [Row] = [], agentRows: [Row] = []
@@ -53,6 +59,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   var desktopActive = true
   var normalFrame: NSRect = .zero
   var outsideClickMonitor: Any?
+  var menuTracking = 0
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     if CommandLine.arguments.contains("--quit") {
@@ -72,12 +79,23 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
       self?.outsideClick(at: NSEvent.mouseLocation)
     }
+    observers.append(NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object:nil, queue:.main) { [weak self] _ in self?.menuTracking += 1 })
+    observers.append(NotificationCenter.default.addObserver(forName: NSMenu.didEndTrackingNotification, object:nil, queue:.main) { [weak self] _ in
+      if let self { self.menuTracking = max(0, self.menuTracking - 1) }
+    })
+    observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification, object:nil, queue:.main) { [weak self] _ in
+      DispatchQueue.main.asyncAfter(deadline:.now()+0.1) {
+        guard let self, !self.closing, !NSApp.isActive else { return }
+        self.outsideClick(at:NSEvent.mouseLocation)
+      }
+    })
     applyTheme()
     let loginLaunch =
       NSAppleEventManager.shared().currentAppleEvent?.paramDescriptor(forKeyword: keyAEPropData)?
       .enumCodeValue == keyAELaunchedAsLogInItem
     if !CommandLine.arguments.contains("--background") && !loginLaunch { show() }
     startBackend()
+    startUpdates()
     observers.append(
       DistributedNotificationCenter.default().addObserver(
         forName: NSNotification.Name("io.github.herdr.Hud.show"), object: nil, queue: .main
@@ -169,7 +187,9 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     let expand = button("Expand / restore",#selector(zoom),glyph:"expand")
     themeButton = button("Switch light / dark",#selector(toggleTheme),glyph:"sun")
     let exit = button("Exit Hud — keep sessions running",#selector(quit),glyph:"power")
-    let left = NSStackView(views:[credits,settings]), trailing = NSStackView(views:[hide,expand,themeButton,exit])
+    updateButton = button("Download update", #selector(downloadUpdate), glyph:"down")
+    updateButton.isHidden = true
+    let left = NSStackView(views:[credits,settings]), trailing = NSStackView(views:[updateButton,hide,expand,themeButton,exit])
     for stack in [left,trailing] { stack.spacing = 6; stack.orientation = .horizontal }
     for button in chromeButtons { button.widthAnchor.constraint(equalToConstant:34).isActive = true; button.heightAnchor.constraint(equalToConstant:34).isActive = true }
     appTitle.font = HudStyle.font(14,bold:true); appTitle.alignment = .center
@@ -327,12 +347,27 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
         self.status.stringValue = message
       }
     }
+    monitor.onUnavailable = { [weak self] session, message in
+      DispatchQueue.main.async {
+        guard let self, !self.closing, token == self.generation else { return }
+        self.disconnected.insert(session.socket_path)
+        self.terminals.filter { $0.key.socket == session.socket_path }.values.forEach { $0.inputAvailable = false }
+        self.spaces.reloadData(); self.agents.reloadData()
+        self.status.stringValue = "Reconnecting to " + session.name + ": " + message
+        self.render()
+      }
+    }
     monitor.start()
   }
   func received(_ session: Session, _ snapshot: Snapshot) {
+    if disconnected.remove(session.socket_path) != nil {
+      terminals.filter { $0.key.socket == session.socket_path }.values.forEach { $0.inputAvailable = true }
+      spaces.reloadData(); agents.reloadData()
+    }
     snapshots[session.socket_path] = (session, snapshot)
     for pane in snapshot.panes {
       let key = TerminalKey(session.socket_path, pane.terminal_id)
+      if let identity = titleIdentity(pane.terminal_title_stripped) { terminalIdentities[key] = identity }
       if let message = attention(previous: previousStates[key], current: pane.agent_status) {
         markUnread(key, message: "\(snapshot.label(for:pane)): \(message)")
       }
@@ -363,6 +398,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     for key in Array(terminals.keys) where !live.contains(key) {
       terminals.removeValue(forKey: key)?.detach()
     }
+    terminalIdentities = terminalIdentities.filter { live.contains($0.key) }
     previousStates = previousStates.filter { live.contains($0.key) }
     unread.formIntersection(live)
     if let selected, !live.contains(selected) {
@@ -421,7 +457,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     }
   }
   func select(_ key: TerminalKey) {
-    guard let (session, snapshot, pane) = pane(key) else { return }
+    guard !disconnected.contains(key.socket), let (session, snapshot, pane) = pane(key) else { return }
     leaveSetup()
     selected = key
     workspaceSelection[SpaceKey(key.socket, pane.workspace_id)] = key
@@ -485,9 +521,14 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     let terminalName = name.isEmpty || Int(name) != nil || name.lowercased() == agent.lowercased() ? "Terminal \(number)" : name
     return "\(agent) · \(terminalName)"
   }
+  func userHost(_ session: Session, _ pane: Pane) -> String {
+    titleIdentity(pane.terminal_title_stripped)
+      ?? terminalIdentities[TerminalKey(session.socket_path, pane.terminal_id)]
+      ?? session.remoteTarget ?? (NSUserName() + "@" + (Foundation.Host.current().localizedName ?? ProcessInfo.processInfo.hostName))
+  }
   func terminalHeading(session:Session,snapshot:Snapshot,pane:Pane) -> String {
     let space = snapshot.workspaces.first { $0.workspace_id == pane.workspace_id }?.label ?? session.name
-    let identity = titleIdentity(pane.terminal_title_stripped)
+    let identity = titleIdentity(pane.terminal_title_stripped) ?? (pane.isAgent ? userHost(session, pane) : nil)
     return (session.name == backend.defaultSession ? "" : session.name + " / ") + space + "  /  " + paneTitle(pane,snapshot:snapshot) + (identity.map { " - " + $0 } ?? "")
   }
   func render() {
@@ -581,9 +622,11 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
       tableView.makeView(withIdentifier: id, owner: self) as? SidebarCell
       ?? SidebarCell(frame: .zero)
     cell.identifier = id
+    cell.alphaValue = disconnected.contains(item.session.value.socket_path) ? 0.5 : 1
     cell.label.textColor = currentColors.map { NSColor(hex: $0.foreground) } ?? .labelColor
     cell.label.stringValue = item.title
-    cell.toolTip = item.title
+    cell.toolTip = nil
+    cell.identityText = item.terminal.flatMap { pane(TerminalKey(item.session.value.socket_path, $0)) }.map { userHost($0.0, $0.2) }
     cell.label.font = HudStyle.font(item.terminal == nil ? 12 : 14, bold:item.terminal == nil)
     cell.group = item.terminal == nil; cell.agentShortcut = tableView === agents
     cell.subtitle.stringValue = item.subtitle; cell.subtitle.textColor = HudStyle.foreground.withAlphaComponent(0.7)
@@ -643,6 +686,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     let rows = table === spaces ? spaceRows : agentRows
     guard rows.indices.contains(index) else { return nil }
     let row = rows[index]
+    guard !disconnected.contains(row.session.value.socket_path) else { return nil }
     let menu = NSMenu()
     for (name, action) in [
       ("Rename…", #selector(renameRow(_:))), ("Close", #selector(closeRow(_:))),
@@ -758,20 +802,47 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
       }
     }
   }
+  @objc func toggleAutoHide(_ sender: NSButton) {
+    prefs.autoHide = sender.state == .on
+    save()
+  }
   @objc func newSpace() {
     let labels = snapshots.values.flatMap { $0.1.workspaces.compactMap(\.label) }
     var n = 1
     while labels.contains("Space \(n)") { n += 1 }
-    guard let name = prompt("New space", initial: "Space \(n)", accept: "Create") else { return }
+    let dialog = NSAlert()
+    dialog.messageText = "New space"
+    dialog.addButton(withTitle: "Create"); dialog.addButton(withTitle: "Cancel")
+    let form = NSStackView(); form.orientation = .vertical; form.alignment = .leading
+    let label = NSTextField(string: "Space \(n)")
+    let enabled = NSButton(checkboxWithTitle: "Start an agent in this space", target: nil, action: nil)
+    let kind = NSPopUpButton(); kind.addItems(withTitles: ["pi", "claude", "codex", "gemini", "cursor", "devin", "agy", "cline", "omp", "mastracode", "opencode", "copilot", "kimi", "kiro", "droid", "amp", "grok", "hermes", "kilo", "qodercli", "qwen", "letta", "maki", "muse"]); kind.selectItem(withTitle: "codex")
+    let agent = NSTextField(string: "agent-\(n)")
+    label.placeholderString = "Space name"; agent.placeholderString = "Agent name"
+    for view in [label, enabled, kind, agent] as [NSView] { form.addArrangedSubview(view) }
+    form.frame = NSRect(x: 0, y: 0, width: 320, height: 130)
+    dialog.accessoryView = form
+    guard dialog.runModal() == .alertFirstButtonReturn else { return }
+    let name = label.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    let agentName = agent.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !name.isEmpty, enabled.state != .on || agentName.range(of: "^[a-z][a-z0-9_-]{0,31}$", options: .regularExpression) != nil else {
+      status.stringValue = "Enter a space name and a valid lowercase agent name."; return
+    }
+    let agentKind = enabled.state == .on ? kind.titleOfSelectedItem : nil
     mutate {
       let session = try self.backend.ensureDefault(initialize: false)
       let result = try self.backend.request(
         session, "workspace.create", ["label": name, "cwd": NSHomeDirectory(), "focus": false])
       self.selectCreated(session, result)
+      if let kind = agentKind, let pane = result["root_pane"] as? [String: Any], let id = pane["pane_id"] as? String {
+        _ = try Host.run(self.backend.executable(), ["--session", self.backend.defaultSession,
+          "agent", "start", agentName, "--kind", kind, "--pane", id, "--timeout", "30000"], timeout: 40)
+      }
     }
   }
   func newTerminal(_ row: Row) {
     let session = row.session.value
+    guard !disconnected.contains(session.socket_path) else { return }
     guard let snapshot = snapshots[session.socket_path]?.1 else { return }
     let members = snapshot.panes.filter { $0.workspace_id == row.workspace }
     let source =
@@ -781,13 +852,14 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     let labels = members.map { snapshot.label(for: $0) }
     var n = members.count + 1
     while labels.contains("Terminal \(n)") { n += 1 }
-    let cwd =
-      [source?.foreground_cwd, source?.cwd].compactMap { $0 }.first { !$0.isEmpty }
-      ?? NSHomeDirectory()
+    let cwd = session.terminalDirectory(foreground: source?.foreground_cwd,
+      cwd: source?.cwd, localHome: NSHomeDirectory())
     mutate {
+      var params: [String: Any] = ["workspace_id": row.workspace,
+        "label": "Terminal \(n)", "focus": false]
+      if let cwd { params["cwd"] = cwd }
       let result = try self.backend.request(
-        session, "tab.create",
-        ["workspace_id": row.workspace, "label": "Terminal \(n)", "cwd": cwd, "focus": false])
+        session, "tab.create", params)
       self.selectCreated(session, result)
     }
   }
@@ -861,7 +933,9 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     window.orderOut(nil)
   }
   func outsideClick(at point: NSPoint) {
-    guard window.isVisible, !bubble.frame.contains(point) else { return }
+    guard prefs.autoHide, !bubbleView.isInteracting, menuTracking == 0, !showingSetup, window.isVisible, !bubble.frame.contains(point),
+      NSApp.modalWindow == nil, window.attachedSheet == nil,
+      settingsController?.window?.isVisible != true, !window.inLiveResize else { return }
     hideHud()
   }
   @objc func toggle() { if window.isVisible { hideHud() } else { show() } }
@@ -931,7 +1005,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   }
   @objc func about() {
     NSApp.orderFrontStandardAboutPanel(options: [
-      .applicationName: "Herdr Hud", .applicationVersion: "1.4 · macOS",
+      .applicationName: "Herdr Hud", .applicationVersion: "1.5 · macOS",
       .credits: NSAttributedString(
         string:
           "Native macOS port of Alex Jax’s independent Ubuntu remix.\nOriginal Herdr HUD: Alex Finn.\nPalettes: Christian Hergert / Ptyxis. Terminal: SwiftTerm contributors.\nIcons: GNOME Project. Interface font: DejaVu.\nGPL-3.0-or-later; third-party notices are bundled."
@@ -1015,6 +1089,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   }
   func applicationWillTerminate(_ notification: Notification) {
     closing = true
+    updateTimer?.invalidate()
     if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
     save()
     monitor?.stop()

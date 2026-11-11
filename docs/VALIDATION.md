@@ -275,5 +275,24 @@ Exact Debian SHA-256:
 `3564dd66b4ea1abc065f72f7ae83c5db4ffda1db76cfd4ebcc5b81f284c806a7`.
 
 This release includes the previously validated SSH transport and recovery tests
-above. No new Mac installer is included. Morpheus installation is deliberately
+above. A native Mac 1.5 candidate is now prepared alongside this package; see
+[its validation record](../macos/VALIDATION.md). Morpheus installation is deliberately
 left to the user's local Codex, as requested; it is not a release prerequisite.
+
+
+### Joint 1.5 final Debian candidate — 11 November 2026
+
+After synchronizing the manual and changelog with the native Mac candidate,
+rebuilt the Debian package and reran 62 unit tests plus sequential sidebar and
+desktop smoke checks against its extracted payload: passed. Installed this exact
+artifact in the local Ubuntu VM, compared installed backend/manual files, restarted
+only Hud, and confirmed its service active with identical Herdr session inventories.
+
+Final candidate Debian SHA-256:
+`451603fc0c7d6bdf41d514c56415c54b85d9b5babc10469d235aefb399f397b4`.
+
+Local logs: `/tmp/hud-15-final-unit.log`, `/tmp/hud-15-final-sidebar.log`,
+`/tmp/hud-15-final-desktop.log` inside the Ubuntu VM. These are new checks, not
+claims based on historical logs. Mac candidate validation is recorded separately
+in [macos/VALIDATION.md](../macos/VALIDATION.md). Both artifacts remain in one draft;
+the macOS platform-support gate is unresolved.

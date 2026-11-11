@@ -5,6 +5,7 @@ final class HudSetupPanel: HudSurface {
   unowned let app: HudApp
   let scroll = NSScrollView(), content = HudSurface()
   let path = NSTextField()
+  let autoHide = NSButton(checkboxWithTitle: "Automatically hide when clicking outside Hud", target: nil, action: nil)
   let groups = [HudSurface(), HudSurface(), HudSurface()]
   var labels: [NSTextField] = []
   var buttons: [HudButton] = []
@@ -33,7 +34,10 @@ final class HudSetupPanel: HudSurface {
     button("Browse…",NSRect(x:12,y:12,width:90,height:34),groups[2],self,#selector(browse))
     button("Retry",NSRect(x:108,y:12,width:72,height:34),groups[2],self,#selector(retry))
     button("Install Herdr",NSRect(x:186,y:12,width:122,height:34),groups[2],self,#selector(install))
+    button("Check for updates",NSRect(x:190,y:12,width:150,height:34),content,app,#selector(HudApp.checkForUpdates))
     button("Back to terminals",NSRect(x:18,y:12,width:165,height:34),content,app,#selector(HudApp.leaveSetup))
+    autoHide.target = app; autoHide.action = #selector(HudApp.toggleAutoHide(_:))
+    autoHide.state = app.prefs.autoHide ? .on : .off; groups[1].addSubview(autoHide)
     refresh()
   }
   required init?(coder:NSCoder) { fatalError() }
@@ -45,10 +49,11 @@ final class HudSetupPanel: HudSurface {
       let group = groups[i]; group.frame = NSRect(x:18,y:geometry.0,width:width,height:geometry.1)
       group.subviews[0].frame = NSRect(x:12,y:group.bounds.height-25,width:width-24,height:22)
     }
-    groups[1].subviews[1].frame.size.width = max(0,width-24)
+    groups[1].subviews[1].frame = NSRect(x:12,y:35,width:max(0,width-24),height:32)
+    autoHide.frame = NSRect(x:12,y:8,width:max(0,width-24),height:22)
     groups[2].subviews[1].frame.size.width = max(0,width-24)
     path.frame = NSRect(x:12,y:58,width:max(0,width-24),height:28)
-    buttons.last?.frame.origin.y = top-424
+    buttons.suffix(2).forEach { $0.frame.origin.y = top-424 }
   }
   func refresh() {
     fill = HudStyle.background; content.fill = HudStyle.background

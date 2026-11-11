@@ -1,28 +1,24 @@
 # Herdr Hud
 
-**Native macOS app:** The AppKit/SwiftTerm source is version 1.4 for macOS 27 on
-Apple silicon; the previously published version 1.2 remains available from the [v1.2 release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2).
-Its build and installation instructions are in [`macos/`](macos/README.md). The current
-macOS source has also been exercised with Herdr 0.9.5 on macOS 27.2; see the
-[Mac validation record](macos/VALIDATION.md) for the scope and limitations.
-The stable 1.5 release below is Debian-only; the GTK/VTE Mac port remains in development.
+A native companion for local and saved remote Herdr terminals and agents:
+GTK/VTE on Ubuntu 26.04 / GNOME 50, and AppKit/SwiftTerm on Apple silicon macOS.
 
-A native GTK/VTE companion for local and saved remote Herdr terminals and agents on Ubuntu 26.04.
+**Version 1.5 is being prepared as a joint Ubuntu and Mac release.** The release
+remains a draft until the Mac publication gates are resolved. The native Mac
+build targets macOS 27; see [Mac validation](macos/VALIDATION.md) for completed
+checks and limitations and [publication gates](docs/MACOS_VALIDATION.md).
 
-**Ubuntu release 1.5** adds saved SSH machines: remote spaces and agents appear
-alongside local ones, with native terminal attachment and automatic reconnection.
-Configure machines using `herdr machine add <ssh-host>`; agents must run inside
-Herdr on the remote host. Plain SSH shells are not automatically adopted.
+Both implementations include saved SSH machines, native remote terminal attachment,
+agent startup in new spaces, retained identity headings, configurable automatic
+hiding and update checks. Configure machines using `herdr machine add <ssh-host>`;
+agents must run inside Herdr on the remote host. Plain SSH shells are not
+automatically adopted. Remote access uses existing noninteractive SSH credentials.
 
-This release also includes the previously unpublished 1.4 improvements: agent
-startup in new spaces, first-click paste, retained identity headings, and improved
-widget gestures, resizing and automatic hiding. GNOME extension revision 7 needs
-logout/login after installation.
-
-The release includes the Debian package, extension ZIP, source archive and
-checksums. No new Mac installer is included. The GTK/VTE Mac port remains in
-development; native Mac feature parity is tracked in
-[issue #3](https://github.com/alex-jax/jax-herdr-hud/issues/3).
+The joint release assets are the Debian package, native Apple silicon DMG, GNOME
+extension ZIP, complete source archive and checksums. On Ubuntu, extension
+revision 7 needs logout/login after installation. On Mac, update downloads are
+verified and opened as a DMG; replace the app in `~/Applications` yourself.
+Herdr is installed separately on both platforms. See [Mac installation](macos/README.md).
 
 **A remix of Alex Finn’s version by [Alex Jax](https://github.com/alex-jax).**
 Original: [Herdr HUD for Omarchy](https://github.com/finna/omarchy-herdr-hud).

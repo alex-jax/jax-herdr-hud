@@ -2,6 +2,7 @@ import hashlib
 import subprocess
 import sys
 import tempfile
+import tarfile
 import unittest
 from pathlib import Path
 
@@ -18,6 +19,11 @@ class ReleaseArtifactTests(unittest.TestCase):
             package.write_bytes(b'debian package fixture')
             subprocess.run([sys.executable, str(SOURCE / 'scripts/release.py'),
                             '--output', str(output)], check=True)
+
+            with tarfile.open(output / f'jax-herdr-hud-{VERSION}-source.tar.gz') as archive:
+                names = archive.getnames()
+                self.assertIn(f'jax-herdr-hud-{VERSION}/macos/Sources/HerdrHud/App.swift', names)
+                self.assertFalse(any('/.build/' in n or '/backups.noindex/' in n for n in names))
 
             lines = (output / 'SHA256SUMS').read_text().splitlines()
             paths = {line.split('  ', 1)[1] for line in lines}

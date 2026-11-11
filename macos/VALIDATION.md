@@ -266,3 +266,35 @@ The Python display-filter tests passed (8 tests). Full Python unittest discovery
 on macOS ran 45 tests with 7 failures and 4 errors: Linux packaging/GTK tools
 (`dpkg-deb`, `gi`) are unavailable here, while Linux-specific update and PATH
 expectations differ on macOS. This does not constitute Ubuntu validation.
+
+
+## Joint 1.5 candidate — 11 November 2026
+
+Environment: macOS 27.2 (26B123), arm64, Herdr 0.9.5. The native Mac build
+now implements saved remote machines, optional agent launch in new spaces,
+remembered identities, saved auto-hide control and GitHub update discovery/download.
+
+- HudCoreChecks passed, including remote argument quoting/routing, working-directory
+  fallback, version/asset selection and invalid update metadata rejection.
+- The debug desktop smoke passed with two real Codex CLI agents in distinct panes;
+  both appeared as separate agent shortcuts. Only the disposable test server was stopped.
+- Live SSH into a disposable Ubuntu VM session passed snapshot discovery, workspace
+  creation, native SwiftTerm remote attachment, keyboard/output round trip, safe
+  detach with the pane retained, and label rename with stable socket identity.
+- The desktop harness also exercised existing palette, selection/history, focus,
+  clipboard, attention, rename/close and geometry behavior. Disabling automatic
+  hiding was checked. Synthetic events do not establish physical-pointer parity.
+- Built and installed the optimized ad-hoc signed app in `~/Applications`, verified
+  its signature and launch, and compared Herdr inventories before/after: unchanged.
+  The installed New space dialog visibly exposes the optional agent checkbox,
+  kind selector and agent name field; it was cancelled without creating a session.
+- Disk-image integrity verification passed. The release is still a draft.
+
+Update version/metadata logic was tested locally; no newer public native release
+exists yet to exercise an end-to-end update download. Actual lock/login, multiple
+monitor hot-plug, and macOS 26 are not established. The native deployment target is
+macOS 27. The root requirement for both macOS 26 and 27 validation remains a
+publication blocker pending the owner's platform-support decision.
+
+Logs: `/tmp/hud-mac-core-final.log`, `/tmp/hud-mac-parity-smoke-final.log`,
+`/tmp/hud-mac-15-release-build.log`, `/tmp/hud-mac-15-install.log`.

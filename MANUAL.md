@@ -308,8 +308,8 @@ installation, exit Hud and use `sudo apt remove jax-herdr-hud` instead.
 
 The current settings loader handles missing files and invalid JSON syntax, but
 does not validate every decoded value's type. Keep the configuration an object
-with numeric sizes and valid theme strings. Local sessions only are supported;
-there is no remote discovery or persistent notification history.
+with numeric sizes and valid theme strings. Local sessions and enabled saved SSH machines are supported; see Remote machines
+below. Notification history is not persistent.
 
 ## Verification
 

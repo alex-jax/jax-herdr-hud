@@ -1,4 +1,4 @@
-HERDR HUD — macOS 1.4
+HERDR HUD — macOS 1.5
 Ubuntu 1.2 terminal interaction update: plain-text drag selection and history,
 clipboard text paste, browser links, paired CLI colors, focus, and VS Code Dark.
 
@@ -9,7 +9,9 @@ REQUIREMENTS
 • Intel Macs and older macOS versions are not supported by this build.
 
 INSTALL
-1. Open the DMG and drag Herdr Hud into Applications.
+1. Open the DMG. In Finder, use Go → Go to Folder → ~/Applications (create it if needed).
+   Quit any existing Hud and copy Herdr Hud there, replacing the previous app.
+   Keep one installed copy; do not also install it in /Applications.
 2. Eject the DMG, then open Herdr Hud from Applications.
 3. If Herdr is not found, open the gear button → Herdr connection → Browse…,
    select your Herdr executable, then click Retry. Automatic discovery checks

@@ -1,11 +1,12 @@
 # Herdr Hud for macOS
 
-Native AppKit/SwiftTerm companion for **macOS 27 on Apple silicon**, source version **1.4**. The native app incorporates Ubuntu 1.2 terminal interactions; later Ubuntu feature parity remains in development. The previously published DMG is available from the [v1.2 GitHub release](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.2); version 1.4 has not been published.
+Native AppKit/SwiftTerm companion for **macOS 27 on Apple silicon**, version **1.5**.
+This joint Ubuntu/macOS release adds saved SSH machines, agent startup in new
+spaces, remembered terminal identities, palette-matching identity tooltips,
+a saved automatic-hiding preference, and in-app update checks.
 
-This source has been exercised on macOS 27.2 arm64 with Herdr 0.9.1 and
-0.9.5. The 0.9.5 checks include a real Codex session; see the
-[validation record](VALIDATION.md) for scope and test details.
-These results do not update the previously published DMG.
+Validation details and limitations are recorded in [VALIDATION.md](VALIDATION.md).
+The older GTK/VTE Mac experiment is not the native application shipped here.
 
 ## Build and install
 
@@ -25,7 +26,7 @@ The installer keeps recoverable ZIP backups in `macos/dist/backups.noindex`,
 cleans up old generated app copies, and refreshes macOS app registration. Build
 bundles stay in `macos/dist/build.noindex` so they do not appear as extra installed apps.
 The build uses a local ad-hoc signature. Developer ID signing, notarization,
-automatic updates, Intel Macs, and older macOS releases are outside this release.
+Intel Macs and older macOS releases are outside this release.
 
 ## Share a DMG
 
@@ -34,7 +35,7 @@ macos/scripts/build-dmg.sh
 ```
 
 This builds the release app and creates
-`macos/dist/Herdr-Hud-1.4-macOS-27-arm64.dmg` plus a SHA-256 file.
+`macos/dist/jax-herdr-hud-1.5-macos-arm64.dmg` plus a SHA-256 file.
 The image contains the app, an Applications shortcut, installation/first-launch
 instructions, and a source archive with the current Mac source, shared palette
 sources, licenses, and pinned Swift dependency sources. It excludes personal
@@ -68,8 +69,9 @@ menus/dialogs can still differ from GTK.
 - Clicking outside the app hides Hud to the floating H. Clicking or dragging H
   itself does not count as an outside click.
 - When the terminal title begins with `user@host`, the heading shows that identity,
-  including for SSH or containers that report it. The identity disappears when a
-  program replaces the title; Herdr does not otherwise report the logged-in user.
+  including for SSH or containers that report it. The last reported identity is remembered per terminal while an agent runs.
+  Without a reported identity, local agents use the local user/host and remote
+  agents use the configured SSH target; these fallbacks are not detected logins.
 - Spaces and Agents refer to the same live terminals. Search, collapse, rename,
   and theme changes retain connections and scrollback. Right-click a sidebar row
   for Rename/Close; use its space's **+** for a new terminal.
@@ -97,7 +99,11 @@ menus/dialogs can still differ from GTK.
   means completion. Unread state is per terminal, cleared by focusing/selecting it,
   and kept only in memory. The app does not infer completion for unreported agents.
 
-The app discovers local Herdr sessions. It initializes the default workspace if
+The app discovers local Herdr sessions and enabled saved SSH machines.
+Configure remote machines using `herdr machine add <host>`; remote sessions must
+already be running and support Unix-socket forwarding. Ordinary SSH shells are
+not automatically adopted. Disconnected remote rows are dimmed and input is
+disabled until their state reconnects. It initializes the default workspace if
 necessary and puts new spaces in the default server, visible to ordinary `herdr`.
 It never forces takeover from another direct-attach client. Detach the other client
 before selecting a terminal again if it owns input.
@@ -113,7 +119,12 @@ The bundle executable accepts `--background` and `--quit`. A second normal launc
 shows the existing instance. The application ID is `io.github.herdr.Hud`.
 Preferences use atomic replacement and tolerate malformed field values.
 
-Rebuild and reinstall for local updates. To remove the app, disable Launch at Login,
+Hud silently checks published releases every six hours. Settings offers **Check
+for updates**. When a newer Mac installer exists, a header arrow downloads it
+only after you click; the GitHub checksum and disk image are verified before it
+opens. Quit Hud and replace your existing app, then reopen it. Keep one installed
+copy at `~/Applications/Herdr Hud.app`; do not create a second copy in `/Applications`.
+Rebuild and reinstall for development updates. To remove the app, disable Launch at Login,
 quit Hud, then move the app bundle to Trash. Settings and Herdr sessions are retained.
 Ubuntu preferences and running processes are not automatically imported.
 

@@ -1,15 +1,16 @@
 # Build and publish on GitHub
 
-## Debian release 1.5
+## Joint release 1.5
 
-The 1.5 release targets Ubuntu 26.04 / GNOME 50 and is intended to ship the Debian
-package, GNOME extension ZIP, source archive and checksums. The Apple silicon
-Mac port remains in development and has no installer in this release. Publish a
-Mac installer only after both macOS 26 and 27 validation gates pass; see
-[Mac build instructions](MACOS.md) and [release gates](MACOS_VALIDATION.md).
+Ship Ubuntu and the native Apple silicon Mac app together from the same source
+commit and tag `v1.5`. Keep the GitHub release in draft until both platform artifacts
+are verified and the Mac publication gate in [MACOS_VALIDATION.md](MACOS_VALIDATION.md)
+is resolved. Do not publish an Ubuntu-only release for this version.
 
-Distribution uses the native Debian package and source installer. Release
-**1.5** targets tag **v1.5**. The release assets must be uploaded before publication is considered complete.
+Ubuntu targets 26.04 / GNOME 50. The native AppKit/SwiftTerm app targets macOS 27;
+it replaces the older experimental GTK/VTE Mac implementation for distribution.
+The root repository currently still requires macOS 26 and 27 validation before
+Mac publication; the native app's macOS 27 minimum does not satisfy that rule.
 
 ## Prepare the version
 
@@ -22,7 +23,9 @@ Review [CHANGELOG.md](../CHANGELOG.md), the manual and installation guide togeth
 
 ```sh
 python3 scripts/build_deb.py
-python3 scripts/release.py
+macos/scripts/build-dmg.sh
+# Copy the tested .deb and native .dmg into the same clean output directory.
+python3 scripts/release.py --output RELEASE_DIRECTORY
 ```
 
 Building needs Python 3 and `dpkg-deb`, requires no root and does not install Herdr.
@@ -56,8 +59,10 @@ Source test results do not establish that a new Debian artifact passed its check
 Commit the reviewed source and documentation, tag the same commit `v1.5`, and
 push the commit and tag. Create a regular GitHub release with the approved release
 notes; leave **Set as a pre-release** unchecked and mark it as the latest release.
-Upload the tested `.deb`, extension ZIP, source archive and checksums under Assets.
-Do not upload a Mac installer in the Debian 1.5 release. Update publication status
+Upload the tested `.deb`, `jax-herdr-hud-1.5-macos-arm64.dmg`, extension ZIP,
+complete source archive and checksums under Assets. Verify the mounted DMG bundle
+and its ad-hoc signature, and compare the installed app to the build. Keep one
+installed app at `~/Applications/Herdr Hud.app`. Update publication status
 in the README, changelog and validation record when done.
 
 Use version-independent release-page links in the installation guide. Users download

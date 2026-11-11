@@ -304,6 +304,8 @@ public final class Monitor {
   private var stopped = false
   private var connections: [String: SocketConnection] = [:]
   private var watching = Set<String>()
+  private var remotes: [String: RemoteMachine] = [:]
+  public var onUnavailable: ((Session, String) -> Void)?
   public var onSessions: (([Session]) -> Void)?
   public var onSnapshot: ((Session, Snapshot) -> Void)?
   public var onEvent: ((Session, [String: Any]) -> Void)?
@@ -318,16 +320,50 @@ public final class Monitor {
     lock.lock()
     stopped = true
     let active = Array(connections.values)
+    let remote = Array(remotes.values)
     lock.unlock()
     active.forEach { $0.cancel() }
+    remote.forEach { $0.stop() }
   }
   public func start() {
     DispatchQueue.global().async { [self] in
       while running {
         do {
           let sessions = try backend.sessions()
+          if !backend.isolated {
+            do {
+              let profiles = try JSONDecoder().decode([MachineProfile].self,
+                from: Host.run(backend.executable(), ["machine", "list", "--json"]))
+                .filter { $0.enabled }
+              let desired = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+              lock.lock()
+              let removed = remotes.filter { entry in
+                guard let next = desired[entry.key] else { return true }
+                return next.target != entry.value.profile.target || next.session != entry.value.profile.session
+              }
+              for (id, _) in removed { remotes.removeValue(forKey: id) }
+              lock.unlock()
+              removed.values.forEach { $0.stop() }
+              for profile in profiles {
+                lock.lock(); let exists = remotes[profile.id] != nil; lock.unlock()
+                if exists { lock.lock(); let remote = remotes[profile.id]; lock.unlock(); remote?.rename(profile.label); continue }
+                let remote = try RemoteMachine(profile: profile, backend: backend)
+                remote.onSnapshot = { [weak self] session, snapshot in
+                  guard let self, self.running else { return }; self.onSnapshot?(session, snapshot)
+                }
+                remote.onError = { [weak self] session, message in
+                  guard let self, self.running else { return }
+                  self.onUnavailable?(session, message)
+                }
+                lock.lock()
+                if stopped { lock.unlock(); remote.stop(); break }
+                remotes[profile.id] = remote; lock.unlock(); remote.start()
+              }
+            } catch { if running { onError?("Remote machines: " + error.localizedDescription) } }
+          }
           if !running { break }
-          onSessions?(sessions)
+          lock.lock(); let remoteSessions = remotes.values.map { $0.session }; lock.unlock()
+          onSessions?(sessions + remoteSessions)
           lock.lock()
           let paths = Set(sessions.map(\.socket_path))
           let removed = connections.filter { !paths.contains($0.key) }.map(\.value)

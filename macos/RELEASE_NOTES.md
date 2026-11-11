@@ -1,45 +1,26 @@
-# Herdr Hud 1.4 — native macOS source (unreleased)
+# Herdr Hud 1.5 — native macOS
 
-Native AppKit/SwiftTerm build for Apple silicon and macOS 27 or later.
-Herdr 0.9.1 and 0.9.5 have been exercised separately. This source build uses an ad-hoc signature and
-is not Developer ID signed or Apple notarized. A 1.4 installer has not been published.
-Ubuntu 1.4 feature parity is not yet complete.
+Native AppKit/SwiftTerm application for Apple silicon and macOS 27 or later.
 
-- Match the Ubuntu reference sidebar with edge-to-edge list backgrounds, fine
-  dividers, matching symbolic icons and interface font, and the empty Agents
-  message. Theme changes retain sidebar selection.
-- Use Ubuntu 26.04's Ubuntu Mono font and matching default terminal cell
-  dimensions, including for history selection.
-- Hide Hud when clicking outside the app, while keeping the floating H and
-  existing terminal sessions available.
+- Display saved SSH machines, their spaces and agents beside local sessions.
+  Remote terminal attachment uses Herdr's native client; disconnecting Hud leaves
+  servers and agents running. Reconnects preserve terminal identity.
+- Optionally start an agent in a new space. Failed startup leaves the workspace
+  and shell available. Startup uses pane IDs; attachment uses terminal IDs.
+- Remember reported user@host identities and show identity-only tooltips styled
+  with the current palette. Unreported remote identities use the SSH target.
+- Add a saved automatic-hiding toggle, while protecting menus, dialogs and widget
+  gestures. H still explicitly shows or hides Hud when automatic hiding is off.
+- Check for updates silently every six hours, with an explicit Settings check.
+  Clicking the update arrow downloads and verifies the Mac installer before opening it.
+- Preserve direct right-click paste, clipboard text/image handling, links, paired
+  CLI colors, selection/history in both directions, and terminal focus.
 
-- Port Ubuntu 1.2's normal drag-to-select and plain-text automatic copy. Hold
-  Shift to send mouse input to interactive CLIs; the route stays fixed for the gesture.
-- Extend selection past terminal edges into retained shell history and live CLI
-  transcripts. Preserve the original live terminal, colors, geometry, and focus.
-  Capture is limited to 20,000 lines and pauses on unmatched redraws.
-- Open plain and labelled HTTP/HTTPS terminal links with Command-click or
-  Control-click, including AppKit's secondary-button Control-click events.
-- Paste clipboard text with Command-V or Control-V, including dictation. Keep
-  the CLI's keyboard-protocol encoding for image-only paste shortcuts.
-- Preserve CLI foreground/background pairs so highlights remain readable.
-- Default fresh preferences to VS Code Dark and retain saved theme choices.
-- Keep one installed app during updates, with ZIP backups and unindexed build
-  bundles instead of extra launchable app copies.
-- Restore terminal focus after header actions. Release selection and type without
-  an Escape step.
+The app is ad-hoc signed and is not Apple notarized. See the enclosed Read Me for
+first-launch instructions. Keep a single installed app at
+`~/Applications/Herdr Hud.app`; replace it after quitting when updating.
 
-Install the DMG by dragging Herdr Hud into Applications, replacing the previous
-copy after quitting Hud. Quitting Hud disconnects its display clients and retains
-Herdr's servers, terminals, agents, and saved preferences. Automatic Mac updates
-are not included.
-
-The DMG includes the exact native sources, pinned dependency sources, build
-scripts, and licenses in `Source.zip`. Its companion `.sha256` file verifies the
-image. See the enclosed Read Me for macOS first-launch instructions.
-
-Validation: core checks and the debug desktop harness, including a real disposable
-Herdr server and controlled CLI wheel round trips in both directions. Pointer
-checks use synthetic AppKit events; physical pointer, lock/login, and monitor
-hot-plug acceptance are separate. This is not a compatibility claim for other
-macOS versions or Intel Macs.
+The DMG includes native source, shared palette sources, pinned dependencies and
+licenses. See [VALIDATION.md](VALIDATION.md) for actual test results and remaining
+physical hardware acceptance checks. This build does not support Intel Macs or
+macOS releases older than 27.
