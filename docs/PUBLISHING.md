@@ -4,13 +4,12 @@
 
 Ship Ubuntu and the native Apple silicon Mac app together from the same source
 commit and tag `v1.5`. Keep the GitHub release in draft until both platform artifacts
-are verified and the Mac publication gate in [MACOS_VALIDATION.md](MACOS_VALIDATION.md)
-is resolved. Do not publish an Ubuntu-only release for this version.
+are verified as described in [MACOS_VALIDATION.md](MACOS_VALIDATION.md). Do not publish an Ubuntu-only release for this version.
 
 Ubuntu targets 26.04 / GNOME 50. The native AppKit/SwiftTerm app targets macOS 27;
 it replaces the older experimental GTK/VTE Mac implementation for distribution.
-The root repository currently still requires macOS 26 and 27 validation before
-Mac publication; the native app's macOS 27 minimum does not satisfy that rule.
+The supported Mac minimum is macOS 27 on Apple silicon. Older macOS releases
+are unsupported and are not publication gates (owner decision, 12 November 2026).
 
 ## Prepare the version
 

@@ -233,8 +233,7 @@ need logout/login under this project's GNOME 50 workflow.
 ## Release packaging contracts
 
 - Public app versions use major.minor (for example `1.2`), without a third component.
-- Stable Ubuntu/Debian app version is `1.5`, targeting tag `v1.5`; the Mac port
-  remains in development until its release gates pass. Extension revision is
+- Stable Ubuntu/Debian and native Mac app version is `1.5`, targeting tag `v1.5`. Extension revision is
   separate. Keep app_info.py and retained packaging metadata synchronized.
 - Retain `io.github.herdr.Hud` and host XDG preferences. New public extension UUID
   is `herdr-hud@alex-jax.github.io`; never enable it with the legacy UUID.
@@ -295,4 +294,7 @@ results separately from fixtures or assumed vendor CLI compatibility.
 - `scripts/build_macos.py` builds only on arm64 macOS. Bundle runtime dependencies,
   fonts and licenses, never Herdr. Preserve the Linux system-library package.
 - Follow `docs/MACOS_VALIDATION.md`; a runtime/build success is not full Mac parity.
-  Do not publish a Mac installer until both macOS 26 and 27 validation passes.
+  The native AppKit/SwiftTerm release targets Apple silicon macOS 27+.
+  Validate on macOS 27; older macOS versions are unsupported and are not release gates.
+  Use macos/scripts/build-app.sh and macos/scripts/build-dmg.sh for native releases;
+  the GTK/VTE Mac build described above is historical.

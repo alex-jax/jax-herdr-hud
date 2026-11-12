@@ -296,3 +296,13 @@ Local logs: `/tmp/hud-15-final-unit.log`, `/tmp/hud-15-final-sidebar.log`,
 claims based on historical logs. Mac candidate validation is recorded separately
 in [macos/VALIDATION.md](../macos/VALIDATION.md). Both artifacts remain in one draft;
 the macOS platform-support gate is unresolved.
+
+
+## Joint publication approval — 12 November 2026
+
+The owner approved publishing Ubuntu and native Apple silicon macOS 27+ together,
+without testing older macOS versions. This resolves the platform-support gate
+recorded above. The previously tested installers are retained byte-for-byte;
+this follow-up changes release documentation and the source archive only. Embedded
+candidate documentation reflects their build date; current release scope is 27+.
+No new application tests, installation or desktop restart were needed for prose changes.

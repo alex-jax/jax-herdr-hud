@@ -3,9 +3,8 @@
 A native companion for local and saved remote Herdr terminals and agents:
 GTK/VTE on Ubuntu 26.04 / GNOME 50, and AppKit/SwiftTerm on Apple silicon macOS.
 
-**Version 1.5 is being prepared as a joint Ubuntu and Mac release.** The release
-remains a draft until the Mac publication gates are resolved. The native Mac
-build targets macOS 27; see [Mac validation](macos/VALIDATION.md) for completed
+**[Version 1.5](https://github.com/alex-jax/jax-herdr-hud/releases/tag/v1.5) ships Ubuntu and Mac together.** The native Mac
+build supports Apple silicon macOS 27+; see [Mac validation](macos/VALIDATION.md) for completed
 checks and limitations and [publication gates](docs/MACOS_VALIDATION.md).
 
 Both implementations include saved SSH machines, native remote terminal attachment,

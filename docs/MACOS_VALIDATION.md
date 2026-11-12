@@ -2,11 +2,12 @@
 
 ## Native 1.5 release candidate — 11 November 2026
 
-The joint 1.5 draft uses the native AppKit/SwiftTerm app in `macos/`, targeting
+The joint 1.5 release uses the native AppKit/SwiftTerm app in `macos/`, targeting
 macOS 27 arm64. Its current results are in [macos/VALIDATION.md](../macos/VALIDATION.md).
-The root AGENTS.md still requires validation on both macOS 26 and 27 before
-publication. That requirement remains unresolved: the native app targets 27,
-and this host runs 27.2. Keep both platforms in the same draft until resolved.
+On 12 November 2026 the owner approved publication for macOS 27+ only and
+removed the lower-version testing gate. This supersedes the historical 26/27
+requirements below for the native release. Testing was performed on 27.2;
+compatibility with older macOS versions is not claimed.
 
 ## Historical GTK/VTE Mac gates
 

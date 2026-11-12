@@ -298,3 +298,13 @@ publication blocker pending the owner's platform-support decision.
 
 Logs: `/tmp/hud-mac-core-final.log`, `/tmp/hud-mac-parity-smoke-final.log`,
 `/tmp/hud-mac-15-release-build.log`, `/tmp/hud-mac-15-install.log`.
+
+
+## Joint publication approval — 12 November 2026
+
+The owner approved publishing Ubuntu and native Apple silicon macOS 27+ together,
+without testing older macOS versions. This resolves the platform-support gate
+recorded above. The previously tested installers are retained byte-for-byte;
+this follow-up changes release documentation and the source archive only. Embedded
+candidate documentation reflects their build date; current release scope is 27+.
+No new application tests, installation or desktop restart were needed for prose changes.
