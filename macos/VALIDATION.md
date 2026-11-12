@@ -308,3 +308,26 @@ recorded above. The previously tested installers are retained byte-for-byte;
 this follow-up changes release documentation and the source archive only. Embedded
 candidate documentation reflects their build date; current release scope is 27+.
 No new application tests, installation or desktop restart were needed for prose changes.
+
+## Window menu and display movement — 12 November 2026
+
+Added Window → Move to Display, listing connected monitors by number and name,
+checking the current monitor and resolving display IDs again when selected.
+Movement restores normal dimensions from an expanded window, fits and centers it
+inside the destination's usable frame and saves placement. H placement is separate.
+
+On macOS 27.2 arm64, HudCoreChecks passed. The debug desktop harness exercised the
+menu actions across three connected PL2493H displays (left, main, right), verified
+window containment, unchanged terminal instance/selection and saved geometry.
+A synthetic smaller display above/left verified fitting with negative coordinates.
+The first full smoke run timed out in the existing real CLI wheel-direction test;
+an unchanged rerun passed the full harness, including the new monitor checks.
+This does not establish physical monitor hot-plug or every desktop arrangement.
+
+Ubuntu source inspection confirmed its native GTK titlebar and the existing
+move/resize auto-hide guard. No physical multi-monitor Ubuntu test was performed.
+
+Built and installed the optimized app at `~/Applications/Herdr Hud.app`, verified
+its ad-hoc signature and every installed file against the release build, and
+confirmed successful launch with an identical Herdr session inventory. Only Hud
+was restarted. This change has not been added to a public release.

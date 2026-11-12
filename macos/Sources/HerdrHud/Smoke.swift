@@ -224,6 +224,32 @@
           NSRect(x: 100000, y: 100000, width: 500, height: 300), fallback: app.window.frame)
         try require(NSScreen.screens.contains { recovered.intersects($0.visibleFrame) },
           "offscreen geometry recovery on a connected screen")
+        let originalFrame = app.window.frame
+        let originalSelection = app.selected
+        let originalTerminal = originalSelection.flatMap { app.terminals[$0] }
+        let syntheticDisplay = NSRect(x: -1600, y: 900, width: 1280, height: 720)
+        let movedFrame = frameOnDisplay(NSRect(x: 0, y: 0, width: 1800, height: 1000),
+          visibleFrame: syntheticDisplay)
+        try require(movedFrame == syntheticDisplay, "move fits smaller display at negative/vertical coordinates")
+        app.menuNeedsUpdate(app.windowMenu)
+        let displayMenu = app.windowMenu.items.first { $0.title == "Move to Display" }?.submenu
+        try require(displayMenu?.items.count == NSScreen.screens.count, "Window menu lists connected displays")
+        for item in displayMenu?.items ?? [] {
+          guard let destination = NSScreen.screens.first(where: {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)
+              == (item.representedObject as? NSNumber)
+          }) else { throw HudError.message("Missing destination display") }
+          app.moveToDisplay(item)
+          try require(destination.visibleFrame.contains(app.window.frame),
+            "menu moves window inside the chosen display's usable frame")
+          try require(app.selected == originalSelection &&
+            originalSelection.flatMap { app.terminals[$0] } === originalTerminal,
+            "display move retains selection and terminal instance")
+          try require(app.prefs.windowFrame == frameArray(app.window.frame), "display move saves placement")
+        }
+        app.window.setFrame(originalFrame, display: true)
+        app.normalFrame = originalFrame
+        app.save()
         if ProcessInfo.processInfo.environment["HUD_TEST_VISUAL_REFERENCE"] == "1" {
           app.prefs.appearance = "dark"
           app.prefs.palette = "nord"

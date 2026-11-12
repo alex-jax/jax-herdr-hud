@@ -60,6 +60,10 @@ menus/dialogs can still differ from GTK.
 
 ## Use
 
+- Use **Window → Move to Display → display name** in the Mac menu bar to move Hud
+  between monitors. The current display is checked; the list refreshes when opened.
+  Moving an expanded window restores its normal size, fits it to the destination
+  and saves the position. The floating H keeps its separate position.
 - Click the floating **H** to show/hide Hud. Drag it to move it. Escape cancels a
   drag; Enter/Space activates the focused H. Its blue dot means unread activity.
 - The menu bar **H** provides Show/Hide, Settings, Launch at Login, and Quit.

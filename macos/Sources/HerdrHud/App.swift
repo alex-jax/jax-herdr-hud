@@ -60,6 +60,7 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
   var normalFrame: NSRect = .zero
   var outsideClickMonitor: Any?
   var menuTracking = 0
+  let windowMenu = NSMenu(title: "Window")
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     if CommandLine.arguments.contains("--quit") {
@@ -142,11 +143,12 @@ final class HudApp: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableVi
     let app = NSMenu()
     let edit = NSMenu()
     let view = NSMenu()
-    for (name, menu) in [("Herdr Hud", app), ("Edit", edit), ("View", view)] {
+    for (name, menu) in [("Herdr Hud", app), ("Edit", edit), ("View", view), ("Window", windowMenu)] {
       let item = NSMenuItem(title: name, action: nil, keyEquivalent: "")
       item.submenu = menu
       main.addItem(item)
     }
+    windowMenu.delegate = self
     app.addItem(withTitle: "About Herdr Hud", action: #selector(about), keyEquivalent: "").target =
       self
     app.addItem(withTitle: "Settings…", action: #selector(settings), keyEquivalent: ",").target =
